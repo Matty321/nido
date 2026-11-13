@@ -13,17 +13,24 @@ struct PreferencesView: View {
     /// Sparkle's updater; nil without a feed in the build: no "Cerca aggiornamenti automaticamente".
     var updates: UpdateController?
 
+    /// Quits and opens Nido again (`AppDelegate.relaunch`): a new language applies from the next launch.
+    var relaunch: (() -> Void)?
+
     @State private var section = "Generale"
     @State private var token: HuggingFaceTokenModel
+    /// The chosen language, "" to follow the system.
+    @State private var language: String
 
     init(
         root: URL?, tokenStore: (any TokenStore)? = nil, sessions: VMSessionStore? = nil,
-        updates: UpdateController? = nil
+        updates: UpdateController? = nil, relaunch: (() -> Void)? = nil
     ) {
         self.root = root
         self.sessions = sessions
         self.updates = updates
+        self.relaunch = relaunch
         _token = State(initialValue: HuggingFaceTokenModel(tokenStore: tokenStore))
+        _language = State(initialValue: AppLanguageSetting().choice ?? "")
     }
 
     var body: some View {
@@ -51,6 +58,23 @@ struct PreferencesView: View {
                         verbatim: String(localized: "Check for updates automatically"),
                         explanation: Self.automaticChecksExplanation,
                         isOn: $updates.automaticallyChecksForUpdates)
+                }
+                NidoInfoRow(label: "Language",
+                            note: "Nido closes and reopens in the chosen language. With a VM running, it asks first.") {
+                    Picker("Language", selection: $language) {
+                        Text("Same as the system").tag("")
+                        ForEach(AppLanguageSetting.languages, id: \.self) { code in
+                            Text(verbatim: AppLanguageSetting.name(code)).tag(code)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .accessibilityIdentifier("preferences-language")
+                }
+                .onChange(of: language) { _, chosen in
+                    AppLanguageSetting().choice = chosen.isEmpty ? nil : chosen
+                    // After this update: the quit may ask about running VMs in a modal alert.
+                    if let relaunch { DispatchQueue.main.async(execute: relaunch) }
                 }
                 NidoInfoRow("License", "Apache License 2.0", note: "Nido is free software: its code is public.")
             }

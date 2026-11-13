@@ -17,6 +17,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let setup = AppSetup()
     /// True between "Sospendi/Arresta ed esci" and the end of the stops: a second ⌘Q is ignored.
     private var isStoppingForQuit = false
+    /// Settings › Language: the quit under way ends with Nido opened again.
+    private var relaunchesAfterQuit = false
+
+    /// Quits through the usual questions (VMs running, a creation, a clone…) and opens Nido again,
+    /// in the language just chosen. Cancelled at one of the questions, Nido stays open: the
+    /// language is saved anyway and applies from the next launch.
+    func relaunch() {
+        relaunchesAfterQuit = true
+        NSApp.terminate(nil)
+        // Still running here: the quit was cancelled, or goes on while the VMs stop (terminateLater).
+        if !isStoppingForQuit { relaunchesAfterQuit = false }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        guard relaunchesAfterQuit else { return }
+        do {
+            try Relauncher.start()
+        } catch {
+            Logger(subsystem: "io.gitlab.pichierri.Nido", category: "quit").error(
+                "Relaunch helper not started: \(error.localizedDescription, privacy: .public)")
+        }
+    }
 
     private var environment: AppEnvironment? {
         guard case .success(let environment) = setup.result else { return nil }

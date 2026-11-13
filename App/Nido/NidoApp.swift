@@ -92,7 +92,8 @@ struct NidoApp: App {
                 root: (try? setup.result?.get())?.paths.root,
                 tokenStore: (try? setup.result?.get())?.aiBridge.tokenStore,
                 sessions: (try? setup.result?.get())?.sessions,
-                updates: (try? setup.result?.get())?.updates)
+                updates: (try? setup.result?.get())?.updates,
+                relaunch: { [appDelegate] in appDelegate.relaunch() })
                 .frame(minWidth: Theme.Layout.windowMinWidth, minHeight: Theme.Layout.windowMinHeight)
                 .ignoresSafeArea(.container, edges: .top)
                 .toolbar {

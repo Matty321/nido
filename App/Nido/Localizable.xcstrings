@@ -13009,6 +13009,34 @@
         }
       }
     },
+    "Language" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprache"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idioma"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langue"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lingua"
+          }
+        }
+      }
+    },
     "Last sample at %@ · no response for %lld seconds" : {
       "localizations" : {
         "de" : {
@@ -14366,6 +14394,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nido non riesce a collegarsi a %@ via SSH"
+          }
+        }
+      }
+    },
+    "Nido closes and reopens in the chosen language. With a VM running, it asks first." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido wird beendet und in der gewählten Sprache wieder geöffnet. Läuft eine VM, fragt Nido vorher."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido se cierra y se vuelve a abrir en el idioma elegido. Si hay una VM en ejecución, pregunta antes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido se ferme et se rouvre dans la langue choisie. Si une VM est en marche, Nido demande d’abord."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido si chiude e si riapre nella lingua scelta. Con una VM accesa, prima chiede."
           }
         }
       }
@@ -18925,6 +18981,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Chiave SSH pubblica"
+          }
+        }
+      }
+    },
+    "Same as the system" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie das System"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Igual que el sistema"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comme le système"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Come il sistema"
           }
         }
       }

@@ -140,6 +140,31 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(close.frame.midY, title.frame.midY, accuracy: 4, "I pulsanti della finestra non sono allineati al titolo")
     }
 
+    /// Generale › Lingua: the system and the five languages, each named in itself. Nothing is chosen:
+    /// a choice writes Nido's real defaults (the UI tests' app has the same bundle identifier) and
+    /// quits the app to open it again.
+    @MainActor
+    func testPreferencesOfferTheLanguages() throws {
+        let app = launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.windows["Nido"].waitForExistence(timeout: 10))
+        app.typeKey(",", modifierFlags: .command)
+
+        let window = app.windows.matching(NSPredicate(format: "title != 'Nido'")).firstMatch
+        XCTAssertTrue(window.waitForExistence(timeout: 10))
+        XCTAssertTrue(window.staticTexts["Lingua"].waitForExistence(timeout: 5))
+        XCTAssertTrue(window.staticTexts["Nido si chiude e si riapre nella lingua scelta. Con una VM accesa, prima chiede."].exists)
+        let picker = window.popUpButtons["preferences-language"]
+        XCTAssertTrue(picker.exists, "Manca il menu della lingua")
+        snapshot(window, app: app, name: "S10-Preferenze-Lingua")
+
+        picker.click()
+        for item in ["Come il sistema", "English", "Italiano", "Deutsch", "Español", "Français"] {
+            XCTAssertTrue(picker.menuItems[item].waitForExistence(timeout: 5), "Manca \(item)")
+        }
+        app.typeKey(.escape, modifierFlags: [])
+    }
+
     // MARK: - Fixtures
 
     @MainActor

@@ -764,6 +764,10 @@ struct AppLanguageTests {
         "VM folder": "Cartella delle VM",
         "read only": "sola lettura",
         "Check for updates automatically": "Cerca aggiornamenti automaticamente",
+        "Language": "Lingua",
+        "Same as the system": "Come il sistema",
+        "Nido closes and reopens in the chosen language. With a VM running, it asks first.":
+            "Nido si chiude e si riapre nella lingua scelta. Con una VM accesa, prima chiede.",
         "License": "Licenza",
         "Nido is free software: its code is public.": "Nido è software libero: il codice è pubblico.",
         "Once a day Nido checks for a new version and asks before installing it. With a VM running, the installation waits.":
