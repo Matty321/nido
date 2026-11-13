@@ -2,6 +2,11 @@
 
 Le versioni di Nido, dalla più recente. L'app mostra la sezione della versione installata al primo avvio dopo un aggiornamento (menu Aiuto › Novità di Nido per rivederla).
 
+## [0.8.1] – 2026-11-13
+
+### Lingue
+- **La lingua di Nido si sceglie in Impostazioni › Generale › Lingua**: inglese, italiano, tedesco, spagnolo, francese o come il sistema. Nido si chiude e si riapre nella lingua nuova; con una VM accesa prima chiede cosa farne, come quando esci. È la stessa impostazione di Impostazioni di Sistema › Generali › Lingua e Zona › Applicazioni.
+
 ## [0.8.0] – 2026-11-13
 
 ### Lingue

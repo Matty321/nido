@@ -2,6 +2,11 @@
 
 Alle Versionen von Nido, die neueste zuerst. Beim ersten Öffnen nach einem Update zeigt Nido die Neuerungen der installierten Version (unter Hilfe › Neue Funktionen in Nido kannst du sie erneut lesen).
 
+## [0.8.1] – 2026-11-13
+
+### Sprachen
+- **Die Sprache von Nido wählst du unter Einstellungen › Allgemein › Sprache**: Englisch, Italienisch, Deutsch, Spanisch, Französisch oder wie das System. Nido wird beendet und in der neuen Sprache wieder geöffnet; läuft eine VM, fragt Nido vorher wie beim Beenden, was mit ihr geschehen soll. Es ist dieselbe Einstellung wie unter Systemeinstellungen › Allgemein › Sprache & Region › Apps.
+
 ## [0.8.0] – 2026-11-13
 
 ### Sprachen

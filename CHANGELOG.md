@@ -2,6 +2,11 @@
 
 Every Nido release, newest first. The first time Nido opens after an update, it shows the notes for the installed version (choose Help › What’s New in Nido to read them again).
 
+## [0.8.1] – 2026-11-13
+
+### Languages
+- **Choose Nido’s language in Settings › General › Language**: English, Italian, German, Spanish, French or the same as the system. Nido closes and opens again in the new language; with a VM running, it first asks what to do with it, as when you quit. It’s the same setting as System Settings › General › Language & Region › Applications.
+
 ## [0.8.0] – 2026-11-13
 
 ### Languages

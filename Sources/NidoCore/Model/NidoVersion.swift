@@ -3,7 +3,7 @@
 /// The version of Nido, shared by the app (`MARKETING_VERSION`, checked by a test) and the `nido`
 /// command (`nido --version`). Each version has its section in CHANGELOG.md.
 public enum NidoVersion {
-    public static let current = "0.8.0"
+    public static let current = "0.8.1"
 
     /// The build number (`CFBundleVersion`): `major*10000 + minor*100 + patch`, so it grows with
     /// the version and Sparkle can compare releases. 0.7.6 is 706, 0.8.0 is 800.
