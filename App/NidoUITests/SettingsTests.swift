@@ -119,6 +119,27 @@ final class SettingsTests: XCTestCase {
         snapshot(window, app: app, name: "S10-Preferenze")
     }
 
+    /// The close, minimise and zoom buttons sit in the middle of the 52 pt bar, level with the
+    /// title, as in the VM settings (S08): the Settings scene must not keep a taller toolbar.
+    @MainActor
+    func testPreferencesWindowButtonsCenterInTheBar() throws {
+        let app = launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.windows["Nido"].waitForExistence(timeout: 10))
+        app.typeKey(",", modifierFlags: .command)
+
+        let window = app.windows.matching(NSPredicate(format: "title != 'Nido'")).firstMatch
+        XCTAssertTrue(window.waitForExistence(timeout: 10))
+        let close = window.buttons[XCUIIdentifierCloseWindow]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        let title = window.staticTexts["Impostazioni di Nido"]
+        XCTAssertTrue(title.exists)
+
+        let barCenter = window.frame.minY + 26
+        XCTAssertEqual(close.frame.midY, barCenter, accuracy: 4, "I pulsanti della finestra non sono al centro della barra")
+        XCTAssertEqual(close.frame.midY, title.frame.midY, accuracy: 4, "I pulsanti della finestra non sono allineati al titolo")
+    }
+
     // MARK: - Fixtures
 
     @MainActor

@@ -100,6 +100,7 @@ struct NidoApp: App {
                 }
                 .toolbar(removing: .title)
                 .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+                .unifiedWindowToolbar()
         }
         .defaultSize(width: Theme.Layout.windowWidth, height: Theme.Layout.windowHeight)
         .windowToolbarStyle(.unified)
