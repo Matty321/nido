@@ -281,6 +281,9 @@ main() {
     trap 'hdiutil detach -quiet "'"$mount"'" 2>/dev/null || true; rm -rf "'"$work"'"' EXIT
 
     # Step 2: tests, signed Release build, checks.
+    # The gvproxy tests run the pinned binary: in a fresh clone (the public repo) it is not there
+    # until fetched, and build-app.sh, which fetches it too, comes only after the tests.
+    sh scripts/fetch-gvproxy.sh
     say "swift test"
     swift test
     say "signed Release build ($sign_identity), feed '${feed_url:-none}'"
