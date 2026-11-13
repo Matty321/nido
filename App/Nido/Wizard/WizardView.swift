@@ -79,6 +79,9 @@ struct WizardView: View {
                     }
                     NidoOSTile(glyph: "W", name: "Windows 11", detail: "Coming soon", state: .disabled)
                 }
+                // Every tile as tall as the tallest, tops aligned: a wrapped name or detail no
+                // longer shifts its tile.
+                .fixedSize(horizontal: false, vertical: true)
                 systemNote
                     .font(.nido(Theme.TypeSize.caption))
                     .foregroundStyle(Theme.Color.textSecondary)

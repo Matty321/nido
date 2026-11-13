@@ -31,10 +31,14 @@ import Testing
     /// Sizes inside a sentence follow the language: decimal comma in Italian, point in English.
     @Test func sizesFollowTheLanguage() {
         let error = NidoError.insufficientSpace(needed: 3 << 29, available: 1 << 30)
-        // The number format keeps the system's region, so English shows the machine's separator.
-        let separator = L10n.locale(for: "en").decimalSeparator ?? "."
-        #expect(error.localizedDescription(language: "en") == "not enough space: 1\(separator)5 GiB needed, 1 GiB available")
-        #expect(error.localizedDescription(language: "it") == "spazio insufficiente: servono 1,5 GiB, disponibili 1 GiB")
+        // The number format keeps the system's region: English in the US shows "1.5", in Italy "1,5".
+        L10n.$testRegion.withValue("US") {
+            #expect(error.localizedDescription(language: "en") == "not enough space: 1.5 GiB needed, 1 GiB available")
+        }
+        L10n.$testRegion.withValue("IT") {
+            #expect(error.localizedDescription(language: "en") == "not enough space: 1,5 GiB needed, 1 GiB available")
+            #expect(error.localizedDescription(language: "it") == "spazio insufficiente: servono 1,5 GiB, disponibili 1 GiB")
+        }
     }
 
     /// A summary of what was left out agrees with its first count (pinned Italian).

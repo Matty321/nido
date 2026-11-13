@@ -369,7 +369,7 @@
         "fontSize" : 13,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Crea VM",
+      "text" : "Create VM",
       "x" : 0,
       "y" : 0
     }
@@ -533,7 +533,7 @@
         "fontSize" : 13,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Annulla",
+      "text" : "Cancel",
       "x" : 0,
       "y" : 0
     }
@@ -669,7 +669,7 @@
         "fontSize" : 13,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Elimina",
+      "text" : "Delete",
       "x" : 0,
       "y" : 0
     }
@@ -833,7 +833,7 @@
         "fontSize" : 13,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Avanti",
+      "text" : "Next",
       "x" : 0,
       "y" : 0
     }
@@ -1034,7 +1034,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "un colore e un'etichetta per ogni stato della VM",
+      "text" : "one color and one label for each VM state",
       "x" : 0,
       "y" : 0
     }
@@ -1203,7 +1203,7 @@
         "fontSize" : 11,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Arrestata",
+      "text" : "Stopped",
       "x" : 0,
       "y" : 0
     }
@@ -1380,7 +1380,7 @@
         "fontSize" : 11,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Avvio in corso",
+      "text" : "Starting",
       "x" : 0,
       "y" : 0
     }
@@ -1557,7 +1557,7 @@
         "fontSize" : 11,
         "fontStyle" : "SemiBold"
       },
-      "text" : "In esecuzione",
+      "text" : "Running",
       "x" : 0,
       "y" : 0
     }
@@ -1734,7 +1734,7 @@
         "fontSize" : 11,
         "fontStyle" : "SemiBold"
       },
-      "text" : "In pausa",
+      "text" : "Paused",
       "x" : 0,
       "y" : 0
     }
@@ -1940,7 +1940,7 @@
         "fontSize" : 11,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Sospesa",
+      "text" : "Suspended",
       "x" : 0,
       "y" : 0
     }
@@ -2117,7 +2117,7 @@
         "fontSize" : 11,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Errore",
+      "text" : "Error",
       "x" : 0,
       "y" : 0
     }
@@ -2323,7 +2323,7 @@
         "fontSize" : 11,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Illeggibile",
+      "text" : "Unreadable",
       "x" : 0,
       "y" : 0
     }
@@ -2500,7 +2500,7 @@
         "fontSize" : 11,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Occupata",
+      "text" : "Busy",
       "x" : 0,
       "y" : 0
     }
@@ -2706,7 +2706,7 @@
         "fontSize" : 11,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Installazione",
+      "text" : "Installing",
       "x" : 0,
       "y" : 0
     }
@@ -2903,7 +2903,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "libreria: una scheda per VM, azioni secondo lo stato",
+      "text" : "library: one card per VM, actions by state",
       "x" : 0,
       "y" : 0
     }
@@ -3086,7 +3086,7 @@
     "expectId" : 254,
     "params" : {
       "height" : 20,
-      "name" : "Sistema",
+      "name" : "System",
       "parent" : 253,
       "props" : {
         "clip" : false,
@@ -3205,7 +3205,7 @@
     "expectId" : 256,
     "params" : {
       "height" : 20,
-      "name" : "Nome",
+      "name" : "Name",
       "parent" : 253,
       "props" : {
         "clip" : false,
@@ -3320,7 +3320,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "4 CPU · 8 GiB di memoria · disco 64 GiB",
+      "text" : "4 CPUs · 8 GiB of memory · 64 GiB disk",
       "x" : 0,
       "y" : 0
     }
@@ -3388,7 +3388,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Avvia",
+      "characters" : "Start",
       "id" : 265
     }
   },
@@ -3403,7 +3403,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Impostazioni",
+      "characters" : "Settings",
       "id" : 267
     }
   },
@@ -3573,7 +3573,7 @@
     "expectId" : 270,
     "params" : {
       "height" : 20,
-      "name" : "Sistema",
+      "name" : "System",
       "parent" : 269,
       "props" : {
         "clip" : false,
@@ -3692,7 +3692,7 @@
     "expectId" : 272,
     "params" : {
       "height" : 20,
-      "name" : "Nome",
+      "name" : "Name",
       "parent" : 269,
       "props" : {
         "clip" : false,
@@ -3807,7 +3807,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "4 CPU · 8 GiB di memoria · disco 64 GiB",
+      "text" : "4 CPUs · 8 GiB of memory · 64 GiB disk",
       "x" : 0,
       "y" : 0
     }
@@ -3875,7 +3875,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Avvia",
+      "characters" : "Start",
       "id" : 281
     }
   },
@@ -3890,7 +3890,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Arresta",
+      "characters" : "Stop",
       "id" : 283
     }
   },
@@ -4060,7 +4060,7 @@
     "expectId" : 286,
     "params" : {
       "height" : 20,
-      "name" : "Sistema",
+      "name" : "System",
       "parent" : 285,
       "props" : {
         "clip" : false,
@@ -4179,7 +4179,7 @@
     "expectId" : 288,
     "params" : {
       "height" : 20,
-      "name" : "Nome",
+      "name" : "Name",
       "parent" : 285,
       "props" : {
         "clip" : false,
@@ -4281,7 +4281,7 @@
     "expectId" : 291,
     "params" : {
       "height" : 20,
-      "name" : "Ponte AI attivo",
+      "name" : "AI bridge active",
       "parent" : 288,
       "props" : {
         "clip" : false,
@@ -4420,7 +4420,7 @@
         "fontSize" : 11,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Ponte AI attivo",
+      "text" : "AI bridge active",
       "x" : 0,
       "y" : 0
     }
@@ -4472,7 +4472,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "4 CPU · 8 GiB di memoria · disco 64 GiB",
+      "text" : "4 CPUs · 8 GiB of memory · 64 GiB disk",
       "x" : 0,
       "y" : 0
     }
@@ -4540,7 +4540,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Apri",
+      "characters" : "Open",
       "id" : 300
     }
   },
@@ -4555,7 +4555,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Arresta",
+      "characters" : "Stop",
       "id" : 302
     }
   },
@@ -4725,7 +4725,7 @@
     "expectId" : 305,
     "params" : {
       "height" : 20,
-      "name" : "Sistema",
+      "name" : "System",
       "parent" : 304,
       "props" : {
         "clip" : false,
@@ -4844,7 +4844,7 @@
     "expectId" : 307,
     "params" : {
       "height" : 20,
-      "name" : "Nome",
+      "name" : "Name",
       "parent" : 304,
       "props" : {
         "clip" : false,
@@ -4952,7 +4952,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "In esecuzione (Terminale)",
+      "characters" : "Running (Terminal)",
       "id" : 312
     }
   },
@@ -4966,7 +4966,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "4 CPU · 8 GiB di memoria · disco 64 GiB",
+      "text" : "4 CPUs · 8 GiB of memory · 64 GiB disk",
       "x" : 0,
       "y" : 0
     }
@@ -5034,7 +5034,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Avvia",
+      "characters" : "Start",
       "id" : 316
     }
   },
@@ -5049,7 +5049,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Arresta",
+      "characters" : "Stop",
       "id" : 318
     }
   },
@@ -5219,7 +5219,7 @@
     "expectId" : 321,
     "params" : {
       "height" : 20,
-      "name" : "Sistema",
+      "name" : "System",
       "parent" : 320,
       "props" : {
         "clip" : false,
@@ -5338,7 +5338,7 @@
     "expectId" : 323,
     "params" : {
       "height" : 20,
-      "name" : "Nome",
+      "name" : "Name",
       "parent" : 320,
       "props" : {
         "clip" : false,
@@ -5453,7 +5453,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "4 CPU · 8 GiB di memoria · disco 64 GiB",
+      "text" : "4 CPUs · 8 GiB of memory · 64 GiB disk",
       "x" : 0,
       "y" : 0
     }
@@ -5521,7 +5521,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Riprendi",
+      "characters" : "Resume",
       "id" : 332
     }
   },
@@ -5536,7 +5536,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Arresta",
+      "characters" : "Stop",
       "id" : 334
     }
   },
@@ -5706,7 +5706,7 @@
     "expectId" : 337,
     "params" : {
       "height" : 20,
-      "name" : "Sistema",
+      "name" : "System",
       "parent" : 336,
       "props" : {
         "clip" : false,
@@ -5825,7 +5825,7 @@
     "expectId" : 339,
     "params" : {
       "height" : 20,
-      "name" : "Nome",
+      "name" : "Name",
       "parent" : 336,
       "props" : {
         "clip" : false,
@@ -5940,7 +5940,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "4 CPU · 8 GiB di memoria · disco 64 GiB",
+      "text" : "4 CPUs · 8 GiB of memory · 64 GiB disk",
       "x" : 0,
       "y" : 0
     }
@@ -6008,7 +6008,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Riprendi",
+      "characters" : "Resume",
       "id" : 348
     }
   },
@@ -6023,7 +6023,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Impostazioni",
+      "characters" : "Settings",
       "id" : 350
     }
   },
@@ -6193,7 +6193,7 @@
     "expectId" : 353,
     "params" : {
       "height" : 20,
-      "name" : "Sistema",
+      "name" : "System",
       "parent" : 352,
       "props" : {
         "clip" : false,
@@ -6312,7 +6312,7 @@
     "expectId" : 355,
     "params" : {
       "height" : 20,
-      "name" : "Nome",
+      "name" : "Name",
       "parent" : 352,
       "props" : {
         "clip" : false,
@@ -6427,7 +6427,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "4 CPU · 8 GiB di memoria · disco 64 GiB",
+      "text" : "4 CPUs · 8 GiB of memory · 64 GiB disk",
       "x" : 0,
       "y" : 0
     }
@@ -6464,7 +6464,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Avvio non riuscito: il disco della VM non è leggibile.",
+      "text" : "Start failed: the VM’s disk can’t be read.",
       "x" : 0,
       "y" : 0
     }
@@ -6532,7 +6532,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Riprova",
+      "characters" : "Try Again",
       "id" : 365
     }
   },
@@ -6547,7 +6547,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Dettagli",
+      "characters" : "Details",
       "id" : 367
     }
   },
@@ -6717,7 +6717,7 @@
     "expectId" : 370,
     "params" : {
       "height" : 20,
-      "name" : "Sistema",
+      "name" : "System",
       "parent" : 369,
       "props" : {
         "clip" : false,
@@ -6836,7 +6836,7 @@
     "expectId" : 372,
     "params" : {
       "height" : 20,
-      "name" : "Nome",
+      "name" : "Name",
       "parent" : 369,
       "props" : {
         "clip" : false,
@@ -6951,7 +6951,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "4 CPU · 8 GiB di memoria · disco 64 GiB",
+      "text" : "4 CPUs · 8 GiB of memory · 64 GiB disk",
       "x" : 0,
       "y" : 0
     }
@@ -6988,7 +6988,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "config.json danneggiato: la VM non si può aprire.",
+      "text" : "config.json is damaged: the VM can’t be opened.",
       "x" : 0,
       "y" : 0
     }
@@ -7056,7 +7056,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Mostra nel Finder",
+      "characters" : "Show in Finder",
       "id" : 382
     }
   },
@@ -7071,7 +7071,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Elimina",
+      "characters" : "Delete",
       "id" : 384
     }
   },
@@ -7241,7 +7241,7 @@
     "expectId" : 387,
     "params" : {
       "height" : 20,
-      "name" : "Sistema",
+      "name" : "System",
       "parent" : 386,
       "props" : {
         "clip" : false,
@@ -7360,7 +7360,7 @@
     "expectId" : 389,
     "params" : {
       "height" : 20,
-      "name" : "Nome",
+      "name" : "Name",
       "parent" : 386,
       "props" : {
         "clip" : false,
@@ -7475,7 +7475,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "4 CPU · 8 GiB di memoria · disco 64 GiB",
+      "text" : "4 CPUs · 8 GiB of memory · 64 GiB disk",
       "x" : 0,
       "y" : 0
     }
@@ -7512,7 +7512,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Clonazione in corso",
+      "text" : "Cloning in progress",
       "x" : 0,
       "y" : 0
     }
@@ -7580,7 +7580,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Avvia",
+      "characters" : "Start",
       "id" : 399
     }
   },
@@ -7595,7 +7595,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Dettagli",
+      "characters" : "Details",
       "id" : 401
     }
   },
@@ -7765,7 +7765,7 @@
     "expectId" : 404,
     "params" : {
       "height" : 20,
-      "name" : "Sistema",
+      "name" : "System",
       "parent" : 403,
       "props" : {
         "clip" : false,
@@ -7884,7 +7884,7 @@
     "expectId" : 406,
     "params" : {
       "height" : 20,
-      "name" : "Nome",
+      "name" : "Name",
       "parent" : 403,
       "props" : {
         "clip" : false,
@@ -7999,7 +7999,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "4 CPU · 8 GiB di memoria · disco 64 GiB",
+      "text" : "4 CPUs · 8 GiB of memory · 64 GiB disk",
       "x" : 0,
       "y" : 0
     }
@@ -8069,7 +8069,7 @@
         "fontSize" : 11,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Installazione di macOS · 42 % · circa 9 min",
+      "text" : "Installing macOS · 42% · about 9 min",
       "x" : 0,
       "y" : 0
     }
@@ -8217,7 +8217,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Mostra",
+      "characters" : "Show",
       "id" : 419
     }
   },
@@ -8232,7 +8232,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Annulla…",
+      "characters" : "Cancel…",
       "id" : 421
     }
   },
@@ -8409,7 +8409,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "scelta del sistema: normale · selezionato · disattivato",
+      "text" : "system choice: normal · selected · disabled",
       "x" : 0,
       "y" : 0
     }
@@ -8560,7 +8560,7 @@
     "expectId" : 428,
     "params" : {
       "height" : 20,
-      "name" : "Sistema",
+      "name" : "System",
       "parent" : 427,
       "props" : {
         "clip" : false,
@@ -8689,7 +8689,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "arm64 · 2,6 GiB",
+      "text" : "arm64 · 2.6 GiB",
       "x" : 0,
       "y" : 0
     }
@@ -8848,7 +8848,7 @@
     "expectId" : 433,
     "params" : {
       "height" : 20,
-      "name" : "Sistema",
+      "name" : "System",
       "parent" : 432,
       "props" : {
         "clip" : false,
@@ -8977,7 +8977,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "arm64 · 1,2 GiB",
+      "text" : "arm64 · 1.2 GiB",
       "x" : 0,
       "y" : 0
     }
@@ -9136,7 +9136,7 @@
     "expectId" : 438,
     "params" : {
       "height" : 20,
-      "name" : "Sistema",
+      "name" : "System",
       "parent" : 437,
       "props" : {
         "clip" : false,
@@ -9265,7 +9265,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "In arrivo",
+      "text" : "Coming soon",
       "x" : 0,
       "y" : 0
     }
@@ -9465,7 +9465,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "risorse della VM: entro i limiti · fuori limite",
+      "text" : "VM resources: within the limits · out of range",
       "x" : 0,
       "y" : 0
     }
@@ -9653,7 +9653,7 @@
         "fontSize" : 13,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Memoria",
+      "text" : "Memory",
       "x" : 0,
       "y" : 0
     }
@@ -9690,7 +9690,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Consigliati 4 GiB · al massimo 12 GiB",
+      "text" : "Recommended: 4 GiB · at most 12 GiB",
       "x" : 0,
       "y" : 0
     }
@@ -10269,7 +10269,7 @@
         "fontSize" : 13,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Memoria",
+      "text" : "Memory",
       "x" : 0,
       "y" : 0
     }
@@ -10306,7 +10306,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Oltre il limite: su questo Mac al massimo 12 GiB.",
+      "text" : "Over the limit: at most 12 GiB on this Mac.",
       "x" : 0,
       "y" : 0
     }
@@ -10879,7 +10879,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "opzione con spiegazione: attiva · disattivata · bloccata a VM accesa",
+      "text" : "option with an explanation: on · off · locked while the VM is running",
       "x" : 0,
       "y" : 0
     }
@@ -11067,7 +11067,7 @@
         "fontSize" : 13,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Sincronizza l'ora con il Mac",
+      "text" : "Sync the clock with the Mac",
       "x" : 0,
       "y" : 0
     }
@@ -11104,7 +11104,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Il Mac imposta l'ora della VM a ogni avvio e dopo la pausa.",
+      "text" : "The Mac sets the VM’s clock at every start and after a pause.",
       "x" : 0,
       "y" : 0
     }
@@ -11389,7 +11389,7 @@
         "fontSize" : 13,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Sincronizza l'ora con il Mac",
+      "text" : "Sync the clock with the Mac",
       "x" : 0,
       "y" : 0
     }
@@ -11426,7 +11426,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Il Mac imposta l'ora della VM a ogni avvio e dopo la pausa.",
+      "text" : "The Mac sets the VM’s clock at every start and after a pause.",
       "x" : 0,
       "y" : 0
     }
@@ -11711,7 +11711,7 @@
         "fontSize" : 13,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Sincronizza l'ora con il Mac",
+      "text" : "Sync the clock with the Mac",
       "x" : 0,
       "y" : 0
     }
@@ -11748,7 +11748,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Si può cambiare solo a VM arrestata.",
+      "text" : "Can be changed only with the VM stopped.",
       "x" : 0,
       "y" : 0
     }
@@ -12037,7 +12037,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "download · verifica · creazione · errore",
+      "text" : "download · verification · creation · error",
       "x" : 0,
       "y" : 0
     }
@@ -12192,7 +12192,7 @@
         "fontSize" : 15,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Download di Debian 13",
+      "text" : "Downloading Debian 13",
       "x" : 0,
       "y" : 0
     }
@@ -12229,7 +12229,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "cloud.debian.org · 0,4 GiB di 1,2 GiB · circa 2 min",
+      "text" : "cloud.debian.org · 0.4 GiB of 1.2 GiB · about 2 min",
       "x" : 0,
       "y" : 0
     }
@@ -12375,7 +12375,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Annulla",
+      "characters" : "Cancel",
       "id" : 504
     }
   },
@@ -12517,7 +12517,7 @@
         "fontSize" : 15,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Verifica dell'immagine",
+      "text" : "Verifying the image",
       "x" : 0,
       "y" : 0
     }
@@ -12554,7 +12554,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Verifica del checksum SHA-512 · 1,2 GiB",
+      "text" : "Verifying the SHA-512 checksum · 1.2 GiB",
       "x" : 0,
       "y" : 0
     }
@@ -12700,7 +12700,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Annulla",
+      "characters" : "Cancel",
       "id" : 512
     }
   },
@@ -12842,7 +12842,7 @@
         "fontSize" : 15,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Creazione di debian-13",
+      "text" : "Creating debian-13",
       "x" : 0,
       "y" : 0
     }
@@ -12879,7 +12879,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Copia del disco (64 GiB) e preparazione di cloud-init",
+      "text" : "Copying the disk (64 GiB) and preparing cloud-init",
       "x" : 0,
       "y" : 0
     }
@@ -13025,7 +13025,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Annulla",
+      "characters" : "Cancel",
       "id" : 520
     }
   },
@@ -13167,7 +13167,7 @@
         "fontSize" : 15,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Download non riuscito",
+      "text" : "Download failed",
       "x" : 0,
       "y" : 0
     }
@@ -13204,7 +13204,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Il checksum SHA-512 non corrisponde: il file scaricato è stato eliminato.",
+      "text" : "The SHA-512 checksum doesn’t match: the downloaded file was deleted.",
       "x" : 0,
       "y" : 0
     }
@@ -13273,7 +13273,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Annulla",
+      "characters" : "Cancel",
       "id" : 526
     }
   },
@@ -13288,7 +13288,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Riprova",
+      "characters" : "Try Again",
       "id" : 528
     }
   },
@@ -13459,7 +13459,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "contenitore della procedura: normale · avanti disattivato · errore",
+      "text" : "wizard container: normal · next disabled · error",
       "x" : 0,
       "y" : 0
     }
@@ -13837,7 +13837,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "Passo 3 di 5",
+      "text" : "Step 3 of 5",
       "x" : 0,
       "y" : 0
     }
@@ -13904,7 +13904,7 @@
         "fontSize" : 22,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Risorse",
+      "text" : "Resources",
       "x" : 0,
       "y" : 0
     }
@@ -13941,7 +13941,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Scegli quanta CPU, memoria e disco del Mac assegnare a debian-13.",
+      "text" : "Choose how much of the Mac’s CPU, memory and disk to give debian-13.",
       "x" : 0,
       "y" : 0
     }
@@ -14059,7 +14059,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Indietro",
+      "characters" : "Back",
       "id" : 559
     }
   },
@@ -14094,7 +14094,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Annulla",
+      "characters" : "Cancel",
       "id" : 562
     }
   },
@@ -14109,7 +14109,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Avanti",
+      "characters" : "Next",
       "id" : 564
     }
   },
@@ -14474,7 +14474,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "Passo 3 di 5",
+      "text" : "Step 3 of 5",
       "x" : 0,
       "y" : 0
     }
@@ -14541,7 +14541,7 @@
         "fontSize" : 22,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Risorse",
+      "text" : "Resources",
       "x" : 0,
       "y" : 0
     }
@@ -14578,7 +14578,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Scegli quanta CPU, memoria e disco del Mac assegnare a debian-13.",
+      "text" : "Choose how much of the Mac’s CPU, memory and disk to give debian-13.",
       "x" : 0,
       "y" : 0
     }
@@ -14696,7 +14696,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Indietro",
+      "characters" : "Back",
       "id" : 590
     }
   },
@@ -14731,7 +14731,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Annulla",
+      "characters" : "Cancel",
       "id" : 593
     }
   },
@@ -14746,7 +14746,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Avanti",
+      "characters" : "Next",
       "id" : 595
     }
   },
@@ -15111,7 +15111,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "Passo 3 di 5",
+      "text" : "Step 3 of 5",
       "x" : 0,
       "y" : 0
     }
@@ -15178,7 +15178,7 @@
         "fontSize" : 22,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Risorse",
+      "text" : "Resources",
       "x" : 0,
       "y" : 0
     }
@@ -15215,7 +15215,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Scegli quanta CPU, memoria e disco del Mac assegnare a debian-13.",
+      "text" : "Choose how much of the Mac’s CPU, memory and disk to give debian-13.",
       "x" : 0,
       "y" : 0
     }
@@ -15301,7 +15301,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Spazio su disco insufficiente: servono 64 GiB, ne restano 41 GiB.",
+      "text" : "Not enough disk space: 64 GiB needed, 41 GiB left on the Mac.",
       "x" : 0,
       "y" : 0
     }
@@ -15370,7 +15370,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Indietro",
+      "characters" : "Back",
       "id" : 622
     }
   },
@@ -15405,7 +15405,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Annulla",
+      "characters" : "Cancel",
       "id" : 625
     }
   },
@@ -15420,7 +15420,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Avanti",
+      "characters" : "Next",
       "id" : 627
     }
   },
@@ -15590,7 +15590,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "barra della finestra della VM, per stato",
+      "text" : "VM window toolbar, by state",
       "x" : 0,
       "y" : 0
     }
@@ -15806,7 +15806,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Pausa",
+      "characters" : "Pause",
       "id" : 640
     }
   },
@@ -15821,7 +15821,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Arresta",
+      "characters" : "Stop",
       "id" : 642
     }
   },
@@ -16024,7 +16024,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Pausa",
+      "characters" : "Pause",
       "id" : 650
     }
   },
@@ -16039,7 +16039,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Sospendi",
+      "characters" : "Suspend",
       "id" : 652
     }
   },
@@ -16054,7 +16054,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Arresta",
+      "characters" : "Stop",
       "id" : 654
     }
   },
@@ -16069,7 +16069,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Snapshot",
+      "characters" : "Snapshots",
       "id" : 656
     }
   },
@@ -16084,7 +16084,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Schermo intero",
+      "characters" : "Enter Full Screen",
       "id" : 658
     }
   },
@@ -16287,7 +16287,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Riprendi",
+      "characters" : "Resume",
       "id" : 666
     }
   },
@@ -16302,7 +16302,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Arresta",
+      "characters" : "Stop",
       "id" : 668
     }
   },
@@ -16505,7 +16505,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Avvia",
+      "characters" : "Start",
       "id" : 676
     }
   },
@@ -16520,7 +16520,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Snapshot",
+      "characters" : "Snapshots",
       "id" : 678
     }
   },
@@ -16535,7 +16535,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Impostazioni",
+      "characters" : "Settings",
       "id" : 680
     }
   },
@@ -16738,7 +16738,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Riprendi",
+      "characters" : "Resume",
       "id" : 688
     }
   },
@@ -16753,7 +16753,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Snapshot",
+      "characters" : "Snapshots",
       "id" : 690
     }
   },
@@ -16768,7 +16768,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Impostazioni",
+      "characters" : "Settings",
       "id" : 692
     }
   },
@@ -16971,7 +16971,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Riprova",
+      "characters" : "Try Again",
       "id" : 700
     }
   },
@@ -16986,7 +16986,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Dettagli",
+      "characters" : "Details",
       "id" : 702
     }
   },
@@ -17189,7 +17189,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Pausa",
+      "characters" : "Pause",
       "id" : 710
     }
   },
@@ -17204,7 +17204,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Sospendi",
+      "characters" : "Suspend",
       "id" : 712
     }
   },
@@ -17219,7 +17219,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Arresta",
+      "characters" : "Stop",
       "id" : 714
     }
   },
@@ -17234,7 +17234,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Snapshot",
+      "characters" : "Snapshots",
       "id" : 716
     }
   },
@@ -17249,7 +17249,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Accesso da terminale",
+      "characters" : "Terminal Access",
       "id" : 718
     }
   },
@@ -17264,7 +17264,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Schermo intero",
+      "characters" : "Enter Full Screen",
       "id" : 720
     }
   },
@@ -17447,7 +17447,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "libreria vuota · nessuno snapshot (S09) · VM arrestata o sospesa (S07)",
+      "text" : "empty library · no snapshots (S09) · stopped or suspended VM (S07)",
       "x" : 0,
       "y" : 0
     }
@@ -17672,7 +17672,7 @@
         "fontSize" : 22,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Il nido è vuoto",
+      "text" : "The nest is empty",
       "x" : 0,
       "y" : 0
     }
@@ -17710,7 +17710,7 @@
         "textAlign" : "center",
         "textAutoResize" : "height"
       },
-      "text" : "Crea la prima macchina virtuale: Nido scarica Debian 13, ne verifica l'immagine e la prepara in pochi minuti.",
+      "text" : "Create your first virtual machine: Nido downloads Debian 13, verifies the image and sets up the VM in a few minutes.",
       "x" : 0,
       "y" : 0
     }
@@ -17746,7 +17746,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Crea VM",
+      "characters" : "Create VM",
       "id" : 732
     }
   },
@@ -17868,7 +17868,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "conferme: download · eliminazione",
+      "text" : "confirmations: download · deletion",
       "x" : 0,
       "y" : 0
     }
@@ -18033,7 +18033,7 @@
         "fontSize" : 15,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Scaricare Debian 13?",
+      "text" : "Download Debian 13?",
       "x" : 0,
       "y" : 0
     }
@@ -18070,7 +18070,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "Nido scaricherà l'immagine da cloud.debian.org (1,2 GiB) e ne verificherà il checksum SHA-512 prima di usarla.",
+      "text" : "Nido will download the image from cloud.debian.org (1.2 GiB) and verify its SHA-512 checksum before using it.",
       "x" : 0,
       "y" : 0
     }
@@ -18139,7 +18139,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Annulla",
+      "characters" : "Cancel",
       "id" : 742
     }
   },
@@ -18154,7 +18154,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Scarica",
+      "characters" : "Download",
       "id" : 744
     }
   },
@@ -18306,7 +18306,7 @@
         "fontSize" : 15,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Eliminare debian-13?",
+      "text" : "Delete debian-13?",
       "x" : 0,
       "y" : 0
     }
@@ -18343,7 +18343,7 @@
         "sizingH" : "fill",
         "textAutoResize" : "height"
       },
-      "text" : "La VM e il suo disco (64 GiB) saranno eliminati da questo Mac. L'operazione non si può annullare.",
+      "text" : "The VM and its disk (64 GiB) will be deleted from this Mac. This can’t be undone.",
       "x" : 0,
       "y" : 0
     }
@@ -18412,7 +18412,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Annulla",
+      "characters" : "Cancel",
       "id" : 750
     }
   },
@@ -18427,7 +18427,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Elimina",
+      "characters" : "Delete",
       "id" : 752
     }
   },
@@ -18596,7 +18596,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "snapshot della VM: normale · corrente (lo stato attuale) · in creazione",
+      "text" : "VM snapshot: normal · current (the current state) · being created",
       "x" : 0,
       "y" : 0
     }
@@ -18784,7 +18784,7 @@
         "fontSize" : 13,
         "fontStyle" : "SemiBold"
       },
-      "text" : "prima-dell-aggiornamento",
+      "text" : "before-update",
       "x" : 0,
       "y" : 0
     }
@@ -18814,7 +18814,7 @@
     "expectId" : 761,
     "params" : {
       "height" : 20,
-      "name" : "Dettagli",
+      "name" : "Details",
       "parent" : 759,
       "props" : {
         "clip" : false,
@@ -18864,7 +18864,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "24 ott 2026, 10:42",
+      "text" : "Oct 24, 2026, 10:42 AM",
       "x" : 0,
       "y" : 0
     }
@@ -18999,7 +18999,7 @@
         "fontSize" : 11,
         "fontStyle" : "SemiBold"
       },
-      "text" : "con stato salvato",
+      "text" : "with saved state",
       "x" : 0,
       "y" : 0
     }
@@ -19068,7 +19068,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Ripristina",
+      "characters" : "Restore",
       "id" : 767
     }
   },
@@ -19083,7 +19083,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Elimina",
+      "characters" : "Delete",
       "id" : 769
     }
   },
@@ -19258,7 +19258,7 @@
         "fontSize" : 13,
         "fontStyle" : "SemiBold"
       },
-      "text" : "Stato attuale",
+      "text" : "Current state",
       "x" : 0,
       "y" : 0
     }
@@ -19288,7 +19288,7 @@
     "expectId" : 773,
     "params" : {
       "height" : 20,
-      "name" : "Dettagli",
+      "name" : "Details",
       "parent" : 771,
       "props" : {
         "clip" : false,
@@ -19343,7 +19343,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "Le modifiche dopo l'ultimo snapshot sono solo qui.",
+      "text" : "Changes since the last snapshot exist only here.",
       "x" : 0,
       "y" : 0
     }
@@ -19412,7 +19412,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Crea snapshot…",
+      "characters" : "Create Snapshot…",
       "id" : 780
     }
   },
@@ -19587,7 +19587,7 @@
         "fontSize" : 13,
         "fontStyle" : "SemiBold"
       },
-      "text" : "prima-dell-aggiornamento",
+      "text" : "before-update",
       "x" : 0,
       "y" : 0
     }
@@ -19617,7 +19617,7 @@
     "expectId" : 784,
     "params" : {
       "height" : 20,
-      "name" : "Dettagli",
+      "name" : "Details",
       "parent" : 782,
       "props" : {
         "clip" : false,
@@ -19664,7 +19664,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "Creazione in corso…",
+      "text" : "Creating…",
       "x" : 0,
       "y" : 0
     }
@@ -19733,7 +19733,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Ripristina",
+      "characters" : "Restore",
       "id" : 788
     }
   },
@@ -19748,7 +19748,7 @@
   {
     "command" : "text.set",
     "params" : {
-      "characters" : "Elimina",
+      "characters" : "Delete",
       "id" : 790
     }
   },
@@ -20244,7 +20244,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "un colore e un'etichetta per ogni stato della VM",
+      "text" : "one color and one label for each VM state",
       "x" : 0,
       "y" : 0
     }
@@ -20476,7 +20476,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "libreria: una scheda per VM, azioni secondo lo stato",
+      "text" : "library: one card per VM, actions by state",
       "x" : 0,
       "y" : 0
     }
@@ -20716,7 +20716,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "scelta del sistema: normale · selezionato · disattivato",
+      "text" : "system choice: normal · selected · disabled",
       "x" : 0,
       "y" : 0
     }
@@ -20900,7 +20900,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "risorse della VM: entro i limiti · fuori limite",
+      "text" : "VM resources: within the limits · out of range",
       "x" : 0,
       "y" : 0
     }
@@ -21076,7 +21076,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "opzione con spiegazione: attiva · disattivata · bloccata a VM accesa",
+      "text" : "option with an explanation: on · off · locked while the VM is running",
       "x" : 0,
       "y" : 0
     }
@@ -21260,7 +21260,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "download · verifica · creazione · errore",
+      "text" : "download · verification · creation · error",
       "x" : 0,
       "y" : 0
     }
@@ -21452,7 +21452,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "contenitore della procedura: normale · avanti disattivato · errore",
+      "text" : "wizard container: normal · next disabled · error",
       "x" : 0,
       "y" : 0
     }
@@ -21636,7 +21636,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "barra della finestra della VM, per stato",
+      "text" : "VM window toolbar, by state",
       "x" : 0,
       "y" : 0
     }
@@ -21852,7 +21852,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "libreria vuota · nessuno snapshot (S09) · VM arrestata o sospesa (S07)",
+      "text" : "empty library · no snapshots (S09) · stopped or suspended VM (S07)",
       "x" : 0,
       "y" : 0
     }
@@ -22020,7 +22020,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "conferme: download · eliminazione",
+      "text" : "confirmations: download · deletion",
       "x" : 0,
       "y" : 0
     }
@@ -22196,7 +22196,7 @@
         "fontSize" : 11,
         "fontStyle" : "Regular"
       },
-      "text" : "snapshot della VM: normale · corrente (lo stato attuale) · in creazione",
+      "text" : "VM snapshot: normal · current (the current state) · being created",
       "x" : 0,
       "y" : 0
     }

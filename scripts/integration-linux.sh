@@ -269,16 +269,16 @@ probe_start() {
     "$PROBE" run "$NIDO_ROOT" "$PROBE_VM" "$@" <"$fifo" >"$LOGS/probe-$PROBE_VM.log" 2>&1 &
     PROBE_PID=$!
     exec 7>"$fifo"
-    probe_wait "avviata:" 120 0 >/dev/null
+    probe_wait "started:" 120 0 >/dev/null
 }
 
 # probe_wait <regex> <seconds> <from line>: prints the first matching probe line after <from line>.
 probe_wait() {
     local regex="$1" deadline=$(( $(date +%s) + $2 )) from="$3" log="$LOGS/probe-$PROBE_VM.log" line
     while (( $(date +%s) < deadline )); do
-        line=$(tail -n +"$((from + 1))" "$log" | grep -E "$regex|ERRORE" | head -n 1 || true)
+        line=$(tail -n +"$((from + 1))" "$log" | grep -E "$regex|ERROR" | head -n 1 || true)
         if [[ -n "$line" ]]; then
-            [[ "$line" != *ERRORE* ]] || fail "nidoprobe: $line"
+            [[ "$line" != *ERROR* ]] || fail "nidoprobe: $line"
             printf '%s\n' "$line"
             return 0
         fi
@@ -298,7 +298,7 @@ probe_cmd() {
 
 # probe_stop: asks the probe to stop the VM and waits for it to exit.
 probe_stop() {
-    probe_cmd stop "arrestata:" 90 >/dev/null
+    probe_cmd stop "stopped:" 90 >/dev/null
     exec 7>&-
     wait "$PROBE_PID" || fail "nidoprobe exited with an error"
     PROBE_PID=""
@@ -377,7 +377,7 @@ code=$(http_code "$VM" http://127.0.0.1:11435/v1/models)
 [[ "$code" == "403" ]] || fail "bridge off: expected 403, got $code"
 
 echo "==> AI bridge on for $BRIDGE_MODEL: filtered list and streaming chat"
-probe_cmd "enable $BRIDGE_MODEL" "ponte acceso" 10 >/dev/null
+probe_cmd "enable $BRIDGE_MODEL" "bridge on" 10 >/dev/null
 models=$(guest "$VM" curl -s --max-time 20 http://127.0.0.1:11435/v1/models)
 [[ "$(jq -r '[.data[].id] | join(",")' <<<"$models")" == "$BRIDGE_MODEL" ]] || fail "model list: $models"
 guest "$VM" curl -sN --max-time 30 http://127.0.0.1:11435/v1/chat/completions \
@@ -390,7 +390,7 @@ chunks=$(grep -c '"content"' "$LOGS/bridge-chat.txt" || true)
 code=$(http_code "$VM" http://127.0.0.1:11435/v1/chat/completions -H "'Content-Type: application/json'" \
     -d "'{\"model\":\"Qwen/Qwen3-8B\",\"messages\":[{\"role\":\"user\",\"content\":\"x\"}]}'")
 [[ "$code" == "403" ]] || fail "model not allowed: expected 403, got $code"
-probe_cmd disable "ponte spento" 10 >/dev/null
+probe_cmd disable "bridge off" 10 >/dev/null
 code=$(http_code "$VM" http://127.0.0.1:11435/v1/models)
 [[ "$code" == "403" ]] || fail "bridge off again: expected 403, got $code"
 
@@ -408,13 +408,13 @@ if [[ "${NIDO_TEST_HF:-}" == "1" ]]; then
     probe_stop
     probe_start "$VM" --real-router
     wait_ssh "$VM" "$PROBE_PID" 120
-    probe_cmd "enable $NIDO_TEST_HF_MODEL" "ponte acceso" 10 >/dev/null
+    probe_cmd "enable $NIDO_TEST_HF_MODEL" "bridge on" 10 >/dev/null
     guest "$VM" curl -sN --max-time 120 http://127.0.0.1:11435/v1/chat/completions -H "'Content-Type: application/json'" \
         -d "'{\"model\":\"$NIDO_TEST_HF_MODEL\",\"stream\":true,\"max_tokens\":32,\"messages\":[{\"role\":\"user\",\"content\":\"Di ciao\"}]}'" \
         >"$LOGS/bridge-hf.txt"
     grep -q '^data: \[DONE\]' "$LOGS/bridge-hf.txt" || fail "real call without [DONE]"
     if grep -rq 'hf_' "$NIDO_ROOT/$VM.nidovm/ai-bridge.log" "$LOGS/bridge-hf.txt"; then fail "token in the log or in the response"; fi
-    probe_cmd disable "ponte spento" 10 >/dev/null
+    probe_cmd disable "bridge off" 10 >/dev/null
 fi
 
 mid_t=$(guest "$VM" cat /etc/machine-id)

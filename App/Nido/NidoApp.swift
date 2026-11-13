@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-@_spi(Testing) import NidoCore
+import NidoCore
 import SwiftUI
 
 @main

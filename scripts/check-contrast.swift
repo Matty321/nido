@@ -100,16 +100,16 @@ func fail(_ message: String) -> Never {
 }
 
 func formatRatio(_ value: Double) -> String {
-    String(format: "%.2f", value).replacingOccurrences(of: ".", with: ",")
+    String(format: "%.2f", value)
 }
 
 let arguments = CommandLine.arguments
 guard arguments.count == 2 else {
-    fail("Uso: swift scripts/check-contrast.swift <tokens.json>")
+    fail("usage: swift scripts/check-contrast.swift <tokens.json>")
 }
 let path = arguments[1]
 guard let data = FileManager.default.contents(atPath: path) else {
-    fail("Impossibile leggere \(path)")
+    fail("can’t read \(path)")
 }
 guard
     let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -117,13 +117,13 @@ guard
     let collections = meta["variableCollections"] as? [String: [String: Any]],
     let variables = meta["variables"] as? [String: [String: Any]]
 else {
-    fail("\(path) non è un export di variabili FigCraft valido (manca meta.variableCollections o meta.variables)")
+    fail("\(path) is not a valid FigCraft variables export (missing meta.variableCollections or meta.variables)")
 }
 guard let colorCollection = collections.values.first(where: { $0["name"] as? String == "Color" }),
       let collectionID = colorCollection["id"] as? String,
       let modes = colorCollection["modes"] as? [[String: Any]]
 else {
-    fail("\(path): manca la collezione di variabili \"Color\"")
+    fail("\(path): missing the \"Color\" variable collection")
 }
 
 /// Resolves a variable's value in a mode, following aliases by mode name.
@@ -158,27 +158,27 @@ var failures: [String] = []
 var report: [String] = []
 for mode in modes {
     guard let modeName = mode["name"] as? String else { continue }
-    report.append("Modo \(modeName):")
+    report.append("Mode \(modeName):")
     for rule in rules {
         guard let fgVar = colorVariables[rule.foreground], let bgVar = colorVariables[rule.background] else {
             let missing = colorVariables[rule.foreground] == nil ? rule.foreground : rule.background
             if rule.optional {
-                report.append("  - \(rule.foreground) su \(rule.background): saltata (manca \(missing))")
+                report.append("  - \(rule.foreground) on \(rule.background): skipped (missing \(missing))")
             } else {
-                failures.append("\(modeName): \(rule.foreground) su \(rule.background): manca il token \(missing)")
+                failures.append("\(modeName): \(rule.foreground) on \(rule.background): missing token \(missing)")
             }
             continue
         }
         guard let fg = resolveColor(fgVar, modeName: modeName)?.quantized,
               let bg = resolveColor(bgVar, modeName: modeName)?.quantized
         else {
-            failures.append("\(modeName): \(rule.foreground) su \(rule.background): valore non leggibile")
+            failures.append("\(modeName): \(rule.foreground) on \(rule.background): can’t read the value")
             continue
         }
         let ratio = contrast(fg, bg)
         let passed = ratio >= rule.minimum
-        let line = "\(rule.foreground) \(fg.hex) su \(rule.background) \(bg.hex): "
-            + "\(formatRatio(ratio)):1 (minimo \(formatRatio(rule.minimum)):1)"
+        let line = "\(rule.foreground) \(fg.hex) on \(rule.background) \(bg.hex): "
+            + "\(formatRatio(ratio)):1 (minimum \(formatRatio(rule.minimum)):1)"
         report.append("  \(passed ? "ok " : "NO ") \(line)")
         if !passed { failures.append("\(modeName): \(line)") }
     }
@@ -186,10 +186,10 @@ for mode in modes {
 
 print(report.joined(separator: "\n"))
 if failures.isEmpty {
-    print("Contrasto AA rispettato in tutti i modi (\(modes.count)).")
+    print("AA contrast met in all modes (\(modes.count)).")
     exit(0)
 } else {
-    print("\nCoppie sotto AA (\(failures.count)):")
+    print("\nPairs below AA (\(failures.count)):")
     for failure in failures { print("  - \(failure)") }
     exit(1)
 }

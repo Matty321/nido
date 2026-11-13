@@ -207,7 +207,8 @@
             let total: Int64 = 1_395_864_371
             switch behavior {
             case .phase2Fails:
-                let message = "spazio insufficiente nel disco della VM per scaricare \(model)"
+                // Coded like the real Guest Tools: the app shows it in its own language (GuestMessage).
+                let message = "model_disk_space_low: not enough disk space for the model: 1.3 GiB needed, 812 MiB free"
                 state.withLock { $0.steps["model-pull"] = step("model-pull", .failed, message, model: model) }
                 throw AIRuntimeError.stepFailed(step: "model-pull", message: message)
             case .phase2:

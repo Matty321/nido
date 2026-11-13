@@ -366,9 +366,14 @@ private final class ReleaseLog: Sendable {
         // Values come from the message: sizes in the language's number format, names as sent.
         #expect(GuestMessage.text("disk_space_low: not enough disk space: 5.2 GiB needed, 812 MiB free", language: "it")
             == "spazio su disco insufficiente: servono 5,2 GiB liberi, ce ne sono 812 MiB")
-        let separator = L10n.locale(for: "en").decimalSeparator ?? "."
-        #expect(GuestMessage.text("disk_space_low: not enough disk space: 5.2 GiB needed, 812 MiB free", language: "en")
-            == "not enough disk space: 5\(separator)2 GiB needed, 812 MiB free")
+        L10n.$testRegion.withValue("US") {
+            #expect(GuestMessage.text("disk_space_low: not enough disk space: 5.2 GiB needed, 812 MiB free", language: "en")
+                == "not enough disk space: 5.2 GiB needed, 812 MiB free")
+        }
+        L10n.$testRegion.withValue("IT") {
+            #expect(GuestMessage.text("disk_space_low: not enough disk space: 5.2 GiB needed, 812 MiB free", language: "en")
+                == "not enough disk space: 5,2 GiB needed, 812 MiB free")
+        }
         #expect(GuestMessage.text("model_missing_after_pull: the model qwen3:0.6b is missing after the download", language: "de")
             == "Das Modell qwen3:0.6b fehlt nach dem Download")
         #expect(GuestMessage.text("unexpected_error: unexpected error (KeyError: 'models': x)", language: "es")

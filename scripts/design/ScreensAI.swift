@@ -22,7 +22,7 @@ func aiScreenComponents(_ s: Script, board: Int) {
 
     // Avviso: a notice inside a view or a form, with an optional action (hidden by default).
     do {
-        let box = section("Avviso", "attenzione · errore · informazione: testo, dettaglio e azione facoltativa")
+        let box = section("Avviso", "warning · error · information: text, detail and optional action")
         var variants: [Int] = []
         for (kind, token) in [("attenzione", "statusPaused"), ("errore", "statusError"), ("informazione", "accent")] {
             let r = stack(s, "Tipo=\(kind)", parent: box, "horizontal", gap: "m", padding: ["m", "l"], width: 512,
@@ -41,7 +41,7 @@ func aiScreenComponents(_ s: Script, board: Int) {
                    props: ["sizingH": "fill", "textAutoResize": "height"])
             s.text("Dettaglio dell'avviso", parent: texts, size: "caption", color: "textSecondary",
                    props: ["sizingH": "fill", "textAutoResize": "height"])
-            let action = button(s, "secondary", "Azione", parent: r)
+            let action = button(s, "secondary", "Action", parent: r)
             s.set(action, ["visible": false])
             s.makeComponent(r)
             variants.append(r)
@@ -51,11 +51,11 @@ func aiScreenComponents(_ s: Script, board: Int) {
 
     // PassoPreparazione: one step of the provisioning (spec C), state in words and colour.
     do {
-        let box = section("PassoPreparazione", "passo del provisioning: fatto · in corso · in attesa · non riuscito")
+        let box = section("PassoPreparazione", "provisioning step: done · in progress · waiting · failed")
         var variants: [Int] = []
         let states: [(String, String, String)] = [
-            ("fatto", "statusRunning", "Fatto"), ("in corso", "accent", "In corso"),
-            ("in attesa", "statusStopped", "In attesa"), ("non riuscito", "statusError", "Non riuscito"),
+            ("fatto", "statusRunning", "Done"), ("in corso", "accent", "In progress"),
+            ("in attesa", "statusStopped", "Waiting"), ("non riuscito", "statusError", "Failed"),
         ]
         for (state, token, label) in states {
             let r = stack(s, "Stato=\(state)", parent: box, "horizontal", gap: "s", width: 360,
@@ -93,11 +93,11 @@ func aiScreenComponents(_ s: Script, board: Int) {
 
     // ProfileChoice: the profile of a new VM, or a template (spec E), as OSTile-like tiles.
     do {
-        let box = section("ProfileChoice", "profilo nella procedura: Debian Base · Debian AI Starter · Da modello")
+        let box = section("ProfileChoice", "profile in the wizard: Debian Base · Debian AI Starter · From Template")
         let profiles: [(String, String, String)] = [
-            ("base", "Debian Base", "2 vCPU · 2 GiB · pacchetti essenziali e Guest Tools"),
-            ("ai", "Debian AI Starter", "4 vCPU · 4 GiB · disco per Ollama e i modelli"),
-            ("modello", "Da modello", "Copia di una VM salvata come modello"),
+            ("base", "Debian Base", "2 vCPUs · 2 GiB · essential packages and Guest Tools"),
+            ("ai", "Debian AI Starter", "4 vCPUs · 4 GiB · disk space for Ollama and models"),
+            ("modello", "From Template", "A copy of a VM saved as a template"),
         ]
         var variants: [Int] = []
         for (selection, _, _) in profiles {
@@ -105,7 +105,7 @@ func aiScreenComponents(_ s: Script, board: Int) {
                           props: ["sizingH": "fixed"])
             // A little more room above the label than below it (it follows SystemChoice in the slot).
             let label = stack(s, "Etichetta", parent: c, "horizontal", props: ["paddingTop": 8])
-            s.text("Profilo", parent: label, size: "caption", style: "SemiBold", color: "textSecondary")
+            s.text("Profile", parent: label, size: "caption", style: "SemiBold", color: "textSecondary")
             let row = stack(s, "Profili", parent: c, "horizontal", gap: "m", props: ["sizingH": "fill"])
             for (key, title, detail) in profiles {
                 let on = key == selection
@@ -128,11 +128,11 @@ func aiScreenComponents(_ s: Script, board: Int) {
 
     // TemplateChoice: the templates in the wizard's "Da modello" path.
     do {
-        let box = section("TemplateChoice", "scelta del modello nella procedura")
+        let box = section("TemplateChoice", "template choice in the wizard")
         let c = stack(s, "TemplateChoice", parent: box, "vertical", gap: "s", width: 512, props: ["sizingH": "fixed"])
         let templates: [(String, String, Bool)] = [
-            ("debian-ai-base", "Debian AI Starter · 4 CPU · 8 GiB · disco 64 GiB · occupa 9,8 GiB", true),
-            ("debian-base", "Debian Base · 2 CPU · 2 GiB · disco 32 GiB · occupa 2,4 GiB", false),
+            ("debian-ai-base", "Debian AI Starter · 4 CPUs · 8 GiB · 64 GiB disk · uses 9.8 GiB", true),
+            ("debian-base", "Debian Base · 2 CPUs · 2 GiB · 32 GiB disk · uses 2.4 GiB", false),
         ]
         for (name, detail, on) in templates {
             let r = stack(s, name, parent: c, "horizontal", gap: "m", padding: ["m", "l"],
@@ -145,15 +145,15 @@ func aiScreenComponents(_ s: Script, board: Int) {
             s.text(name, parent: texts, size: "body", style: "SemiBold", color: "textPrimary")
             s.text(detail, parent: texts, size: "caption", color: "textSecondary")
         }
-        s.text("La nuova VM è una copia istantanea del modello: nessuno spazio in più finché i dischi non cambiano. "
-               + "Ha un'identità nuova e parte senza cartelle condivise e con il ponte AI spento.",
+        s.text("The new VM is an instant copy of the template: no extra space until the disks change. "
+               + "It has a new identity and starts without shared folders and with the AI bridge off.",
                parent: c, size: "caption", color: "textSecondary", props: ["sizingH": "fill", "textAutoResize": "height"])
         s.makeComponent(c)
     }
 
     // TemplateCard: a template in the library (spec E): no Avvia, a new VM or an edit instead.
     do {
-        let box = section("TemplateCard", "libreria: un modello di VM, che non si avvia")
+        let box = section("TemplateCard", "library: a VM template, which doesn’t start")
         let c = stack(s, "TemplateCard", parent: box, "vertical", gap: "m", padding: ["l"], width: 340,
                       props: ["sizingH": "fixed"])
         s.bind(c, "fill", "surface")
@@ -161,29 +161,29 @@ func aiScreenComponents(_ s: Script, board: Int) {
         s.stroke(c, "border")
         let top = stack(s, "Intestazione", parent: c, "horizontal", gap: "m",
                         props: ["crossAlign": "center", "sizingH": "fill"])
-        let glyph = stack(s, "Sistema", parent: top, "horizontal",
+        let glyph = stack(s, "System", parent: top, "horizontal",
                           props: ["mainAlign": "center", "crossAlign": "center", "sizingH": "fixed", "sizingV": "fixed"])
         s.set(glyph, ["width": 40, "height": 40])
         s.bind(glyph, "fill", "background")
         s.bind(glyph, "cornerRadius", "Radius/s")
         s.stroke(glyph, "border")
         s.text("D", parent: glyph, size: "headline", style: "Bold", color: "accent")
-        let names = stack(s, "Nome", parent: top, "vertical", gap: "xs", props: ["sizingH": "fill"])
+        let names = stack(s, "Name", parent: top, "vertical", gap: "xs", props: ["sizingH": "fill"])
         s.text("debian-ai-base", parent: names, size: "headline", style: "SemiBold", color: "textPrimary")
         s.text("Debian 13 · Debian AI Starter", parent: names, size: "caption", color: "textSecondary")
-        let pill = stack(s, "Modello", parent: top, "horizontal", padding: ["0", "s"],
+        let pill = stack(s, "Template", parent: top, "horizontal", padding: ["0", "s"],
                          props: ["crossAlign": "center", "sizingV": "fixed"])
         s.set(pill, ["height": 20])
         s.bind(pill, "fill", "background")
         s.bind(pill, "cornerRadius", "Radius/m")
         s.stroke(pill, "border")
-        s.text("Modello", parent: pill, size: "caption", style: "SemiBold", color: "textSecondary")
-        let details = stack(s, "Dettagli", parent: c, "vertical", gap: "xs", props: ["sizingH": "fill"])
-        s.text("4 CPU · 8 GiB di memoria · disco 64 GiB", parent: details, size: "caption", color: "textSecondary")
-        s.text("Occupa 9,8 GiB sul Mac", parent: details, size: "caption", color: "textSecondary")
+        s.text("Template", parent: pill, size: "caption", style: "SemiBold", color: "textSecondary")
+        let details = stack(s, "Details", parent: c, "vertical", gap: "xs", props: ["sizingH": "fill"])
+        s.text("4 CPUs · 8 GiB of memory · 64 GiB disk", parent: details, size: "caption", color: "textSecondary")
+        s.text("Uses 9.8 GiB on the Mac", parent: details, size: "caption", color: "textSecondary")
         let row = stack(s, "Azioni", parent: c, "horizontal", gap: "s", props: ["sizingH": "fill"])
-        button(s, "primary", "Nuova VM…", parent: row)
-        button(s, "secondary", "Modifica modello", parent: row)
+        button(s, "primary", "New VM…", parent: row)
+        button(s, "secondary", "Edit Template", parent: row)
         s.makeComponent(c)
     }
 }
@@ -307,8 +307,8 @@ func notice(_ s: Script, parent: Int, inSlot: Bool, kind: String, title: String,
 func slotToggle(_ s: Script, slot: Int, on: Bool, _ title: String, _ explanation: String) {
     let r = s.slotInsert(slot, component: s.variant("ToggleRow", on ? "Stato=attiva" : "Stato=disattivata"))
     s.set(r, ["sizingH": "fill"])
-    s.setText(s.find("Sincronizza l'ora con il Mac", in: r), title)
-    s.setText(s.find("Il Mac imposta l'ora della VM a ogni avvio e dopo la pausa.", in: r), explanation)
+    s.setText(s.find("Sync the clock with the Mac", in: r), title)
+    s.setText(s.find("The Mac sets the VM’s clock at every start and after a pause.", in: r), explanation)
 }
 
 /// A key and its value on one line, with a hairline under it (no box: it sits inside a panel).
@@ -335,7 +335,7 @@ func panel(_ s: Script, parent: Int, _ title: String?, padding: [String] = ["l"]
 
 // MARK: - VM window views
 
-let appSettingsSections = ["Generale", "Hugging Face", "Informazioni"]
+let appSettingsSections = ["General", "Hugging Face", "About"]
 
 /// The views of the VM window under its toolbar; "Ponte AI attivo" at the end when the bridge is on.
 func vmTabs(_ s: Script, window w: Int, selected: String, bridge: Bool) {
@@ -344,7 +344,7 @@ func vmTabs(_ s: Script, window w: Int, selected: String, bridge: Bool) {
     s.set(strip, ["height": 36])
     s.bind(strip, "fill", "surface")
     s.stroke(strip, "border", props: ["strokeSides": [0, 0, 1, 0]])
-    for tab in ["Schermo", "Monitor", "AI"] {
+    for tab in ["Screen", "Monitor", "AI"] {
         let on = tab == selected
         // The label, then a 2 pt underline (accent on the chosen view) on the strip's bottom edge.
         let item = stack(s, tab, parent: strip, "vertical", props: ["sizingV": "fill", "crossAlign": "center",
@@ -401,36 +401,36 @@ func monitorMessage(_ s: Script, window w: Int, state: String) {
                         props: ["mainAlign": "center", "crossAlign": "center"])
     let empty = s.instance(of: s.firstLayerComponent("EmptyState"), parent: area)
     let egg = s.children(of: s.find("Nido", in: empty))[0]
-    let label = s.find("Crea VM", in: empty)
+    let label = s.find("Create VM", in: empty)
     let action = s.parent(of: label)
     let texts: [String: (String, String, String?, String)] = [
-        "ferma": ("La VM non è in esecuzione",
-                  "Avvia debian-ai per vedere CPU, memoria e disco. Il monitor legge i dati dal guest via vsock, "
-                    + "senza passare dalla rete.", nil, "statusStopped"),
-        "attesa": ("In attesa del monitor del guest",
-                   "debian-ai sta completando l'avvio. Al primo avvio cloud-init installa pacchetti e Guest Tools: "
-                    + "possono servire alcuni minuti.", nil, "accent"),
-        "assenti": ("Guest Tools non installati",
-                    "debian-ai non ha il monitor del guest: è stata creata senza Guest Tools o con una versione di Nido "
-                     + "precedente. Nido li installa via SSH senza toccare pacchetti, file e modelli; il monitor "
-                     + "risponde dal prossimo riavvio.", "Installa Guest Tools", "statusPaused"),
-        "versione": ("Versione dei Guest Tools non riconosciuta",
-                     "I Guest Tools di debian-ai rispondono con la versione 3.0, che questa versione di Nido non conosce. "
-                      + "Aggiorna Nido, oppure reinstalla i Guest Tools della versione di Nido che usi.",
-                     "Reinstalla Guest Tools", "statusPaused"),
-        "errore": ("Monitor non raggiungibile",
-                   "Nessuna risposta entro 2 secondi. Nido riprova da solo ogni 3 secondi: la VM continua a "
-                    + "funzionare normalmente.", "Riprova ora", "statusError"),
+        "ferma": ("The VM isn’t running",
+                  "Start debian-ai to see CPU, memory and disk. The monitor reads the data from the guest over vsock, "
+                    + "without going through the network.", nil, "statusStopped"),
+        "attesa": ("Waiting for the guest monitor",
+                   "debian-ai is still starting. On the first boot cloud-init installs packages and Guest Tools: "
+                    + "this can take a few minutes.", nil, "accent"),
+        "assenti": ("Guest Tools not installed",
+                    "debian-ai has no guest monitor: it was created without Guest Tools or with an earlier version of Nido. "
+                     + "Nido installs them over SSH without touching packages, files or models; the monitor "
+                     + "starts responding after the next restart.", "Install Guest Tools", "statusPaused"),
+        "versione": ("Guest Tools version not recognized",
+                     "The Guest Tools of debian-ai report version 3.0, which this version of Nido doesn’t recognize. "
+                      + "Update Nido, or reinstall the Guest Tools that come with your version of Nido.",
+                     "Reinstall Guest Tools", "statusPaused"),
+        "errore": ("Monitor can’t be reached",
+                   "No answer within 2 seconds. Nido retries automatically every 3 seconds: the VM keeps "
+                    + "working normally.", "Try Again Now", "statusError"),
     ]
     let (title, body, actionLabel, eggToken) = texts[state]!
-    s.setText(s.find("Il nido è vuoto", in: empty), title)
+    s.setText(s.find("The nest is empty", in: empty), title)
     s.setText(s.find(emptyStateBody, in: empty), body)
     s.bind(egg, "fill", eggToken)
     if let actionLabel { s.setText(label, actionLabel) } else { s.set(action, ["visible": false]) }
     if state == "attesa" {
         let waiting = stack(s, "Attesa", parent: area, "vertical", gap: "s", props: ["crossAlign": "center"])
         indeterminateBar(s, parent: waiting, width: 240)
-        s.text("Nido chiede al guest ogni 3 secondi", parent: waiting, size: "caption", color: "textSecondary")
+        s.text("Nido asks the guest every 3 seconds", parent: waiting, size: "caption", color: "textSecondary")
     }
 }
 
@@ -440,7 +440,7 @@ func meterRow(_ s: Script, parent: Int, _ label: String, _ sub: String, value: S
     let r = stack(s, label, parent: parent, "horizontal", gap: "l", padding: ["m", "l"],
                   props: ["sizingH": "fill", "crossAlign": "center"])
     if !last { s.stroke(r, "border", props: ["strokeSides": [0, 0, 1, 0]]) }
-    let names = stack(s, "Nome", parent: r, "vertical", gap: "xs", width: 112, props: ["sizingH": "fixed"])
+    let names = stack(s, "Name", parent: r, "vertical", gap: "xs", width: 112, props: ["sizingH": "fixed"])
     s.text(label, parent: names, size: "body", style: "SemiBold", color: "textPrimary")
     s.text(sub, parent: names, size: "caption", color: "textSecondary")
     let mid = stack(s, "Misura", parent: r, "vertical", gap: "s", props: ["sizingH": "fill"])
@@ -465,46 +465,46 @@ func monitorValues(_ s: Script, window w: Int, state: String) {
     let old = state == "vecchi" || state == "ultimo"
     let area = fillArea(s, "Monitor", parent: w, gap: "l", padding: ["xl"])
     if state == "ultimo" {
-        notice(s, parent: area, inSlot: false, kind: "informazione", title: "Ultimo campione prima dell'arresto",
-               detail: "debian-ai si è fermata alle 10:44:02 senza che lo chiedessi. Questi sono i valori delle 10:43:58; "
-                + "il monitor riparte al prossimo avvio.")
+        notice(s, parent: area, inSlot: false, kind: "informazione", title: "Last sample before the VM stopped",
+               detail: "debian-ai stopped on its own at 10:44:02. These are the values from 10:43:58; "
+                + "the monitor resumes at the next start.")
     }
     let head = stack(s, "Stato del monitor", parent: area, "horizontal", gap: "m",
                      props: ["sizingH": "fill", "crossAlign": "center"])
     let caption: String = switch state {
-    case "vecchi": "Ultimo campione alle 10:42:18 · nessuna risposta da 14 secondi"
-    case "ultimo": "Campione delle 10:43:58 · la VM è arrestata"
-    default: "Aggiornato alle 10:42:18 · ogni 3 secondi, solo mentre questa vista è aperta"
+    case "vecchi": "Last sample at 10:42:18 · no answer for 14 seconds"
+    case "ultimo": "Sample from 10:43:58 · the VM is stopped"
+    default: "Updated at 10:42:18 · every 3 seconds, only while this view is open"
     }
     s.text(caption, parent: head, size: "caption", color: "textSecondary", props: ["features": ["tnum": true]])
     spacer(s, parent: head)
-    if state != "ultimo" { button(s, "secondary", "Aggiorna", parent: head) }
+    if state != "ultimo" { button(s, "secondary", "Refresh", parent: head) }
 
     let body = stack(s, "Corpo", parent: area, "horizontal", gap: "l", props: ["sizingH": "fill", "crossAlign": "min"])
-    let left = stack(s, "Risorse", parent: body, "vertical", props: ["sizingH": "fill", "clip": true])
+    let left = stack(s, "Resources", parent: body, "vertical", props: ["sizingH": "fill", "clip": true])
     s.bind(left, "fill", "surface")
     s.bind(left, "cornerRadius", "Radius/m")
     s.stroke(left, "border")
     let busy = state == "avvisi"
-    meterRow(s, parent: left, "CPU", "4 vCPU", value: busy ? "94 %" : "23 %", fraction: busy ? 0.94 : 0.23,
-             detail: busy ? "carico medio 1 min 3,86" : "carico medio 1 min 0,92",
-             warning: busy ? "CPU elevata" : nil, old: old)
-    meterRow(s, parent: left, "Memoria", "3,9 GiB", value: "54 %", fraction: 0.54,
-             detail: "2,1 GiB usati · 1,8 GiB disponibili", old: old)
-    meterRow(s, parent: left, "Swap", "Non configurata", value: "–", fraction: nil,
-             detail: "La VM non ha un'area di swap", old: old)
-    meterRow(s, parent: left, "Disco", "31,3 GiB · /", value: busy ? "93 %" : "39 %", fraction: busy ? 0.93 : 0.39,
-             detail: busy ? "29,1 GiB usati · 2,2 GiB liberi" : "12,1 GiB usati · 19,2 GiB liberi",
-             warning: busy ? "Disco quasi pieno" : nil, old: old, last: true)
+    meterRow(s, parent: left, "CPU", "4 vCPUs", value: busy ? "94%" : "23%", fraction: busy ? 0.94 : 0.23,
+             detail: busy ? "1-minute load average 3.86" : "1-minute load average 0.92",
+             warning: busy ? "High CPU" : nil, old: old)
+    meterRow(s, parent: left, "Memory", "3.9 GiB", value: "54%", fraction: 0.54,
+             detail: "2.1 GiB used · 1.8 GiB available", old: old)
+    meterRow(s, parent: left, "Swap", "Not set up", value: "–", fraction: nil,
+             detail: "The VM has no swap area", old: old)
+    meterRow(s, parent: left, "Disk", "31.3 GiB · /", value: busy ? "93%" : "39%", fraction: busy ? 0.93 : 0.39,
+             detail: busy ? "29.1 GiB used · 2.2 GiB free" : "12.1 GiB used · 19.2 GiB free",
+             warning: busy ? "Disk almost full" : nil, old: old, last: true)
 
     let right = stack(s, "Colonna", parent: body, "vertical", gap: "l", width: 320, props: ["sizingH": "fixed"])
-    let alerts = panel(s, parent: right, "Avvisi")
+    let alerts = panel(s, parent: right, "Warnings")
     var items: [String] = []
-    if busy { items = ["CPU elevata", "Disco quasi pieno"] }
-    if state == "vecchi" { items = ["Dati vecchi: il guest non risponde da più di 10 secondi"] }
+    if busy { items = ["High CPU", "Disk almost full"] }
+    if state == "vecchi" { items = ["Stale data: the guest hasn’t responded for more than 10 seconds"] }
     if items.isEmpty {
-        s.text(state == "ultimo" ? "Nessun avviso nell'ultimo campione."
-                : "Nessun avviso: CPU, memoria e disco sono entro le soglie dei Guest Tools.",
+        s.text(state == "ultimo" ? "No warnings in the last sample."
+                : "No warnings: CPU, memory and disk are within the Guest Tools’ thresholds.",
                parent: alerts, size: "caption", color: "textSecondary",
                props: ["sizingH": "fill", "textAutoResize": "height"])
     }
@@ -518,13 +518,13 @@ func monitorValues(_ s: Script, window w: Int, state: String) {
         s.text(item, parent: row, size: "body", color: "textPrimary",
                props: ["sizingH": "fill", "textAutoResize": "height"])
     }
-    let system = panel(s, parent: right, "Sistema")
+    let system = panel(s, parent: right, "System")
     s.set(system, ["gap": 0])
-    keyValue(s, parent: system, "Nome host", "debian-ai")
-    keyValue(s, parent: system, "Architettura", "aarch64")
+    keyValue(s, parent: system, "Host name", "debian-ai")
+    keyValue(s, parent: system, "Architecture", "aarch64")
     keyValue(s, parent: system, "Kernel", "6.12.48+deb13-arm64")
-    keyValue(s, parent: system, "Acceso da", "2 h 14 min")
-    keyValue(s, parent: system, "Guest Tools", "1.0.0 · protocollo 2.0", last: true)
+    keyValue(s, parent: system, "Uptime", "2 h 14 min")
+    keyValue(s, parent: system, "Guest Tools", "1.0.0 · protocol 2.0", last: true)
 }
 
 // MARK: - S14 Provisioning progress
@@ -541,7 +541,7 @@ let cloudInitLines = """
 /// The provisioning of debian-ai as a panel over the screen, in one phase:
 /// fase1, fase2, errore, log, chiave, completata.
 func provisioningScreen(_ s: Script, _ name: String, parent: Int?, mode: String, phase: String) -> ScreenRefs {
-    let w = aiVMWindow(s, name, parent: parent, mode: mode, state: "running", tab: "Schermo", bridge: false)
+    let w = aiVMWindow(s, name, parent: parent, mode: mode, state: "running", tab: "Screen", bridge: false)
     _ = console(s, parent: w, lines: phase == "fase1" ? cloudInitLines
                     : consoleLines.replacingOccurrences(of: "debian-13", with: "debian-ai"))
     let wide = phase == "log"
@@ -555,9 +555,9 @@ func provisioningScreen(_ s: Script, _ name: String, parent: Int?, mode: String,
 
     let head = stack(s, "Testa", parent: box, "vertical", gap: "xs", props: ["sizingH": "fill"])
     let (title, subtitle): (String, String) = switch phase {
-    case "fase1": ("Preparazione di debian-ai", "Primo avvio: cloud-init prepara il sistema")
-    case "completata": ("debian-ai è pronta", "Ollama e llama3.2:1b verificati alle 10:52")
-    default: ("Preparazione di debian-ai", "Ollama e il modello scelti alla creazione")
+    case "fase1": ("Setting up debian-ai", "First boot: cloud-init is preparing the system")
+    case "completata": ("debian-ai is ready", "Ollama and llama3.2:1b verified at 10:52")
+    default: ("Setting up debian-ai", "Ollama and the model chosen at creation")
     }
     s.text(title, parent: head, size: "headline", style: "SemiBold", color: "textPrimary")
     s.text(subtitle, parent: head, size: "caption", color: "textSecondary")
@@ -568,100 +568,100 @@ func provisioningScreen(_ s: Script, _ name: String, parent: Int?, mode: String,
         s.set(r, ["sizingH": "fill"])
         s.setText(s.find("Passo", in: r), label)
         if let status {
-            let old = ["fatto": "Fatto", "in corso": "In corso", "in attesa": "In attesa", "non riuscito": "Non riuscito"]
+            let old = ["fatto": "Done", "in corso": "In progress", "in attesa": "Waiting", "non riuscito": "Failed"]
             s.setText(s.find(old[state]!, in: r), status)
         }
     }
-    let model = "Modello llama3.2:1b"
+    let model = "Model llama3.2:1b"
     switch phase {
     case "fase1":
-        groupLabel(s, parent: steps, "Fase 1 · primo avvio")
-        step("VM creata", "fatto")
-        step("Debian avviato", "fatto")
-        step("Pacchetti essenziali e Guest Tools", "in corso")
-        step("Guest pronto (risponde il monitor)", "in attesa")
-        groupLabel(s, parent: steps, "Fase 2 · dopo l'avvio", spaceAbove: true)
+        groupLabel(s, parent: steps, "Phase 1 · first boot")
+        step("VM created", "fatto")
+        step("Debian started", "fatto")
+        step("Essential packages and Guest Tools", "in corso")
+        step("Guest ready (the monitor responds)", "in attesa")
+        groupLabel(s, parent: steps, "Phase 2 · after the start", spaceAbove: true)
         step("Ollama", "in attesa")
         step(model, "in attesa")
-        step("Verifica", "in attesa")
+        step("Verification", "in attesa")
     default:
-        step("Fase 1 · pacchetti e Guest Tools", "fatto", status: "Fatto alle 10:38")
-        groupLabel(s, parent: steps, "Fase 2 · dopo l'avvio", spaceAbove: true)
+        step("Phase 1 · packages and Guest Tools", "fatto", status: "Done at 10:38")
+        groupLabel(s, parent: steps, "Phase 2 · after the start", spaceAbove: true)
         switch phase {
         case "fase2":
             step("Ollama", "fatto")
-            step(model, "in corso", status: "46 %")
+            step(model, "in corso", status: "46%")
             meter(s, parent: steps, fraction: 0.46, width: width - 32)
-            s.text("0,6 GiB di 1,3 GiB · circa 1 min", parent: steps, size: "caption", color: "textSecondary",
+            s.text("0.6 GiB of 1.3 GiB · about 1 min", parent: steps, size: "caption", color: "textSecondary",
                    props: ["features": ["tnum": true]])
-            step("Verifica", "in attesa")
+            step("Verification", "in attesa")
         case "chiave":
             step("Ollama", "non riuscito")
             step(model, "in attesa")
-            step("Verifica", "in attesa")
+            step("Verification", "in attesa")
         case "completata":
             step("Ollama", "fatto")
-            step(model, "fatto", status: "1,3 GiB")
-            step("Verifica", "fatto")
+            step(model, "fatto", status: "1.3 GiB")
+            step("Verification", "fatto")
         default:  // errore, log
             step("Ollama", "fatto")
             step(model, "non riuscito")
-            step("Verifica", "in attesa")
+            step("Verification", "in attesa")
         }
     }
 
     switch phase {
     case "fase1":
-        s.text("debian-ai sarà usabile alla fine della fase 1. Ollama e il modello arrivano dopo, senza bloccarla.",
+        s.text("debian-ai will be usable at the end of phase 1. Ollama and the model come later, without blocking it.",
                parent: box, size: "caption", color: "textSecondary", props: ["sizingH": "fill", "textAutoResize": "height"])
     case "fase2":
-        s.text("debian-ai è già pronta: puoi usarla mentre Nido scarica il modello.",
+        s.text("debian-ai is ready: you can use it while Nido downloads the model.",
                parent: box, size: "caption", color: "textSecondary", props: ["sizingH": "fill", "textAutoResize": "height"])
     case "errore", "log":
-        notice(s, parent: box, inSlot: false, kind: "errore", title: "Download del modello non riuscito",
-               detail: "Spazio insufficiente nel disco di debian-ai: servono 1,3 GiB, ne restano 0,8 GiB. Libera spazio "
-                + "nella VM e premi Riprova: Nido riprende dal modello, Ollama resta installato.")
+        notice(s, parent: box, inSlot: false, kind: "errore", title: "Couldn’t download the model",
+               detail: "Not enough space on the disk of debian-ai: 1.3 GiB needed, 0.8 GiB left. Free up space "
+                + "in the VM and click Try Again: Nido resumes from the model, Ollama stays installed.")
     case "chiave":
-        notice(s, parent: box, inSlot: false, kind: "errore", title: "Nido non riesce a collegarsi a debian-ai via SSH",
-               detail: "La chiave ~/.ssh/id_ed25519 non è disponibile o non è autorizzata nella VM: se ha una passphrase "
-                + "aggiungila all'agente (ssh-add) dal Terminale, poi premi Riprova.")
+        notice(s, parent: box, inSlot: false, kind: "errore", title: "Nido can’t connect to debian-ai over SSH",
+               detail: "The key ~/.ssh/id_ed25519 isn’t available or isn’t authorized in the VM: if it has a passphrase, "
+                + "add it to the agent (ssh-add) from Terminal, then click Try Again.")
     default:
-        s.text("Usa Ollama dalla vista AI, oppure nella VM su 127.0.0.1:11434.",
+        s.text("Use Ollama from the AI view, or in the VM at 127.0.0.1:11434.",
                parent: box, size: "caption", color: "textSecondary", props: ["sizingH": "fill", "textAutoResize": "height"])
     }
     if wide {
         let log = stack(s, "Log", parent: box, "vertical", padding: ["m"], props: ["sizingH": "fill", "fills": [consoleFill]])
         s.bind(log, "cornerRadius", "Radius/s")
         s.plainText("""
-            10:46:02 ollama-install: versione fissata, sha256 verificato
-            10:46:09 ollama-install: fatto
+            10:46:02 ollama-install: pinned version, sha256 verified
+            10:46:09 ollama-install: done
             10:46:10 model-pull: llama3.2:1b
-            10:47:31 model-pull: 61 % (0,8 GiB di 1,3 GiB)
-            10:47:44 model-pull: errore: no space left on device
-            10:47:44 model-pull: non riuscito, file parziali rimossi
+            10:47:31 model-pull: 61% (0.8 GiB of 1.3 GiB)
+            10:47:44 model-pull: error: no space left on device
+            10:47:44 model-pull: failed, partial files removed
             """, parent: log, props: ["fontFamily": consoleFont, "fontStyle": "Regular", "fontSize": 12,
                                        "lineHeight": 18, "fills": [consoleText]])
-        s.text("/var/log/nido-provision.log in debian-ai · ultime righe, lette via SSH",
+        s.text("/var/log/nido-provision.log in debian-ai · last lines, read over SSH",
                parent: box, size: "caption", color: "textSecondary")
     }
     let row = stack(s, "Azioni", parent: box, "horizontal", gap: "s", props: ["sizingH": "fill", "mainAlign": "max"])
     switch phase {
-    case "fase1": button(s, "secondary", "Nascondi", parent: row)
+    case "fase1": button(s, "secondary", "Hide", parent: row)
     case "fase2":
-        button(s, "secondary", "Mostra log", parent: row)
-        button(s, "secondary", "Smetti di attendere", parent: row)
+        button(s, "secondary", "Show Log", parent: row)
+        button(s, "secondary", "Stop Waiting", parent: row)
     case "errore":
-        button(s, "secondary", "Mostra log", parent: row)
-        button(s, "primary", "Riprova", parent: row)
+        button(s, "secondary", "Show Log", parent: row)
+        button(s, "primary", "Try Again", parent: row)
     case "log":
-        button(s, "secondary", "Nascondi log", parent: row)
-        button(s, "primary", "Riprova", parent: row)
+        button(s, "secondary", "Hide Log", parent: row)
+        button(s, "primary", "Try Again", parent: row)
     case "chiave":
-        button(s, "secondary", "Riprova", parent: row)
-        button(s, "primary", "Apri il Terminale", parent: row)
+        button(s, "secondary", "Try Again", parent: row)
+        button(s, "primary", "Open Terminal", parent: row)
     default:
-        button(s, "secondary", "Chiudi", parent: row)
-        button(s, "primary", "Apri la vista AI", parent: row)
+        button(s, "secondary", "Close", parent: row)
+        button(s, "primary", "Open AI View", parent: row)
     }
     return ["window": w]
 }
@@ -699,34 +699,34 @@ func listRow(_ s: Script, parent: Int, _ title: String, _ detail: String?, last:
 /// The Locale mode: assente (Ollama not installed), modelli (with a download), nota (after
 /// "Smetti di attendere"), chat (streaming answer).
 func localeMode(_ s: Script, parent: Int, state: String) {
-    let (c, head) = aiColumn(s, parent: parent, "Locale", "Ollama dentro debian-ai: i testi non escono dal Mac.")
+    let (c, head) = aiColumn(s, parent: parent, "Local", "Ollama inside debian-ai: the text doesn’t leave the Mac.")
     let badge = s.instance(of: s.variant("StatusBadge", state == "assente" ? "Stato=stopped" : "Stato=running"),
                            parent: head)
-    s.setText(s.children(of: badge)[1], state == "assente" ? "Non installato" : "Attivo")
+    s.setText(s.children(of: badge)[1], state == "assente" ? "Not installed" : "Active")
     if state == "assente" {
-        s.text("Nido installa Ollama dalle fonti ufficiali, nella versione verificata da Nido, e lo avvia come "
-               + "servizio della VM su 127.0.0.1:11434.",
+        s.text("Nido installs Ollama from the official sources, in the version Nido has verified, and runs it as a "
+               + "service of the VM on 127.0.0.1:11434.",
                parent: c, size: "body", color: "textPrimary", props: ["sizingH": "fill", "textAutoResize": "height"])
-        s.text("Ollama usa la CPU della VM: Virtualization non offre una GPU ai guest Linux, quindi conviene un "
-               + "modello piccolo. Ci vuole qualche minuto; puoi usare la VM nel frattempo.",
+        s.text("Ollama uses the VM’s CPU: Virtualization offers no GPU to Linux guests, so a "
+               + "small model is best. It takes a few minutes; you can use the VM in the meantime.",
                parent: c, size: "caption", color: "textSecondary", props: ["sizingH": "fill", "textAutoResize": "height"])
         let row = stack(s, "Azioni", parent: c, "horizontal", gap: "s")
-        button(s, "primary", "Installa Ollama", parent: row)
+        button(s, "primary", "Install Ollama", parent: row)
         return
     }
     let actions = stack(s, "Azioni di Ollama", parent: c, "horizontal", gap: "s", props: ["sizingH": "fill"])
-    for label in ["Verifica", "Riavvia", "Ferma", "Aggiorna"] { button(s, "secondary", label, parent: actions) }
+    for label in ["Verify", "Restart", "Stop", "Refresh"] { button(s, "secondary", label, parent: actions) }
     spacer(s, parent: actions)
-    button(s, "secondary", "Disinstalla…", parent: actions)
+    button(s, "secondary", "Uninstall…", parent: actions)
     if state == "nota" {
         notice(s, parent: c, inSlot: false, kind: "informazione",
-               title: "Nido ha smesso di attendere: l'operazione continua nella VM e lo stato si aggiorna da solo.",
+               title: "Nido stopped waiting: the operation continues in the VM and the status updates automatically.",
                detail: nil)
     }
-    segmented(s, parent: c, ["Modelli", "Chat"], selected: state == "chat" ? "Chat" : "Modelli")
+    segmented(s, parent: c, ["Models", "Chat"], selected: state == "chat" ? "Chat" : "Models")
     if state == "chat" {
-        let picker = stack(s, "Modello", parent: c, "horizontal", gap: "s", props: ["sizingH": "fill", "crossAlign": "center"])
-        s.text("Modello", parent: picker, size: "caption", style: "SemiBold", color: "textSecondary")
+        let picker = stack(s, "Model", parent: c, "horizontal", gap: "s", props: ["sizingH": "fill", "crossAlign": "center"])
+        s.text("Model", parent: picker, size: "caption", style: "SemiBold", color: "textSecondary")
         textField(s, parent: picker, "llama3.2:1b", width: 160)
         let talk = stack(s, "Conversazione", parent: c, "vertical", gap: "m", padding: ["m"],
                          props: ["sizingH": "fill", "sizingV": "fill"])
@@ -737,47 +737,47 @@ func localeMode(_ s: Script, parent: Int, state: String) {
                            props: ["sizingH": "fixed"])
         s.bind(bubble, "fill", "accent")
         s.bind(bubble, "cornerRadius", "Radius/m")
-        s.text("Riassumi in tre punti cosa fa cloud-init al primo avvio.", parent: bubble, size: "body",
+        s.text("Summarize in three points what cloud-init does at first boot.", parent: bubble, size: "body",
                color: "accentText", props: ["sizingH": "fill", "textAutoResize": "height"])
         let answer = stack(s, "Risposta", parent: talk, "vertical", gap: "xs", props: ["sizingH": "fill"])
-        s.text("1. Legge la configurazione dal disco seed (NoCloud).\n2. Crea l'utente, mette la chiave SSH e "
-               + "configura la rete.",
+        s.text("1. Reads the configuration from the seed disk (NoCloud).\n2. Creates the user, adds the SSH key and "
+               + "sets up the network.",
                parent: answer, size: "body", color: "textPrimary", props: ["sizingH": "fill", "textAutoResize": "height"])
         // The answer arrives in pieces: the cursor follows the last word.
         let last = stack(s, "Ultima riga", parent: answer, "horizontal", gap: "xs", props: ["crossAlign": "center"])
-        s.text("3. Installa i pacchetti richiesti e", parent: last, size: "body", color: "textPrimary")
+        s.text("3. Installs the required packages and", parent: last, size: "body", color: "textPrimary")
         let caret = s.frame("Cursore", parent: last, width: 7, height: 15)
         s.bind(caret, "fill", "accent")
-        s.text("llama3.2:1b sta rispondendo · sulla CPU di debian-ai", parent: talk, size: "caption",
+        s.text("llama3.2:1b is answering · on debian-ai’s CPU", parent: talk, size: "caption",
                color: "textSecondary")
         let input = stack(s, "Scrivi", parent: c, "horizontal", gap: "s", props: ["sizingH": "fill", "crossAlign": "center"])
-        textField(s, parent: input, "Scrivi un messaggio", placeholder: true)
-        button(s, "secondary", "Interrompi", parent: input)
-        s.text("La chat resta in debian-ai: nulla esce dal Mac e Nido non la salva.", parent: c, size: "caption",
+        textField(s, parent: input, "Write a message", placeholder: true)
+        button(s, "secondary", "Stop", parent: input)
+        s.text("The chat stays in debian-ai: nothing leaves the Mac and Nido doesn’t save it.", parent: c, size: "caption",
                color: "textSecondary")
         return
     }
-    let list = stack(s, "Modelli", parent: c, "vertical", props: ["sizingH": "fill"])
-    for (model, size) in [("llama3.2:1b", "1,3 GiB"), ("qwen3:1.7b", "1,4 GiB")] {
+    let list = stack(s, "Models", parent: c, "vertical", props: ["sizingH": "fill"])
+    for (model, size) in [("llama3.2:1b", "1.3 GiB"), ("qwen3:1.7b", "1.4 GiB")] {
         let r = listRow(s, parent: list, model, size)
-        button(s, "secondary", "Rimuovi…", parent: r)
+        button(s, "secondary", "Remove…", parent: r)
     }
     if state == "modelli" {
         let r = listRow(s, parent: list, "qwen3:4b", nil, last: true)
         let progress = stack(s, "Avanzamento", parent: s.find("Testo", in: r), "vertical", gap: "xs",
                              props: ["sizingH": "fill"])
         meter(s, parent: progress, fraction: 0.44, width: 300)
-        s.text("Download · 1,1 GiB di 2,5 GiB · 44 %", parent: progress, size: "caption", color: "textSecondary",
+        s.text("Download · 1.1 GiB of 2.5 GiB · 44%", parent: progress, size: "caption", color: "textSecondary",
                props: ["features": ["tnum": true]])
-        button(s, "secondary", "Smetti di attendere", parent: r)
+        button(s, "secondary", "Stop Waiting", parent: r)
     }
-    let pull = stack(s, "Scarica", parent: c, "vertical", gap: "xs", props: ["sizingH": "fill"])
-    groupLabel(s, parent: pull, "Scarica un modello")
+    let pull = stack(s, "Download", parent: c, "vertical", gap: "xs", props: ["sizingH": "fill"])
+    groupLabel(s, parent: pull, "Download a model")
     let field = stack(s, "Riga", parent: pull, "horizontal", gap: "s", props: ["sizingH": "fill", "crossAlign": "center"])
-    textField(s, parent: field, "nome:variante, per esempio llama3.2:1b", placeholder: true, mono: false)
-    button(s, state == "modelli" ? "disabled" : "primary", "Scarica", parent: field)
-    s.text(state == "modelli" ? "Un'operazione alla volta: attendi la fine del download in corso."
-            : "Dalla libreria di Ollama. Con 4 GiB di memoria scegli un modello piccolo.",
+    textField(s, parent: field, "name:variant, for example llama3.2:1b", placeholder: true, mono: false)
+    button(s, state == "modelli" ? "disabled" : "primary", "Download", parent: field)
+    s.text(state == "modelli" ? "One operation at a time: wait for the current download to finish."
+            : "From the Ollama library. With 4 GiB of memory, choose a small model.",
            parent: pull, size: "caption", color: "textSecondary", props: ["sizingH": "fill", "textAutoResize": "height"])
 }
 
@@ -785,49 +785,49 @@ func localeMode(_ s: Script, parent: Int, state: String) {
 /// bridge could not start in this session, the Mac has no token).
 func remoteMode(_ s: Script, parent: Int, state: String) {
     let on = state != "spento"
-    let (c, head) = aiColumn(s, parent: parent, "Remoto",
-                             "Hugging Face tramite il ponte di Nido: i testi escono dal Mac.")
+    let (c, head) = aiColumn(s, parent: parent, "Remote",
+                             "Hugging Face through Nido’s bridge: the text leaves the Mac.")
     // The VM's policy (the switch); whether the bridge works is the "Ponte AI attivo" indicator.
-    s.text(on ? "Acceso" : "Spento", parent: head, size: "body", style: "SemiBold",
+    s.text(on ? "On" : "Off", parent: head, size: "body", style: "SemiBold",
            color: on ? "textPrimary" : "textSecondary")
     switchControl(s, parent: head, on: on)
     if state == "spento" {
-        s.text("Con il ponte, i programmi di debian-ai usano i modelli di Hugging Face Inference Providers come "
-               + "un'API compatibile OpenAI. Il tuo token resta sul Mac: la VM non lo riceve mai.",
+        s.text("With the bridge, programs in debian-ai use models from Hugging Face Inference Providers as "
+               + "an OpenAI-compatible API. Your token stays on the Mac: the VM never receives it.",
                parent: c, size: "body", color: "textPrimary", props: ["sizingH": "fill", "textAutoResize": "height"])
         let facts = stack(s, "Dati", parent: c, "vertical", props: ["sizingH": "fill"])
-        keyValue(s, parent: facts, "Token", "Salvato nel Portachiavi del Mac", keyWidth: 120)
-        keyValue(s, parent: facts, "Limiti iniziali", "200 000 token al giorno · 20 richieste al minuto", keyWidth: 120)
-        keyValue(s, parent: facts, "Registro", "Ora, modello, token ed esito; mai prompt né risposte", keyWidth: 120,
+        keyValue(s, parent: facts, "Token", "Saved in the Mac’s Keychain", keyWidth: 120)
+        keyValue(s, parent: facts, "Default limits", "200 000 tokens per day · 20 requests per minute", keyWidth: 120)
+        keyValue(s, parent: facts, "Log", "Time, model, tokens and outcome; never prompts or answers", keyWidth: 120,
                  last: true)
-        s.text("Alla prima attivazione Nido ti mostra cosa esce dal Mac. La modalità Locale resta sempre disponibile.",
+        s.text("The first time you turn it on, Nido shows you what leaves the Mac. Local mode is always available.",
                parent: c, size: "caption", color: "textSecondary", props: ["sizingH": "fill", "textAutoResize": "height"])
         let row = stack(s, "Azioni", parent: c, "horizontal", gap: "s")
-        button(s, "primary", "Attiva il ponte…", parent: row)
+        button(s, "primary", "Turn On the Bridge…", parent: row)
         return
     }
     if state == "guasto" {
-        notice(s, parent: c, inSlot: false, kind: "errore", title: "Il ponte AI non è disponibile in questa sessione",
-               detail: "Il registro ai-bridge.log della VM non si apre o la VM non ha il dispositivo vsock. Le richieste "
-                + "della VM non arrivano a Hugging Face; riavvia la VM per riprovare.")
-        notice(s, parent: c, inSlot: false, kind: "attenzione", title: "Manca il token di Hugging Face",
-               detail: "Finché manca, le richieste della VM ricevono un errore 401 e nulla esce dal Mac.",
-               action: "Apri le Impostazioni")
+        notice(s, parent: c, inSlot: false, kind: "errore", title: "The AI bridge isn’t available in this session",
+               detail: "The VM’s ai-bridge.log can’t be opened, or the VM has no vsock device. The VM’s requests "
+                + "don’t reach Hugging Face; restart the VM to try again.")
+        notice(s, parent: c, inSlot: false, kind: "attenzione", title: "The Hugging Face token is missing",
+               detail: "Until then, the VM’s requests get a 401 error and nothing leaves the Mac.",
+               action: "Open Settings")
     }
-    segmented(s, parent: c, ["Modelli e limiti", "Uso e registro"],
-              selected: state == "registro" ? "Uso e registro" : "Modelli e limiti")
+    segmented(s, parent: c, ["Models and Limits", "Usage and Log"],
+              selected: state == "registro" ? "Usage and Log" : "Models and Limits")
     if state == "registro" {
-        let usage = stack(s, "Uso di oggi", parent: c, "vertical", gap: "xs", props: ["sizingH": "fill"])
-        groupLabel(s, parent: usage, "Uso di oggi")
+        let usage = stack(s, "Today’s usage", parent: c, "vertical", gap: "xs", props: ["sizingH": "fill"])
+        groupLabel(s, parent: usage, "Today’s usage")
         let figures = stack(s, "Cifre", parent: usage, "horizontal", gap: "s", props: ["crossAlign": "baseline"])
         s.text("12 480", parent: figures, size: "title", style: "SemiBold", color: "textPrimary",
                props: ["features": ["tnum": true]])
-        s.text("di 200 000 token · si azzera a mezzanotte", parent: figures, size: "caption", color: "textSecondary")
+        s.text("of 200 000 tokens · resets at midnight", parent: figures, size: "caption", color: "textSecondary")
         meter(s, parent: usage, fraction: 0.0624, width: 466)
-        let log = stack(s, "Registro", parent: c, "vertical", props: ["sizingH": "fill"])
-        groupLabel(s, parent: log, "Ultime chiamate")
-        let columns: [(String, Double?)] = [("Ora", 60), ("Modello e provider", nil), ("Token", 80), ("Esito", 96),
-                                            ("Durata", 44)]
+        let log = stack(s, "Log", parent: c, "vertical", props: ["sizingH": "fill"])
+        groupLabel(s, parent: log, "Recent calls")
+        let columns: [(String, Double?)] = [("Time", 60), ("Model and Provider", nil), ("Token", 80), ("Outcome", 96),
+                                            ("Duration", 44)]
         func tableRow(_ cells: [String], header: Bool = false, last: Bool = false) {
             let r = stack(s, header ? "Intestazione" : cells[0], parent: log, "horizontal", gap: "s",
                           padding: ["xs", "0"], props: ["sizingH": "fill", "crossAlign": "center"])
@@ -846,39 +846,39 @@ func remoteMode(_ s: Script, parent: Int, state: String) {
             }
         }
         tableRow(columns.map(\.0), header: true)
-        tableRow(["10:41:07", "Llama-3.1-8B-Instruct\nnebius", "812 / 164", "Riuscita", "1,9 s"])
-        tableRow(["10:40:52", "Llama-3.1-8B-Instruct\nnebius", "640 / 211", "Riuscita", "2,4 s"])
-        tableRow(["10:40:50", "Llama-3.1-8B-Instruct", "0 / 0", "Oltre il limite", "0,0 s"])
-        tableRow(["10:38:15", "Qwen3-Coder-30B-A3B-Instruct\nnovita", "2 104 / 958", "Riuscita", "6,1 s"], last: true)
-        s.text("Il registro non contiene mai prompt né risposte.", parent: c, size: "caption", color: "textSecondary")
+        tableRow(["10:41:07", "Llama-3.1-8B-Instruct\nnebius", "812 / 164", "Succeeded", "1.9 s"])
+        tableRow(["10:40:52", "Llama-3.1-8B-Instruct\nnebius", "640 / 211", "Succeeded", "2.4 s"])
+        tableRow(["10:40:50", "Llama-3.1-8B-Instruct", "0 / 0", "Over the limit", "0.0 s"])
+        tableRow(["10:38:15", "Qwen3-Coder-30B-A3B-Instruct\nnovita", "2 104 / 958", "Succeeded", "6.1 s"], last: true)
+        s.text("The log never contains prompts or answers.", parent: c, size: "caption", color: "textSecondary")
         return
     }
-    let allowed = stack(s, "Modelli consentiti", parent: c, "vertical", props: ["sizingH": "fill"])
-    groupLabel(s, parent: allowed, "Modelli consentiti · prezzi dei provider per milione di token, indicativi")
+    let allowed = stack(s, "Allowed models", parent: c, "vertical", props: ["sizingH": "fill"])
+    groupLabel(s, parent: allowed, "Allowed models · provider prices per million tokens, for reference")
     let models: [(String, String)] = [
-        ("meta-llama/Llama-3.1-8B-Instruct", "nebius, novita · contesto 131 072 · 0,02 $ / 0,06 $"),
-        ("Qwen/Qwen3-Coder-30B-A3B-Instruct", "novita · contesto 262 144 · 0,10 $ / 0,30 $"),
+        ("meta-llama/Llama-3.1-8B-Instruct", "nebius, novita · context 131 072 · $0.02 / $0.06"),
+        ("Qwen/Qwen3-Coder-30B-A3B-Instruct", "novita · context 262 144 · $0.10 / $0.30"),
     ]
     for (index, (id, detail)) in models.enumerated() {
         let r = listRow(s, parent: allowed, id, detail, last: index == models.count - 1)
-        button(s, "secondary", "Rimuovi", parent: r)
+        button(s, "secondary", "Remove", parent: r)
     }
     if state == "guasto" { return }
     let more = stack(s, "Catalogo", parent: c, "horizontal", props: ["sizingH": "fill"])
-    button(s, "secondary", "Scegli dal catalogo…", parent: more)
+    button(s, "secondary", "Choose from Catalog…", parent: more)
     let limits = stack(s, "Limiti", parent: c, "vertical", gap: "xs", props: ["sizingH": "fill"])
-    groupLabel(s, parent: limits, "Limiti per debian-ai")
+    groupLabel(s, parent: limits, "Limits for debian-ai")
     let fields = stack(s, "Campi", parent: limits, "horizontal", gap: "s", props: ["sizingH": "fill"])
-    for (label, value) in [("Token al giorno", "200 000"), ("Richieste al minuto", "20"), ("max_tokens", "4 096")] {
+    for (label, value) in [("Tokens per day", "200 000"), ("Requests per minute", "20"), ("max_tokens", "4 096")] {
         let f = stack(s, label, parent: fields, "vertical", gap: "xs", props: ["sizingH": "fill"])
         s.text(label, parent: f, size: "caption", color: "textSecondary")
         textField(s, parent: f, value)
     }
     let guest = stack(s, "Nella VM", parent: c, "vertical", gap: "xs", props: ["sizingH": "fill"])
-    groupLabel(s, parent: guest, "Nella VM, con una chiave API qualsiasi")
-    let code = stack(s, "Codice", parent: guest, "horizontal", gap: "s", props: ["sizingH": "fill", "crossAlign": "center"])
+    groupLabel(s, parent: guest, "In the VM, with any API key")
+    let code = stack(s, "Code", parent: guest, "horizontal", gap: "s", props: ["sizingH": "fill", "crossAlign": "center"])
     textField(s, parent: code, "OPENAI_BASE_URL=http://127.0.0.1:11435/v1", mono: true)
-    button(s, "secondary", "Copia", parent: code)
+    button(s, "secondary", "Copy", parent: code)
 }
 
 /// S15: the AI view of debian-ai; `sheet` adds one over it: privacy, catalogo, catalogo-errore,
@@ -894,26 +894,26 @@ func aiScreen(_ s: Script, _ name: String, parent: Int?, mode: String, locale: S
     remoteMode(s, parent: area, state: remote)
     switch sheet {
     case "privacy":
-        let f = formSheet(s, window: w, title: "Attivare il ponte AI per debian-ai?",
-                          message: "Con il ponte attivo, i testi che i programmi della VM inviano al ponte escono dal Mac e "
-                            + "arrivano a Hugging Face e al provider che serve il modello, con il tuo token. Nido non "
-                            + "registra prompt né risposte, solo modello, token usati ed esito. La modalità Locale "
-                            + "(Ollama nella VM) resta sempre disponibile.")
-        s.text("Limiti iniziali, modificabili: 200 000 token al giorno, 20 richieste al minuto, max_tokens 4 096.",
+        let f = formSheet(s, window: w, title: "Turn on the AI bridge for debian-ai?",
+                          message: "With the bridge on, the text that the VM’s programs send to the bridge leaves the Mac and "
+                            + "reaches Hugging Face and the provider that serves the model, with your token. Nido doesn’t "
+                            + "log prompts or answers, only the model, tokens used and outcome. Local mode "
+                            + "(Ollama in the VM) is always available.")
+        s.text("Default limits, which you can change: 200 000 tokens per day, 20 requests per minute, max_tokens 4 096.",
                parent: f, size: "caption", color: "textSecondary", props: ["sizingH": "fill", "textAutoResize": "height"])
-        sheetActions(s, parent: f, action: "Attiva il ponte")
+        sheetActions(s, parent: f, action: "Turn On the Bridge")
     case "catalogo", "catalogo-errore":
         catalogSheet(s, window: w, failed: sheet == "catalogo-errore")
     case "rimuovi":
-        _ = confirmSheet(s, window: w, kind: "eliminazione", title: "Rimuovere llama3.2:1b da debian-ai?",
-                         message: "Il modello (1,3 GiB) viene cancellato dalla VM. Puoi scaricarlo di nuovo quando vuoi.",
-                         action: "Rimuovi")
+        _ = confirmSheet(s, window: w, kind: "eliminazione", title: "Remove llama3.2:1b from debian-ai?",
+                         message: "The model (1.3 GiB) is deleted from the VM. You can download it again whenever you want.",
+                         action: "Remove")
     case "disinstalla":
-        let f = formSheet(s, window: w, title: "Disinstallare Ollama da debian-ai?",
-                          message: "Nido ferma il servizio e rimuove Ollama dalla VM. I modelli restano, a meno che tu "
-                            + "non scelga di cancellarli.")
-        toggleRow(s, parent: f, on: false, "Cancella anche i modelli", "llama3.2:1b e qwen3:1.7b: 2,7 GiB nella VM.")
-        sheetActions(s, parent: f, action: "Disinstalla", kind: "destructive")
+        let f = formSheet(s, window: w, title: "Uninstall Ollama from debian-ai?",
+                          message: "Nido stops the service and removes Ollama from the VM. The models stay, unless you "
+                            + "choose to delete them.")
+        toggleRow(s, parent: f, on: false, "Also delete the models", "llama3.2:1b and qwen3:1.7b: 2.7 GiB in the VM.")
+        sheetActions(s, parent: f, action: "Uninstall", kind: "destructive")
     default:
         break
     }
@@ -930,25 +930,25 @@ func catalogSheet(_ s: Script, window w: Int, failed: Bool) {
     s.bind(sheet, "fill", "surfaceRaised")
     s.bind(sheet, "cornerRadius", "Radius/l")
     s.stroke(sheet, "border")
-    s.text("Modelli consentiti per debian-ai", parent: sheet, size: "headline", style: "SemiBold", color: "textPrimary")
-    s.text("Dal catalogo di Hugging Face Inference Providers. La VM vede solo i modelli scelti; i prezzi sono dei "
-           + "provider, per milione di token in ingresso / in uscita, solo indicativi.",
+    s.text("Allowed Models for debian-ai", parent: sheet, size: "headline", style: "SemiBold", color: "textPrimary")
+    s.text("From the Hugging Face Inference Providers catalog. The VM sees only the models you choose; prices are the "
+           + "providers’, per million input / output tokens, for reference only.",
            parent: sheet, size: "body", color: "textSecondary", props: ["sizingH": "fill", "textAutoResize": "height"])
     let tools = stack(s, "Strumenti", parent: sheet, "horizontal", gap: "s", props: ["sizingH": "fill", "crossAlign": "center"])
-    textField(s, parent: tools, "Cerca nel catalogo", placeholder: true)
-    button(s, failed ? "primary" : "secondary", failed ? "Riprova" : "Aggiorna", parent: tools)
+    textField(s, parent: tools, "Search the catalog", placeholder: true)
+    button(s, failed ? "primary" : "secondary", failed ? "Try Again" : "Refresh", parent: tools)
     if failed {
         notice(s, parent: sheet, inSlot: false, kind: "errore",
-               title: "Il catalogo dei modelli non è raggiungibile: controlla la connessione del Mac e riprova.",
-               detail: "I modelli già consentiti restano validi: la VM continua a usarli.")
+               title: "The model catalog can’t be reached: check the Mac’s connection and try again.",
+               detail: "The models already allowed stay valid: the VM keeps using them.")
     } else {
-        s.text("Aggiornato alle 10:12 · 4 di 118 modelli", parent: sheet, size: "caption", color: "textSecondary")
+        s.text("Updated at 10:12 · 4 of 118 models", parent: sheet, size: "caption", color: "textSecondary")
         let list = stack(s, "Catalogo", parent: sheet, "vertical", props: ["sizingH": "fill"])
         let rows: [(String, String, Bool)] = [
-            ("meta-llama/Llama-3.1-8B-Instruct", "nebius, novita · contesto 131 072 · 0,02 $ / 0,06 $", true),
-            ("Qwen/Qwen3-Coder-30B-A3B-Instruct", "novita · contesto 262 144 · 0,10 $ / 0,30 $", true),
-            ("openai/gpt-oss-20b", "groq, together · contesto 131 072 · 0,05 $ / 0,20 $", false),
-            ("deepseek-ai/DeepSeek-R1", "fireworks-ai · contesto 163 840 · prezzo non indicato", false),
+            ("meta-llama/Llama-3.1-8B-Instruct", "nebius, novita · context 131 072 · $0.02 / $0.06", true),
+            ("Qwen/Qwen3-Coder-30B-A3B-Instruct", "novita · context 262 144 · $0.10 / $0.30", true),
+            ("openai/gpt-oss-20b", "groq, together · context 131 072 · $0.05 / $0.20", false),
+            ("deepseek-ai/DeepSeek-R1", "fireworks-ai · context 163 840 · price not listed", false),
         ]
         for (index, (id, detail, on)) in rows.enumerated() {
             let r = stack(s, id, parent: list, "horizontal", gap: "m", padding: ["s", "0"],
@@ -960,7 +960,7 @@ func catalogSheet(_ s: Script, window w: Int, failed: Bool) {
             s.text(detail, parent: texts, size: "caption", color: "textSecondary")
         }
     }
-    sheetActions(s, parent: sheet, action: "Salva", disabled: false)
+    sheetActions(s, parent: sheet, action: "Save", disabled: false)
 }
 
 // MARK: - Library with templates, settings
@@ -975,45 +975,45 @@ func librarySection(_ s: Script, parent: Int, _ title: String, _ caption: String
 /// S01 with templates and a VM whose bridge is on; `sheet`: salva, modifica.
 func libraryTemplates(_ s: Script, _ name: String, parent: Int?, mode: String, sheet: String? = nil) -> ScreenRefs {
     let w = window(s, name, parent: parent, x: 0, y: 0, mode: mode)
-    let bar = toolbar(s, window: w, title: "Libreria", subtitle: "3 macchine virtuali · 2 modelli · 1 in esecuzione")
+    let bar = toolbar(s, window: w, title: "Library", subtitle: "3 virtual machines · 2 templates · 1 running")
     searchField(s, parent: bar)
-    button(s, "secondary", "Nuova VM", parent: bar)
+    button(s, "secondary", "New VM", parent: bar)
     let content = fillArea(s, "Contenuto", parent: w, gap: "l", padding: ["xl"])
-    librarySection(s, parent: content, "Macchine virtuali", "3")
+    librarySection(s, parent: content, "Virtual Machines", "3")
     let grid = stack(s, "Griglia", parent: content, "horizontal", gap: "l", props: ["sizingH": "fill"])
     func card(_ state: String, _ vm: String, _ caption: String) -> Int {
         let c = s.instance(of: s.variant("VMCard", "Stato=\(state)"), parent: grid)
         s.set(c, ["width": 340])
         s.setText(s.find("debian-13", in: c), vm)
-        s.setText(s.find("4 CPU · 8 GiB di memoria · disco 64 GiB", in: c), caption)
+        s.setText(s.find("4 CPUs · 8 GiB of memory · 64 GiB disk", in: c), caption)
         return c
     }
-    _ = card("suspended", "archivio", "2 CPU · 4 GiB di memoria · disco 32 GiB")
-    let ai = card("running", "debian-ai", "4 CPU · 4 GiB di memoria · disco 64 GiB")
-    s.set(s.find("Ponte AI attivo", in: ai), ["visible": true])
-    _ = card("stopped", "ricerca-01", "4 CPU · 8 GiB di memoria · disco 64 GiB")
-    librarySection(s, parent: content, "Modelli", "2 · 12,2 GiB sul Mac · non si avviano: servono a creare nuove VM")
-    let templates = stack(s, "Modelli", parent: content, "horizontal", gap: "l", props: ["sizingH": "fill"])
+    _ = card("suspended", "archivio", "2 CPUs · 4 GiB of memory · 32 GiB disk")
+    let ai = card("running", "debian-ai", "4 CPUs · 4 GiB of memory · 64 GiB disk")
+    s.set(s.find("AI bridge active", in: ai), ["visible": true])
+    _ = card("stopped", "ricerca-01", "4 CPUs · 8 GiB of memory · 64 GiB disk")
+    librarySection(s, parent: content, "Templates", "2 · 12.2 GiB on the Mac · they don’t start: they’re for creating new VMs")
+    let templates = stack(s, "Templates", parent: content, "horizontal", gap: "l", props: ["sizingH": "fill"])
     _ = s.instance(of: s.firstLayerComponent("TemplateCard"), parent: templates)
     let base = s.instance(of: s.firstLayerComponent("TemplateCard"), parent: templates)
     s.setText(s.find("debian-ai-base", in: base), "debian-base")
     s.setText(s.find("Debian 13 · Debian AI Starter", in: base), "Debian 13 · Debian Base")
-    s.setText(s.find("4 CPU · 8 GiB di memoria · disco 64 GiB", in: base), "2 CPU · 2 GiB di memoria · disco 32 GiB")
-    s.setText(s.find("Occupa 9,8 GiB sul Mac", in: base), "Occupa 2,4 GiB sul Mac")
+    s.setText(s.find("4 CPUs · 8 GiB of memory · 64 GiB disk", in: base), "2 CPUs · 2 GiB of memory · 32 GiB disk")
+    s.setText(s.find("Uses 9.8 GiB on the Mac", in: base), "Uses 2.4 GiB on the Mac")
     switch sheet {
     case "salva":
-        let f = formSheet(s, window: w, title: "Salvare ricerca-01 come modello?",
-                          message: "ricerca-01 diventa un modello: non si avvia più e serve a creare nuove VM con una copia "
-                            + "istantanea del disco. Per aggiornarlo scegli Modifica modello, poi salvalo di nuovo.")
+        let f = formSheet(s, window: w, title: "Save ricerca-01 as a template?",
+                          message: "ricerca-01 becomes a template: it no longer starts and is used to create new VMs with an instant copy "
+                            + "of its disk. To update it, choose Edit Template, then save it again.")
         notice(s, parent: f, inSlot: false, kind: "informazione",
-               title: "Le VM create dal modello partono senza cartelle condivise e con il ponte AI spento.",
-               detail: "Ognuna ha un'identità nuova: indirizzo MAC, nome host e chiavi host SSH.")
-        sheetActions(s, parent: f, action: "Salva come modello")
+               title: "VMs created from the template start without shared folders and with the AI bridge off.",
+               detail: "Each one has a new identity: MAC address, host name and SSH host keys.")
+        sheetActions(s, parent: f, action: "Save as Template")
     case "modifica":
-        _ = confirmSheet(s, window: w, kind: "download", title: "Modificare debian-ai-base?",
-                         message: "Il modello torna una VM che puoi avviare e aggiornare. Quando hai finito, salvala di nuovo "
-                            + "come modello. Le VM già create dal modello non cambiano.",
-                         action: "Modifica modello")
+        _ = confirmSheet(s, window: w, kind: "download", title: "Edit debian-ai-base?",
+                         message: "The template becomes a VM again that you can start and update. When you’re done, save it "
+                            + "as a template again. VMs already created from the template don’t change.",
+                         action: "Edit Template")
     default:
         break
     }
@@ -1022,11 +1022,11 @@ func libraryTemplates(_ s: Script, _ name: String, parent: Int?, mode: String, s
 
 /// S10, section Hugging Face: the Mac's token (assente, salvato, errore), never shown once saved.
 func s10HuggingFace(_ s: Script, _ name: String, parent: Int?, mode: String, state: String) -> ScreenRefs {
-    let (w, column) = settingsWindow(s, name, parent: parent, x: 0, y: 0, mode: mode, title: "Impostazioni di Nido",
+    let (w, column) = settingsWindow(s, name, parent: parent, x: 0, y: 0, mode: mode, title: "Nido Settings",
                                      sections: appSettingsSections, selected: "Hugging Face", heading: "Hugging Face",
-                                     intro: "Un solo token per tutte le VM, usato solo dal ponte AI verso "
-                                        + "router.huggingface.co. Nido lo tiene nel Portachiavi del Mac: non arriva mai "
-                                        + "nelle VM, nei log o nei messaggi d'errore.")
+                                     intro: "One token for all VMs, used only by the AI bridge to reach "
+                                        + "router.huggingface.co. Nido keeps it in the Mac’s Keychain: it never reaches "
+                                        + "the VMs, the logs or the error messages.")
     let box = stack(s, "Token", parent: column, "vertical", gap: "s", padding: ["m", "l"], props: ["sizingH": "fill"])
     s.bind(box, "fill", "surface")
     s.bind(box, "cornerRadius", "Radius/m")
@@ -1035,26 +1035,26 @@ func s10HuggingFace(_ s: Script, _ name: String, parent: Int?, mode: String, sta
     case "salvato":
         let row = stack(s, "Riga", parent: box, "horizontal", gap: "m", props: ["sizingH": "fill", "crossAlign": "center"])
         let texts = stack(s, "Testo", parent: row, "vertical", gap: "xs", props: ["sizingH": "fill"])
-        s.text("Token di accesso", parent: texts, size: "body", style: "SemiBold", color: "textPrimary")
-        s.text("Salvato nel Portachiavi. Non si può rivedere: per cambiarlo, incollane uno nuovo.", parent: texts,
+        s.text("Access token", parent: texts, size: "body", style: "SemiBold", color: "textPrimary")
+        s.text("Saved in the Keychain. It can’t be shown again: to change it, paste a new one.", parent: texts,
                size: "caption", color: "textSecondary", props: ["sizingH": "fill", "textAutoResize": "height"])
-        button(s, "secondary", "Sostituisci…", parent: row)
-        button(s, "secondary", "Rimuovi", parent: row)
-        infoRow(s, parent: column, "VM con il ponte AI attivo", "debian-ai",
-                note: "Se rimuovi il token, il ponte risponde 401 nelle VM e nulla esce dal Mac.", inSlot: false)
+        button(s, "secondary", "Replace…", parent: row)
+        button(s, "secondary", "Remove", parent: row)
+        infoRow(s, parent: column, "VMs with the AI bridge on", "debian-ai",
+                note: "If you remove the token, the bridge answers 401 in the VMs and nothing leaves the Mac.", inSlot: false)
     default:
         let invalid = state == "errore"
-        s.text("Token di accesso", parent: box, size: "body", style: "SemiBold", color: "textPrimary")
+        s.text("Access token", parent: box, size: "body", style: "SemiBold", color: "textPrimary")
         let row = stack(s, "Riga", parent: box, "horizontal", gap: "s", props: ["sizingH": "fill", "crossAlign": "center"])
         textField(s, parent: row, invalid ? "••••••••••••••••••••••••••••" : "hf_…", placeholder: !invalid,
                   invalid: invalid)
-        button(s, invalid ? "primary" : "disabled", "Salva", parent: row)
+        button(s, invalid ? "primary" : "disabled", "Save", parent: row)
         if invalid {
-            s.text("Il token non è valido: incollalo senza spazi interni né caratteri speciali.", parent: box,
+            s.text("The token isn’t valid: paste it without spaces or special characters inside.", parent: box,
                    size: "caption", style: "SemiBold", color: "statusError",
                    props: ["sizingH": "fill", "textAutoResize": "height"])
         }
-        s.text("Crea su huggingface.co un token fine-grained con il solo permesso «Make calls to Inference Providers».",
+        s.text("On huggingface.co, create a fine-grained token with only the “Make calls to Inference Providers” permission.",
                parent: box, size: "caption", color: "textSecondary", props: ["sizingH": "fill", "textAutoResize": "height"])
     }
     return ["window": w]
@@ -1063,30 +1063,30 @@ func s10HuggingFace(_ s: Script, _ name: String, parent: Int?, mode: String, sta
 /// S08, section Guest Tools of a VM created before M3c: install them, apply the anti-hang settings;
 /// `manual`: SSH failed and the commands to copy are shown.
 func s08GuestTools(_ s: Script, _ name: String, parent: Int?, mode: String, manual: Bool) -> ScreenRefs {
-    let (w, column) = settingsWindow(s, name, parent: parent, x: 0, y: 0, mode: mode, title: "Impostazioni di debian-13",
+    let (w, column) = settingsWindow(s, name, parent: parent, x: 0, y: 0, mode: mode, title: "debian-13 Settings",
                                      sections: vmSettingsSections, comingSoon: vmSettingsComingSoon,
                                      selected: "Guest Tools", heading: "Guest Tools",
-                                     intro: "Il software di Nido dentro la VM: monitor, preparazione di Ollama e ponte AI. "
-                                        + "Nido lo installa via SSH con la chiave della VM; pacchetti, file e modelli "
-                                        + "restano come sono.")
+                                     intro: "Nido’s software inside the VM: the monitor, the Ollama setup and the AI bridge. "
+                                        + "Nido installs it over SSH with the VM’s key; packages, files and models "
+                                        + "stay as they are.")
     if manual {
         notice(s, parent: column, inSlot: false, kind: "errore",
-               title: "Installazione automatica non riuscita: debian-13 non risponde via SSH",
-               detail: "Controlla che la VM sia accesa e che il servizio ssh sia attivo e premi Riprova, oppure installa "
-                + "i Guest Tools a mano con i comandi qui sotto.", action: "Riprova")
-        pickerRow(s, parent: column, "Installazione manuale",
-                  "Esegui nella VM, come utente con sudo:\nsudo sh -c 'mkdir -p /opt/nido-guest-tools && base64 -d …'",
-                  action: "Copia i comandi")
+               title: "Automatic installation failed: debian-13 doesn’t respond over SSH",
+               detail: "Check that the VM is running and the ssh service is on, then click Try Again, or install "
+                + "the Guest Tools yourself with the commands below.", action: "Try Again")
+        pickerRow(s, parent: column, "Manual installation",
+                  "Run in the VM, as a user with sudo:\nsudo sh -c 'mkdir -p /opt/nido-guest-tools && base64 -d …'",
+                  action: "Copy Commands")
     } else {
-        pickerRow(s, parent: column, "Guest Tools non installati",
-                  "debian-13 è stata creata con una versione di Nido precedente. Il monitor risponde dal prossimo riavvio.",
-                  action: "Installa Guest Tools")
+        pickerRow(s, parent: column, "Guest Tools not installed",
+                  "debian-13 was created with an earlier version of Nido. The monitor starts responding after the next restart.",
+                  action: "Install Guest Tools")
     }
-    pickerRow(s, parent: column, "Impostazioni anti-blocco",
-              "Se il kernel va in panic, il messaggio compare nel registro della console e la VM si riavvia dopo "
-                + "10 secondi invece di restare bloccata. Valgono dal prossimo riavvio.",
-              action: "Applica")
-    s.text("Servono debian-13 accesa e la sua chiave SSH. Nido non modifica mai una VM da solo.", parent: column,
+    pickerRow(s, parent: column, "Hang protection settings",
+              "If the kernel panics, the message appears in the console log and the VM restarts after "
+                + "10 seconds instead of hanging. They apply from the next restart.",
+              action: "Apply")
+    s.text("This needs debian-13 running and its SSH key. Nido never changes a VM by itself.", parent: column,
            size: "caption", color: "textSecondary")
     return ["window": w]
 }

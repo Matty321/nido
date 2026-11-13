@@ -18,7 +18,7 @@ func fail(_ message: String) -> Never {
 
 let arguments = CommandLine.arguments
 guard arguments.count == 3 else {
-    fail("Uso: swift scripts/gen-guest-tools.swift <guest/linux> <GuestToolsPayload.swift>")
+    fail("usage: swift scripts/gen-guest-tools.swift <guest/linux> <GuestToolsPayload.swift>")
 }
 let root = URL(fileURLWithPath: arguments[1], isDirectory: true)
 let outputPath = arguments[2]
@@ -32,7 +32,7 @@ struct Entry {
 
 func read(_ relative: String) -> Data {
     guard let data = fm.contents(atPath: root.appendingPathComponent(relative).path) else {
-        fail("Impossibile leggere \(relative) in \(root.path)")
+        fail("can’t read \(relative) in \(root.path)")
     }
     return data
 }
@@ -40,7 +40,7 @@ func read(_ relative: String) -> Data {
 var entries: [Entry] = []
 let moduleDirectory = root.appendingPathComponent("nido_guest_tools").path
 guard let names = try? fm.contentsOfDirectory(atPath: moduleDirectory) else {
-    fail("Manca \(moduleDirectory)")
+    fail("missing \(moduleDirectory)")
 }
 for name in names.filter({ $0.hasSuffix(".py") }) {
     entries.append(Entry(path: "/opt/nido-guest-tools/nido_guest_tools/\(name)", mode: "0644", data: read("nido_guest_tools/\(name)")))
@@ -57,10 +57,10 @@ for unit in ["nido-guest-tools.service", "nido-ai-bridge.service"] {
 }
 entries.sort { $0.path < $1.path }
 
-guard let versionText = String(data: read("VERSION"), encoding: .utf8) else { fail("VERSION non è UTF-8") }
+guard let versionText = String(data: read("VERSION"), encoding: .utf8) else { fail("VERSION is not UTF-8") }
 let version = versionText.trimmingCharacters(in: .whitespacesAndNewlines)
 guard version.range(of: #"^[0-9]+\.[0-9]+\.[0-9]+$"#, options: .regularExpression) != nil else {
-    fail("VERSION non valida: \(version)")
+    fail("invalid VERSION: \(version)")
 }
 
 var out = """
@@ -84,5 +84,5 @@ out += "    ]\n}\n"
 do {
     try out.write(toFile: outputPath, atomically: true, encoding: .utf8)
 } catch {
-    fail("Impossibile scrivere \(outputPath): \(error.localizedDescription)")
+    fail("can’t write \(outputPath): \(error.localizedDescription)")
 }

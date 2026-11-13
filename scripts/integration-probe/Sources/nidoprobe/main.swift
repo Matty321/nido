@@ -29,7 +29,7 @@ func say(_ text: String) {
 }
 
 func fail(_ text: String) -> Never {
-    say("ERRORE " + text)
+    say("ERROR " + text)
     exit(1)
 }
 
@@ -40,11 +40,11 @@ func describe(_ error: any Error) -> String {
 
 let args = CommandLine.arguments
 guard args.count >= 4 else {
-    fail("uso: nidoprobe run|guest-tools|panic-settings|ollama <root> <vm> [...]")
+    fail("usage: nidoprobe run|guest-tools|panic-settings|ollama <root> <vm> [...]")
 }
 let paths = NidoPaths(root: URL(fileURLWithPath: args[2], isDirectory: true))
 let name: VMName
-do { name = try VMName(args[3]) } catch { fail("nome non valido: \(args[3])") }
+do { name = try VMName(args[3]) } catch { fail("invalid name: \(args[3])") }
 
 /// stdin lines, read on a thread of their own (readLine blocks).
 func stdinLines() -> AsyncStream<String> {
@@ -75,11 +75,11 @@ func runVM() async throws {
     let services = args.contains("--real-router")
         ? AIBridgeServices(router: URLSessionRouterClient(), tokenStore: KeychainTokenStore())
         : AIBridgeServices(router: DebugFakeRouter(), tokenStore: DebugMemoryTokenStore())
-    say("router: \(args.contains("--real-router") ? "router.huggingface.co (reale)" : "finto (DebugFakeRouter)")")
+    say("router: \(args.contains("--real-router") ? "router.huggingface.co (real)" : "fake (DebugFakeRouter)")")
     let host = try services.makeHost(for: bundle)
-    say("ponte collegato: \(session.attachAIBridge(host))")
+    say("bridge attached: \(session.attachAIBridge(host))")
     let outcome = try await session.startOrResume()
-    say("avviata: \(outcome) stato=\(session.state)")
+    say("started: \(outcome) state=\(session.state)")
     let client = GuestMonitorClient(channel: VsockGuestChannel(session: session))
     for await line in stdinLines() {
         let parts = line.split(separator: " ").map(String.init)
@@ -92,7 +92,7 @@ func runVM() async throws {
             while Date().timeIntervalSince(begin) < limit {
                 do {
                     let status = try await client.fetch()
-                    say("monitor ok dopo \(String(format: "%.1f", Date().timeIntervalSince(begin))) s: \(summary(status))")
+                    say("monitor ok after \(String(format: "%.1f", Date().timeIntervalSince(begin))) s: \(summary(status))")
                     answered = true
                     break
                 } catch {
@@ -100,26 +100,26 @@ func runVM() async throws {
                     try await Task.sleep(for: .seconds(1))
                 }
             }
-            if !answered { say("ERRORE monitor senza risposta entro \(Int(limit)) s: \(lastError)") }
+            if !answered { say("ERROR monitor gave no answer within \(Int(limit)) s: \(lastError)") }
         case "enable":
             let models = Array(parts.dropFirst())
             try bundle.updateConfig {
                 $0.aiBridge = AIBridgePolicy(enabled: true, allowedModels: models, privacyAcknowledged: true)
             }
-            say("ponte acceso per \(models)")
+            say("bridge on for \(models)")
         case "disable":
             try bundle.updateConfig { $0.aiBridge = AIBridgePolicy(enabled: false) }
-            say("ponte spento")
+            say("bridge off")
         case "stop":
             await session.stop(gracePeriod: .seconds(60))
-            say("arrestata: \(session.state)")
+            say("stopped: \(session.state)")
             return
         default:
-            say("comando sconosciuto: \(line)")
+            say("unknown command: \(line)")
         }
     }
     await session.stop(gracePeriod: .seconds(60))
-    say("stdin chiuso: arrestata (\(session.state))")
+    say("stdin closed: stopped (\(session.state))")
 }
 
 func guestTools() async throws {
@@ -136,7 +136,7 @@ func panicSettings() async throws {
     let bundle = try VMBundle.open(name, paths: paths)
     let ssh = GuestSSH(bundle: bundle, config: try bundle.readConfig(), runner: SystemProcessRunner())
     _ = try await ssh.run(.applyPanicSettings, timeout: .seconds(180))
-    say("impostazioni dei panic applicate")
+    say("panic settings applied")
 }
 
 func ollama(_ action: [String]) async throws {
@@ -144,14 +144,14 @@ func ollama(_ action: [String]) async throws {
     switch action.first {
     case "install":
         try await runtime.install()
-        say("ollama installato")
+        say("ollama installed")
     case "verify":
         try await runtime.verify()
-        say("ollama verificato")
+        say("ollama verified")
     case "status":
         let status = try await runtime.status()
-        say("installato=\(status.installed) versione=\(status.version ?? "-") attivo=\(status.running) "
-            + "fissata=\(status.pinnedVersion ?? "-") modelli=\(status.models.map { "\($0.name) \($0.sizeBytes)" })")
+        say("installed=\(status.installed) version=\(status.version ?? "-") running=\(status.running) "
+            + "pinned=\(status.pinnedVersion ?? "-") models=\(status.models.map { "\($0.name) \($0.sizeBytes)" })")
     case "pull" where action.count == 2:
         let last = Mutex(Date.distantPast)
         try await runtime.pull(model: action[1]) { progress in
@@ -162,20 +162,20 @@ func ollama(_ action: [String]) async throws {
                 return true
             }
             if due {
-                say("scaricamento \(progress.completedBytes)/\(progress.totalBytes) \(progress.message)")
+                say("downloading \(progress.completedBytes)/\(progress.totalBytes) \(progress.message)")
             }
         }
-        say("modello \(action[1]) scaricato")
+        say("model \(action[1]) downloaded")
     case "chat" where action.count == 3:
         var answer = ""
         for try await event in runtime.chat(model: action[1], messages: [ChatMessage(role: .user, content: action[2])]) {
             if case .piece(let piece) = event { answer += piece }
         }
         let flat = answer.replacingOccurrences(of: "\n", with: " ")
-        say("risposta (\(answer.count) caratteri): \(flat.prefix(200))")
-        if answer.isEmpty { fail("risposta vuota") }
+        say("answer (\(answer.count) characters): \(flat.prefix(200))")
+        if answer.isEmpty { fail("empty answer") }
     default:
-        fail("azione ollama sconosciuta: \(action)")
+        fail("unknown ollama action: \(action)")
     }
 }
 
@@ -185,7 +185,7 @@ do {
     case "guest-tools": try await guestTools()
     case "panic-settings": try await panicSettings()
     case "ollama": try await ollama(Array(args.dropFirst(4)))
-    default: fail("modo sconosciuto: \(args[1])")
+    default: fail("unknown mode: \(args[1])")
     }
 } catch {
     fail(describe(error))

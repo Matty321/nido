@@ -55,7 +55,7 @@ func prototypePage(_ s: Script) {
     let creatingSnapshot = snapshotsWindow(s, "F04 · 3 S09 Creazione", parent: nil, x: at(2), y: row3, mode: mode,
                                            phase: "creazione", running: true, extra: ("snapshot-1", "", true))
     let created = snapshotsWindow(s, "F04 · 4 S09 Snapshot creato", parent: nil, x: at(3), y: row3, mode: mode,
-                                  phase: "elenco", running: true, extra: ("snapshot-1", "24 ott 2026, 17:30", true))
+                                  phase: "elenco", running: true, extra: ("snapshot-1", "Oct 24, 2026, 5:30 PM", true))
     let stoppedList = snapshotsWindow(s, "F04 · 5 S09 Snapshot a VM arrestata", parent: nil, x: at(4), y: row3,
                                       mode: mode, phase: "elenco")
     let restoring = snapshotConfirmSheet(s, "F04 · 6 S09 Conferma ripristino", parent: nil, x: at(5), y: row3,
@@ -127,7 +127,7 @@ func prototypePage(_ s: Script) {
     s.navigate(from: window(creatingSnapshot), to: window(created), afterDelay: autoStepDelay)
     s.navigate(from: stopped["snapshot"]!, to: window(stoppedList))
     s.navigate(from: suspended["snapshot"]!, to: window(stoppedList))
-    s.navigate(from: stoppedList["ripristina-prima-dell-aggiornamento"]!, to: window(restoring))
+    s.navigate(from: stoppedList["ripristina-before-update"]!, to: window(restoring))
     s.navigate(from: restoring["annulla"]!, to: window(stoppedList))
     s.navigate(from: restoring["conferma"]!, to: window(suspended))
 

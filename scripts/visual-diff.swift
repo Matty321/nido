@@ -42,7 +42,7 @@ func parse(_ arguments: [String]) -> Options {
     var index = 0
     func value(_ flag: String) -> String {
         index += 1
-        guard index < arguments.count else { fail("manca il valore di \(flag)") }
+        guard index < arguments.count else { fail("missing value for \(flag)") }
         return arguments[index]
     }
     while index < arguments.count {
@@ -59,24 +59,24 @@ func parse(_ arguments: [String]) -> Options {
         case "--crop":
             let parts = value(argument).split(separator: ",").compactMap { Int($0) }
             guard parts.count == 4, parts[2] > 0, parts[3] > 0, parts[0] >= 0, parts[1] >= 0 else {
-                fail("--crop: x,y,w,h in pixel")
+                fail("--crop: x,y,w,h in pixels")
             }
             options.crop = CGRect(x: parts[0], y: parts[1], width: parts[2], height: parts[3])
         case "--crop-at":
             let parts = value(argument).split(separator: ",").compactMap { Int($0) }
-            guard parts.count == 2, parts[0] >= 0, parts[1] >= 0 else { fail("--crop-at: x,y in pixel") }
+            guard parts.count == 2, parts[0] >= 0, parts[1] >= 0 else { fail("--crop-at: x,y in pixels") }
             options.cropAt = CGPoint(x: parts[0], y: parts[1])
         case "--diff":
             options.diffOut = value(argument)
         default:
-            if argument.hasPrefix("--") { fail("opzione sconosciuta \(argument)") }
+            if argument.hasPrefix("--") { fail("unknown option \(argument)") }
             positional.append(argument)
         }
         index += 1
     }
-    if options.crop != nil, options.cropAt != nil { fail("--crop e --crop-at si escludono") }
+    if options.crop != nil, options.cropAt != nil { fail("--crop and --crop-at are mutually exclusive") }
     guard positional.count == 2 else {
-        fail("uso: visual-diff.swift <design.png> <app.png> [--tolerance 16] [--max-diff 3%] "
+        fail("usage: visual-diff.swift <design.png> <app.png> [--tolerance 16] [--max-diff 3%] "
             + "[--crop x,y,w,h | --crop-at x,y] [--diff out.png]")
     }
     options.design = positional[0]
@@ -87,7 +87,7 @@ func parse(_ arguments: [String]) -> Options {
 func load(_ path: String) -> CGImage {
     guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
           let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
-    else { fail("impossibile leggere \(path)") }
+    else { fail("can’t read \(path)") }
     return image
 }
 
@@ -106,7 +106,7 @@ func rgba(_ image: CGImage) -> [UInt8] {
         context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
         return true
     }
-    if !drawn { fail("contesto grafico non disponibile") }
+    if !drawn { fail("graphics context unavailable") }
     return pixels
 }
 
@@ -121,9 +121,9 @@ func writePNG(_ pixels: [UInt8], width: Int, height: Int, to path: String) {
     let url = URL(fileURLWithPath: path)
     guard let image,
           let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)
-    else { fail("impossibile scrivere \(path)") }
+    else { fail("can’t write \(path)") }
     CGImageDestinationAddImage(destination, image, nil)
-    if !CGImageDestinationFinalize(destination) { fail("impossibile scrivere \(path)") }
+    if !CGImageDestinationFinalize(destination) { fail("can’t write \(path)") }
 }
 
 var options = parse(Array(CommandLine.arguments.dropFirst()))
@@ -135,11 +135,11 @@ if let origin = options.cropAt {
 if let crop = options.crop {
     guard crop.maxX <= CGFloat(design.width), crop.maxY <= CGFloat(design.height),
           let cropped = design.cropping(to: crop)
-    else { fail("--crop fuori da \(options.design) (\(design.width)×\(design.height))") }
+    else { fail("--crop outside \(options.design) (\(design.width)×\(design.height))") }
     design = cropped
 }
 guard design.width == app.width, design.height == app.height else {
-    fail("dimensioni diverse: \(options.design) \(design.width)×\(design.height), "
+    fail("sizes differ: \(options.design) \(design.width)×\(design.height), "
         + "\(options.app) \(app.width)×\(app.height)")
 }
 
@@ -167,7 +167,7 @@ for pixel in 0..<(width * height) {
 if let out = options.diffOut { writePNG(diff, width: width, height: height, to: out) }
 
 let percent = Double(differing) / Double(width * height) * 100
-let verdict = percent <= options.maxDiff ? "ok" : "oltre la soglia"
-print(String(format: "%.2f%% pixel diversi (%d di %d, tolleranza %d/255, soglia %.1f%%): %@",
+let verdict = percent <= options.maxDiff ? "ok" : "above the threshold"
+print(String(format: "%.2f%% pixels differ (%d of %d, tolerance %d/255, threshold %.1f%%): %@",
              percent, differing, width * height, options.tolerance, options.maxDiff, verdict))
 exit(percent <= options.maxDiff ? 0 : 1)

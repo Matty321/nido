@@ -86,7 +86,7 @@ swift scripts/tests/visual-fixtures.swift "$tmp/visual"
 vd="$tmp/visual-diff"
 v="$tmp/visual"
 if expect_exit 0 "$vd" "$v/base.png" "$v/base.png" --tolerance 16 --max-diff 3% --diff "$v/same-diff.png"; then
-    if grep -q "^0.00% pixel diversi" "$tmp/out.txt" && [ -s "$v/same-diff.png" ]; then
+    if grep -q "^0.00% pixels differ" "$tmp/out.txt" && [ -s "$v/same-diff.png" ]; then
         echo "ok: identical images → 0.00 % and the difference PNG written"
     else
         echo "FAILED: identical images do not give 0.00 % or the difference PNG is missing"
@@ -95,7 +95,7 @@ if expect_exit 0 "$vd" "$v/base.png" "$v/base.png" --tolerance 16 --max-diff 3% 
     fi
 fi
 if expect_exit 1 "$vd" "$v/base.png" "$v/altered.png" --tolerance 16 --max-diff 3%; then
-    if grep -q "^10.00% pixel diversi" "$tmp/out.txt"; then
+    if grep -q "^10.00% pixels differ" "$tmp/out.txt"; then
         echo "ok: altered rectangle → 10.00 %"
     else
         echo "FAILED: the altered rectangle does not give 10.00 %"

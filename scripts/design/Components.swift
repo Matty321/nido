@@ -10,7 +10,7 @@ import Foundation
 /// library card and in the VM window. An outlined pill like StatusBadge, with an accent dot.
 @discardableResult
 func bridgePill(_ s: Script, parent: Int) -> Int {
-    let pill = stack(s, "Ponte AI attivo", parent: parent, "horizontal", gap: "xs", padding: ["0", "s"],
+    let pill = stack(s, "AI bridge active", parent: parent, "horizontal", gap: "xs", padding: ["0", "s"],
                      props: ["crossAlign": "center", "sizingV": "fixed"])
     s.set(pill, ["height": 20])
     s.bind(pill, "fill", "background")
@@ -18,7 +18,7 @@ func bridgePill(_ s: Script, parent: Int) -> Int {
     s.stroke(pill, "accent")
     let dot = s.ellipse(parent: pill, size: 8)
     s.bind(dot, "fill", "accent")
-    s.text("Ponte AI attivo", parent: pill, size: "caption", style: "SemiBold", color: "textPrimary")
+    s.text("AI bridge active", parent: pill, size: "caption", style: "SemiBold", color: "textPrimary")
     return pill
 }
 
@@ -54,10 +54,10 @@ func buildComponents(firstID: Int) -> Script {
     do {
         let box = section("NidoButton", "primary · secondary · destructive · disabled")
         let kinds: [(String, String, String, String?, String)] = [
-            ("primary", "accent", "accentText", nil, "Crea VM"),
-            ("secondary", "surfaceRaised", "textPrimary", "border", "Annulla"),
-            ("destructive", "statusError", "accentText", nil, "Elimina"),
-            ("disabled", "surfaceRaised", "textSecondary", "border", "Avanti"),
+            ("primary", "accent", "accentText", nil, "Create VM"),
+            ("secondary", "surfaceRaised", "textPrimary", "border", "Cancel"),
+            ("destructive", "statusError", "accentText", nil, "Delete"),
+            ("disabled", "surfaceRaised", "textSecondary", "border", "Next"),
         ]
         for (kind, fill, text, border, label) in kinds {
             let b = stack(s, "Tipo=\(kind)", parent: box, "horizontal", padding: ["xs", "m"],
@@ -85,21 +85,21 @@ func buildComponents(firstID: Int) -> Script {
     // StatusBadge -----------------------------------------------------------------------
     var badge = Built()
     let states: [(String, String, String, Bool)] = [  // state, label, color, hollow dot
-        ("stopped", "Arrestata", "statusStopped", false),
-        ("starting", "Avvio in corso", "accent", false),
-        ("running", "In esecuzione", "statusRunning", false),
-        ("paused", "In pausa", "statusPaused", false),
+        ("stopped", "Stopped", "statusStopped", false),
+        ("starting", "Starting", "accent", false),
+        ("running", "Running", "statusRunning", false),
+        ("paused", "Paused", "statusPaused", false),
         // Stopped with its state saved (`state.vzvmsave`): hollow, nothing runs.
-        ("suspended", "Sospesa", "statusPaused", true),
-        ("error", "Errore", "statusError", false),
-        ("unreadable", "Illeggibile", "statusError", true),
+        ("suspended", "Suspended", "statusPaused", true),
+        ("error", "Error", "statusError", false),
+        ("unreadable", "Unreadable", "statusError", true),
         // M3b: this app holds the VM's lock for a snapshot of the stopped VM or a clone.
-        ("busy", "Occupata", "accent", false),
+        ("busy", "Busy", "accent", false),
         // M3b: a macOS VM being installed from an IPSW (no bundle in the library yet).
-        ("installing", "Installazione", "accent", true),
+        ("installing", "Installing", "accent", true),
     ]
     do {
-        let box = section("StatusBadge", "un colore e un'etichetta per ogni stato della VM")
+        let box = section("StatusBadge", "one color and one label for each VM state")
         for (state, label, color, hollow) in states {
             let b = stack(s, "Stato=\(state)", parent: box, "horizontal", gap: "xs", padding: ["0", "s"],
                           props: ["crossAlign": "center", "sizingV": "fixed"])
@@ -125,24 +125,24 @@ func buildComponents(firstID: Int) -> Script {
     // VMCard ----------------------------------------------------------------------------
     var card = Built()
     do {
-        let box = section("VMCard", "libreria: una scheda per VM, azioni secondo lo stato")
+        let box = section("VMCard", "library: one card per VM, actions by state")
         let details: [String: (String?, [(String, String)])] = [
-            "stopped": (nil, [("primary", "Avvia"), ("secondary", "Impostazioni")]),
-            "starting": (nil, [("disabled", "Avvia"), ("secondary", "Arresta")]),
-            "running": (nil, [("primary", "Apri"), ("secondary", "Arresta")]),
+            "stopped": (nil, [("primary", "Start"), ("secondary", "Settings")]),
+            "starting": (nil, [("disabled", "Start"), ("secondary", "Stop")]),
+            "running": (nil, [("primary", "Open"), ("secondary", "Stop")]),
             // Started with `nido start`: it runs in the Terminal's process, so the app can stop it but
             // cannot open it.
-            "running-terminale": (nil, [("disabled", "Avvia"), ("secondary", "Arresta")]),
-            "paused": (nil, [("primary", "Riprendi"), ("secondary", "Arresta")]),
+            "running-terminale": (nil, [("disabled", "Start"), ("secondary", "Stop")]),
+            "paused": (nil, [("primary", "Resume"), ("secondary", "Stop")]),
             // Suspended: Riprendi starts it again from its saved state.
-            "suspended": (nil, [("primary", "Riprendi"), ("secondary", "Impostazioni")]),
-            "error": ("Avvio non riuscito: il disco della VM non è leggibile.",
-                      [("primary", "Riprova"), ("secondary", "Dettagli")]),
-            "unreadable": ("config.json danneggiato: la VM non si può aprire.",
-                           [("secondary", "Mostra nel Finder"), ("destructive", "Elimina")]),
+            "suspended": (nil, [("primary", "Resume"), ("secondary", "Settings")]),
+            "error": ("Start failed: the VM’s disk can’t be read.",
+                      [("primary", "Try Again"), ("secondary", "Details")]),
+            "unreadable": ("config.json is damaged: the VM can’t be opened.",
+                           [("secondary", "Show in Finder"), ("destructive", "Delete")]),
             // As LibraryModel.buttons for LiveState.busy: everything waits except Dettagli.
-            "busy": (nil, [("disabled", "Avvia"), ("secondary", "Dettagli")]),
-            "installing": (nil, [("secondary", "Mostra"), ("secondary", "Annulla…")]),
+            "busy": (nil, [("disabled", "Start"), ("secondary", "Details")]),
+            "installing": (nil, [("secondary", "Show"), ("secondary", "Cancel…")]),
         ]
         var cardStates = states.map(\.0)
         cardStates.insert("running-terminale", at: cardStates.firstIndex(of: "running")! + 1)
@@ -154,7 +154,7 @@ func buildComponents(firstID: Int) -> Script {
             s.stroke(c, "border")
             let top = stack(s, "Intestazione", parent: c, "horizontal", gap: "m",
                             props: ["crossAlign": "center", "sizingH": "fill"])
-            let glyph = stack(s, "Sistema", parent: top, "horizontal",
+            let glyph = stack(s, "System", parent: top, "horizontal",
                               props: ["mainAlign": "center", "crossAlign": "center", "sizingH": "fixed",
                                       "sizingV": "fixed", "width": 40, "height": 40])
             s.set(glyph, ["width": 40, "height": 40])
@@ -162,7 +162,7 @@ func buildComponents(firstID: Int) -> Script {
             s.bind(glyph, "cornerRadius", "Radius/s")
             s.stroke(glyph, "border")
             s.text("D", parent: glyph, size: "headline", style: "Bold", color: "accent")
-            let names = stack(s, "Nome", parent: top, "vertical", gap: "xs", props: ["sizingH": "fill"])
+            let names = stack(s, "Name", parent: top, "vertical", gap: "xs", props: ["sizingH": "fill"])
             s.text("debian-13", parent: names, size: "headline", style: "SemiBold", color: "textPrimary")
             s.text("Debian 13 · arm64", parent: names, size: "caption", color: "textSecondary")
             if state == "running" {
@@ -172,22 +172,22 @@ func buildComponents(firstID: Int) -> Script {
             if state == "running-terminale" {
                 // The longer label goes under the name, where it has the width of the card.
                 let b = s.instance(of: badge.variants.first { $0.0 == "running" }!.1, parent: names)
-                s.setText(s.children(of: b)[1], "In esecuzione (Terminale)")
+                s.setText(s.children(of: b)[1], "Running (Terminal)")
             } else {
                 _ = s.instance(of: badge.variants.first { $0.0 == state }!.1, parent: top)
             }
 
-            s.text("4 CPU · 8 GiB di memoria · disco 64 GiB", parent: c, size: "caption", color: "textSecondary")
+            s.text("4 CPUs · 8 GiB of memory · 64 GiB disk", parent: c, size: "caption", color: "textSecondary")
             if state == "busy" {
                 // NidoVMCard: the reason under the resources, secondary and semibold.
-                s.text("Clonazione in corso", parent: c, size: "caption", style: "SemiBold", color: "textSecondary",
+                s.text("Cloning in progress", parent: c, size: "caption", style: "SemiBold", color: "textSecondary",
                        props: ["sizingH": "fill", "textAutoResize": "height"])
             }
             if state == "installing" {
                 // The progress of the installation, as in the wizard (percentage and time left).
                 let progress = stack(s, "Avanzamento installazione", parent: c, "vertical", gap: "xs",
                                      props: ["sizingH": "fill"])
-                s.text("Installazione di macOS · 42 % · circa 9 min", parent: progress, size: "caption",
+                s.text("Installing macOS · 42% · about 9 min", parent: progress, size: "caption",
                        style: "SemiBold", color: "textSecondary", props: ["features": ["tnum": true]])
                 meter(s, parent: progress, fraction: 0.42, width: 288)
             }
@@ -208,11 +208,11 @@ func buildComponents(firstID: Int) -> Script {
     // OSTile ----------------------------------------------------------------------------
     var tile = Built()
     do {
-        let box = section("OSTile", "scelta del sistema: normale · selezionato · disattivato")
+        let box = section("OSTile", "system choice: normal · selected · disabled")
         let tiles: [(String, String, String, String)] = [
-            ("normale", "U", "Ubuntu 24.04", "arm64 · 2,6 GiB"),
-            ("selezionato", "D", "Debian 13", "arm64 · 1,2 GiB"),
-            ("disattivato", "W", "Windows 11", "In arrivo"),
+            ("normale", "U", "Ubuntu 24.04", "arm64 · 2.6 GiB"),
+            ("selezionato", "D", "Debian 13", "arm64 · 1.2 GiB"),
+            ("disattivato", "W", "Windows 11", "Coming soon"),
         ]
         for (state, letter, name, detail) in tiles {
             let t = stack(s, "Stato=\(state)", parent: box, "vertical", gap: "s", padding: ["l"], width: 168,
@@ -220,7 +220,7 @@ func buildComponents(firstID: Int) -> Script {
             s.bind(t, "fill", state == "selezionato" ? "surfaceRaised" : "surface")
             s.bind(t, "cornerRadius", "Radius/m")
             s.stroke(t, state == "selezionato" ? "accent" : "border", weight: state == "selezionato" ? 2 : 1)
-            let glyph = stack(s, "Sistema", parent: t, "horizontal",
+            let glyph = stack(s, "System", parent: t, "horizontal",
                               props: ["mainAlign": "center", "crossAlign": "center", "sizingH": "fixed",
                                       "sizingV": "fixed"])
             s.set(glyph, ["width": 48, "height": 48])
@@ -241,10 +241,10 @@ func buildComponents(firstID: Int) -> Script {
     // ResourceStepper -------------------------------------------------------------------
     var stepper = Built()
     do {
-        let box = section("ResourceStepper", "risorse della VM: entro i limiti · fuori limite")
+        let box = section("ResourceStepper", "VM resources: within the limits · out of range")
         let rows: [(String, String, String?)] = [
             ("normale", "8 GiB", nil),
-            ("fuori limite", "16 GiB", "Oltre il limite: su questo Mac al massimo 12 GiB."),
+            ("fuori limite", "16 GiB", "Over the limit: at most 12 GiB on this Mac."),
         ]
         for (state, value, warning) in rows {
             let r = stack(s, "Stato=\(state)", parent: box, "horizontal", gap: "m", padding: ["m", "l"],
@@ -253,8 +253,8 @@ func buildComponents(firstID: Int) -> Script {
             s.bind(r, "cornerRadius", "Radius/m")
             s.stroke(r, "border")
             let labels = stack(s, "Testo", parent: r, "vertical", gap: "xs", props: ["sizingH": "fill"])
-            s.text("Memoria", parent: labels, size: "body", style: "SemiBold", color: "textPrimary")
-            s.text(warning ?? "Consigliati 4 GiB · al massimo 12 GiB", parent: labels, size: "caption",
+            s.text("Memory", parent: labels, size: "body", style: "SemiBold", color: "textPrimary")
+            s.text(warning ?? "Recommended: 4 GiB · at most 12 GiB", parent: labels, size: "caption",
                    style: warning == nil ? "Regular" : "SemiBold",
                    color: warning == nil ? "textSecondary" : "statusError",
                    props: ["sizingH": "fill", "textAutoResize": "height"])
@@ -289,11 +289,11 @@ func buildComponents(firstID: Int) -> Script {
     // ToggleRow -------------------------------------------------------------------------
     var toggle = Built()
     do {
-        let box = section("ToggleRow", "opzione con spiegazione: attiva · disattivata · bloccata a VM accesa")
+        let box = section("ToggleRow", "option with an explanation: on · off · locked while the VM is running")
         let rows: [(String, Bool, String)] = [
-            ("attiva", true, "Il Mac imposta l'ora della VM a ogni avvio e dopo la pausa."),
-            ("disattivata", false, "Il Mac imposta l'ora della VM a ogni avvio e dopo la pausa."),
-            ("bloccata", true, "Si può cambiare solo a VM arrestata."),
+            ("attiva", true, "The Mac sets the VM’s clock at every start and after a pause."),
+            ("disattivata", false, "The Mac sets the VM’s clock at every start and after a pause."),
+            ("bloccata", true, "Can be changed only with the VM stopped."),
         ]
         for (state, on, explanation) in rows {
             let r = stack(s, "Stato=\(state)", parent: box, "horizontal", gap: "m", padding: ["m", "l"],
@@ -302,7 +302,7 @@ func buildComponents(firstID: Int) -> Script {
             s.bind(r, "cornerRadius", "Radius/m")
             s.stroke(r, "border")
             let labels = stack(s, "Testo", parent: r, "vertical", gap: "xs", props: ["sizingH": "fill"])
-            s.text("Sincronizza l'ora con il Mac", parent: labels, size: "body", style: "SemiBold",
+            s.text("Sync the clock with the Mac", parent: labels, size: "body", style: "SemiBold",
                    color: "textPrimary")
             s.text(explanation, parent: labels, size: "caption", color: "textSecondary",
                    props: ["sizingH": "fill", "textAutoResize": "height"])
@@ -324,12 +324,12 @@ func buildComponents(firstID: Int) -> Script {
     // ProgressPanel ---------------------------------------------------------------------
     var progress = Built()
     do {
-        let box = section("ProgressPanel", "download · verifica · creazione · errore")
+        let box = section("ProgressPanel", "download · verification · creation · error")
         let phases: [(String, String, String, Double?)] = [
-            ("download", "Download di Debian 13", "cloud.debian.org · 0,4 GiB di 1,2 GiB · circa 2 min", 0.34),
-            ("verifica", "Verifica dell'immagine", "Verifica del checksum SHA-512 · 1,2 GiB", 0.8),
-            ("creazione", "Creazione di debian-13", "Copia del disco (64 GiB) e preparazione di cloud-init", 0.6),
-            ("errore", "Download non riuscito", "Il checksum SHA-512 non corrisponde: il file scaricato è stato eliminato.", nil),
+            ("download", "Downloading Debian 13", "cloud.debian.org · 0.4 GiB of 1.2 GiB · about 2 min", 0.34),
+            ("verifica", "Verifying the image", "Verifying the SHA-512 checksum · 1.2 GiB", 0.8),
+            ("creazione", "Creating debian-13", "Copying the disk (64 GiB) and preparing cloud-init", 0.6),
+            ("errore", "Download failed", "The SHA-512 checksum doesn’t match: the downloaded file was deleted.", nil),
         ]
         for (phase, title, detail, fraction) in phases {
             let p = stack(s, "Fase=\(phase)", parent: box, "vertical", gap: "s", padding: ["l"], width: 480,
@@ -352,10 +352,10 @@ func buildComponents(firstID: Int) -> Script {
             let row = stack(s, "Azioni", parent: p, "horizontal", gap: "s",
                             props: ["sizingH": "fill", "mainAlign": "max"])
             if fraction == nil {
-                addButton("secondary", "Annulla", parent: row)
-                addButton("primary", "Riprova", parent: row)
+                addButton("secondary", "Cancel", parent: row)
+                addButton("primary", "Try Again", parent: row)
             } else {
-                addButton("secondary", "Annulla", parent: row)
+                addButton("secondary", "Cancel", parent: row)
             }
             s.makeComponent(p)
             progress.variants.append((phase, p))
@@ -367,11 +367,11 @@ func buildComponents(firstID: Int) -> Script {
     // WizardStep ------------------------------------------------------------------------
     var wizard = Built()
     do {
-        let box = section("WizardStep", "contenitore della procedura: normale · avanti disattivato · errore")
+        let box = section("WizardStep", "wizard container: normal · next disabled · error")
         let variants: [(String, String?, String)] = [
             ("normale", nil, "primary"),
             ("avanti disattivato", nil, "disabled"),
-            ("errore", "Spazio su disco insufficiente: servono 64 GiB, ne restano 41 GiB.", "disabled"),
+            ("errore", "Not enough disk space: 64 GiB needed, 41 GiB left on the Mac.", "disabled"),
         ]
         for (state, error, next) in variants {
             let w = stack(s, "Stato=\(state)", parent: box, "vertical", gap: "l", padding: ["xl"], width: 560,
@@ -385,10 +385,10 @@ func buildComponents(firstID: Int) -> Script {
                 s.set(seg, ["cornerRadius": 2])
                 s.bind(seg, "fill", index <= 2 ? "accent" : "border")
             }
-            s.text("Passo 3 di 5", parent: steps, size: "caption", color: "textSecondary")
+            s.text("Step 3 of 5", parent: steps, size: "caption", color: "textSecondary")
             let head = stack(s, "Testa", parent: w, "vertical", gap: "xs", props: ["sizingH": "fill"])
-            s.text("Risorse", parent: head, size: "title", style: "SemiBold", color: "textPrimary")
-            s.text("Scegli quanta CPU, memoria e disco del Mac assegnare a debian-13.", parent: head,
+            s.text("Resources", parent: head, size: "title", style: "SemiBold", color: "textPrimary")
+            s.text("Choose how much of the Mac’s CPU, memory and disk to give debian-13.", parent: head,
                    size: "body", color: "textSecondary", props: ["sizingH": "fill", "textAutoResize": "height"])
             let content = stack(s, "Contenuto", parent: w, "vertical", gap: "s", props: ["sizingH": "fill"])
             let memory = s.instance(of: stepper.variants[0].1, parent: content)
@@ -399,10 +399,10 @@ func buildComponents(firstID: Int) -> Script {
             }
             let foot = stack(s, "Navigazione", parent: w, "horizontal", gap: "s",
                              props: ["sizingH": "fill", "crossAlign": "center"])
-            addButton("secondary", "Indietro", parent: foot)
+            addButton("secondary", "Back", parent: foot)
             spacer(s, parent: foot)
-            addButton("secondary", "Annulla", parent: foot)
-            addButton(next, "Avanti", parent: foot)
+            addButton("secondary", "Cancel", parent: foot)
+            addButton(next, "Next", parent: foot)
             s.makeComponent(w)
             wizard.variants.append((state, w))
         }
@@ -413,23 +413,23 @@ func buildComponents(firstID: Int) -> Script {
     // VMToolbar -------------------------------------------------------------------------
     var toolbar = Built()
     do {
-        let box = section("VMToolbar", "barra della finestra della VM, per stato")
+        let box = section("VMToolbar", "VM window toolbar, by state")
         let bars: [(String, String, [(String, String)])] = [
-            ("starting", "starting", [("disabled", "Pausa"), ("secondary", "Arresta")]),
+            ("starting", "starting", [("disabled", "Pause"), ("secondary", "Stop")]),
             // As VMWindowModel.toolbarButtons, plus Snapshot (S09) where a snapshot can be taken.
-            ("running", "running", [("secondary", "Pausa"), ("secondary", "Sospendi"), ("secondary", "Arresta"),
-                                    ("secondary", "Snapshot"), ("secondary", "Schermo intero")]),
-            ("paused", "paused", [("primary", "Riprendi"), ("secondary", "Arresta")]),
-            ("stopped", "stopped", [("primary", "Avvia"), ("secondary", "Snapshot"), ("secondary", "Impostazioni")]),
+            ("running", "running", [("secondary", "Pause"), ("secondary", "Suspend"), ("secondary", "Stop"),
+                                    ("secondary", "Snapshots"), ("secondary", "Enter Full Screen")]),
+            ("paused", "paused", [("primary", "Resume"), ("secondary", "Stop")]),
+            ("stopped", "stopped", [("primary", "Start"), ("secondary", "Snapshots"), ("secondary", "Settings")]),
             // Stopped with its state saved: Riprendi starts it again from there.
-            ("suspended", "suspended", [("primary", "Riprendi"), ("secondary", "Snapshot"),
-                                        ("secondary", "Impostazioni")]),
-            ("error", "error", [("primary", "Riprova"), ("secondary", "Dettagli")]),
+            ("suspended", "suspended", [("primary", "Resume"), ("secondary", "Snapshots"),
+                                        ("secondary", "Settings")]),
+            ("error", "error", [("primary", "Try Again"), ("secondary", "Details")]),
             // M3b: a running macOS VM, with the "Accesso da terminale" panel.
-            ("running-macos", "running", [("secondary", "Pausa"), ("secondary", "Sospendi"),
-                                          ("secondary", "Arresta"), ("secondary", "Snapshot"),
-                                          ("secondary", "Accesso da terminale"),
-                                          ("secondary", "Schermo intero")]),
+            ("running-macos", "running", [("secondary", "Pause"), ("secondary", "Suspend"),
+                                          ("secondary", "Stop"), ("secondary", "Snapshots"),
+                                          ("secondary", "Terminal Access"),
+                                          ("secondary", "Enter Full Screen")]),
         ]
         for (state, badgeState, actions) in bars {
             let t = stack(s, "Stato=\(state)", parent: box, "horizontal", gap: "s", padding: ["s", "l"],
@@ -451,7 +451,7 @@ func buildComponents(firstID: Int) -> Script {
     // EmptyState ------------------------------------------------------------------------
     var empty = Built()
     do {
-        let box = section("EmptyState", "libreria vuota · nessuno snapshot (S09) · VM arrestata o sospesa (S07)")
+        let box = section("EmptyState", "empty library · no snapshots (S09) · stopped or suspended VM (S07)")
         let e = stack(s, "EmptyState", parent: box, "vertical", gap: "m", padding: ["xxl"], width: 480,
                       props: ["sizingH": "fixed", "crossAlign": "center"])
         s.bind(e, "fill", "surface")
@@ -463,11 +463,11 @@ func buildComponents(firstID: Int) -> Script {
         s.stroke(nest, "border", weight: 2)
         let egg = s.ellipse(parent: nest, size: 24)
         s.bind(egg, "fill", "accent")
-        s.text("Il nido è vuoto", parent: e, size: "title", style: "SemiBold", color: "textPrimary")
-        s.text("Crea la prima macchina virtuale: Nido scarica Debian 13, ne verifica l'immagine e la prepara in pochi minuti.",
+        s.text("The nest is empty", parent: e, size: "title", style: "SemiBold", color: "textPrimary")
+        s.text("Create your first virtual machine: Nido downloads Debian 13, verifies the image and sets up the VM in a few minutes.",
                parent: e, size: "body", color: "textSecondary",
                props: ["sizingH": "fill", "textAutoResize": "height", "textAlign": "center"])
-        addButton("primary", "Crea VM", parent: e)
+        addButton("primary", "Create VM", parent: e)
         s.makeComponent(e)
         empty.variants.append(("libreria", e))
         empty.set = e
@@ -477,14 +477,14 @@ func buildComponents(firstID: Int) -> Script {
     // ConfirmSheet ----------------------------------------------------------------------
     var sheet = Built()
     do {
-        let box = section("ConfirmSheet", "conferme: download · eliminazione")
+        let box = section("ConfirmSheet", "confirmations: download · deletion")
         let sheets: [(String, String, String, String, String)] = [
-            ("download", "Scaricare Debian 13?",
-             "Nido scaricherà l'immagine da cloud.debian.org (1,2 GiB) e ne verificherà il checksum SHA-512 prima di usarla.",
-             "primary", "Scarica"),
-            ("eliminazione", "Eliminare debian-13?",
-             "La VM e il suo disco (64 GiB) saranno eliminati da questo Mac. L'operazione non si può annullare.",
-             "destructive", "Elimina"),
+            ("download", "Download Debian 13?",
+             "Nido will download the image from cloud.debian.org (1.2 GiB) and verify its SHA-512 checksum before using it.",
+             "primary", "Download"),
+            ("eliminazione", "Delete debian-13?",
+             "The VM and its disk (64 GiB) will be deleted from this Mac. This can’t be undone.",
+             "destructive", "Delete"),
         ]
         for (kind, title, message, actionKind, action) in sheets {
             let c = stack(s, "Tipo=\(kind)", parent: box, "vertical", gap: "m", padding: ["xl"], width: 440,
@@ -499,7 +499,7 @@ func buildComponents(firstID: Int) -> Script {
                    props: ["sizingH": "fill", "textAutoResize": "height"])
             let row = stack(s, "Azioni", parent: c, "horizontal", gap: "s",
                             props: ["sizingH": "fill", "mainAlign": "max"])
-            addButton("secondary", "Annulla", parent: row)
+            addButton("secondary", "Cancel", parent: row)
             addButton(actionKind, action, parent: row)
             s.makeComponent(c)
             sheet.variants.append((kind, c))
@@ -511,7 +511,7 @@ func buildComponents(firstID: Int) -> Script {
     // SnapshotRow -----------------------------------------------------------------------
     var snapshotRow = Built()
     do {
-        let box = section("SnapshotRow", "snapshot della VM: normale · corrente (lo stato attuale) · in creazione")
+        let box = section("SnapshotRow", "VM snapshot: normal · current (the current state) · being created")
         for state in ["normale", "corrente", "in creazione"] {
             let r = stack(s, "Stato=\(state)", parent: box, "horizontal", gap: "m", padding: ["m", "l"],
                           width: 640, props: ["sizingH": "fixed", "crossAlign": "center"])
@@ -519,21 +519,21 @@ func buildComponents(firstID: Int) -> Script {
             s.bind(r, "cornerRadius", "Radius/m")
             s.stroke(r, state == "corrente" ? "accent" : "border", weight: state == "corrente" ? 2 : 1)
             let labels = stack(s, "Testo", parent: r, "vertical", gap: "xs", props: ["sizingH": "fill"])
-            s.text(state == "corrente" ? "Stato attuale" : "prima-dell-aggiornamento", parent: labels, size: "body",
+            s.text(state == "corrente" ? "Current state" : "before-update", parent: labels, size: "body",
                    style: "SemiBold", color: "textPrimary")
             // Fixed height: rows with and without the "con stato salvato" pill line up.
-            let details = stack(s, "Dettagli", parent: labels, "horizontal", gap: "s",
+            let details = stack(s, "Details", parent: labels, "horizontal", gap: "s",
                                 props: ["crossAlign": "center", "sizingV": "fixed"])
             s.set(details, ["height": 20])
             switch state {
             case "corrente":
                 _ = s.instance(of: badge.variants.first { $0.0 == "stopped" }!.1, parent: details)
-                s.text("Le modifiche dopo l'ultimo snapshot sono solo qui.", parent: details, size: "caption",
+                s.text("Changes since the last snapshot exist only here.", parent: details, size: "caption",
                        color: "textSecondary")
             case "in creazione":
-                s.text("Creazione in corso…", parent: details, size: "caption", color: "textSecondary")
+                s.text("Creating…", parent: details, size: "caption", color: "textSecondary")
             default:
-                s.text("24 ott 2026, 10:42", parent: details, size: "caption", color: "textSecondary",
+                s.text("Oct 24, 2026, 10:42 AM", parent: details, size: "caption", color: "textSecondary",
                        props: ["features": ["tnum": true]])
                 // The snapshot holds the memory too (taken while the VM ran): it restores as suspended.
                 let pill = stack(s, "Stato salvato", parent: details, "horizontal", padding: ["0", "s"],
@@ -542,18 +542,18 @@ func buildComponents(firstID: Int) -> Script {
                 s.bind(pill, "fill", "background")
                 s.bind(pill, "cornerRadius", "Radius/m")
                 s.stroke(pill, "border")
-                s.text("con stato salvato", parent: pill, size: "caption", style: "SemiBold", color: "accent")
+                s.text("with saved state", parent: pill, size: "caption", style: "SemiBold", color: "accent")
             }
             let row = stack(s, "Azioni", parent: r, "horizontal", gap: "s", props: ["crossAlign": "center"])
             switch state {
             case "corrente":
-                addButton("primary", "Crea snapshot…", parent: row)
+                addButton("primary", "Create Snapshot…", parent: row)
             case "in creazione":
-                addButton("disabled", "Ripristina", parent: row)
-                addButton("disabled", "Elimina", parent: row)
+                addButton("disabled", "Restore", parent: row)
+                addButton("disabled", "Delete", parent: row)
             default:
-                addButton("secondary", "Ripristina", parent: row)
-                addButton("secondary", "Elimina", parent: row)
+                addButton("secondary", "Restore", parent: row)
+                addButton("secondary", "Delete", parent: row)
             }
             s.makeComponent(r)
             snapshotRow.variants.append((state, r))

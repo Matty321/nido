@@ -95,7 +95,7 @@ func searchField(_ s: Script, parent: Int) {
     s.bind(field, "fill", "surfaceRaised")
     s.bind(field, "cornerRadius", "Radius/s")
     s.stroke(field, "border")
-    s.text("Cerca tra le VM", parent: field, size: "body", color: "textSecondary")
+    s.text("Search VMs", parent: field, size: "body", color: "textSecondary")
 }
 
 /// A frame that fills the rest of a window.
@@ -136,7 +136,7 @@ func screenComponents(_ s: Script) {
 
     // InfoRow: a read-only value, with or without a note.
     do {
-        let box = section("InfoRow", "valore in sola lettura: semplice · con nota")
+        let box = section("InfoRow", "read-only value: plain · with a note")
         var variants: [Int] = []
         for kind in ["semplice", "con nota"] {
             let r = row("Tipo=\(kind)", parent: box)
@@ -155,25 +155,25 @@ func screenComponents(_ s: Script) {
 
     // PickerRow: a file or folder with its action.
     do {
-        let box = section("PickerRow", "file o cartella scelti, con l'azione")
+        let box = section("PickerRow", "chosen file or folder, with its action")
         let r = row("PickerRow", parent: box)
         let labels = stack(s, "Testo", parent: r, "vertical", gap: "xs", props: ["sizingH": "fill"])
         s.text("Etichetta", parent: labels, size: "body", style: "SemiBold", color: "textPrimary")
         s.text("Percorso", parent: labels, size: "caption", color: "textSecondary",
                props: ["sizingH": "fill", "textAutoResize": "height"])
-        button(s, "secondary", "Scegli…", parent: r)
+        button(s, "secondary", "Choose…", parent: r)
         s.makeComponent(r)
     }
 
     // SystemChoice: the OS tiles of S02 with the source of the image; M3b adds macOS (from an IPSW).
     do {
-        let box = section("SystemChoice", "scelta del sistema nella procedura: Debian · macOS")
+        let box = section("SystemChoice", "system choice in the wizard: Debian · macOS")
         let captions = [
-            "debian": "Immagine cloud ufficiale di Debian da cloud.debian.org, verificata con SHA-512 prima dell'uso. "
-                + "Windows arriverà nelle prossime versioni.",
-            "macos": "macOS si installa da un file IPSW che scarichi tu dal sito sviluppatori di Apple, anche beta: "
-                + "Nido lo legge soltanto. L'installazione dura 10–20 minuti; l'assistente iniziale di macOS lo "
-                + "completi tu nella finestra della VM.",
+            "debian": "Official Debian cloud image from cloud.debian.org, verified with SHA-512 before use. "
+                + "Windows is coming in a future version.",
+            "macos": "macOS installs from an IPSW file you download from Apple’s developer site, betas included: "
+                + "Nido only reads it. Installing takes 10–20 minutes; you complete macOS "
+                + "Setup Assistant in the VM’s window.",
         ]
         var variants: [Int] = []
         for selection in ["debian", "macos"] {
@@ -185,12 +185,12 @@ func screenComponents(_ s: Script) {
             if mac {
                 s.setText(s.find("U", in: debian), "D")
                 s.setText(s.find("Ubuntu 24.04", in: debian), "Debian 13")
-                s.setText(s.find("arm64 · 2,6 GiB", in: debian), "arm64 · 1,2 GiB")
+                s.setText(s.find("arm64 · 2.6 GiB", in: debian), "arm64 · 1.2 GiB")
             }
             let macTile = s.instance(of: s.variant("OSTile", mac ? "Stato=selezionato" : "Stato=normale"), parent: tiles)
             s.setText(s.find(mac ? "D" : "U", in: macTile), "M")
             s.setText(s.find(mac ? "Debian 13" : "Ubuntu 24.04", in: macTile), "macOS")
-            s.setText(s.find(mac ? "arm64 · 1,2 GiB" : "arm64 · 2,6 GiB", in: macTile), "da file IPSW")
+            s.setText(s.find(mac ? "arm64 · 1.2 GiB" : "arm64 · 2.6 GiB", in: macTile), "from an IPSW file")
             _ = s.instance(of: s.variant("OSTile", "Stato=disattivato"), parent: tiles)
             for tile in s.children(of: tiles) { s.set(tile, ["width": 160]) }
             s.text(captions[selection]!, parent: choice, size: "caption", color: "textSecondary",
@@ -217,17 +217,17 @@ func screenComponents(_ s: Script) {
 func libraryWindow(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Double = 0, mode: String,
                    withVMs: Bool, behindSheet: Bool = false) -> ScreenRefs {
     let w = window(s, name, parent: parent, x: x, y: y, mode: mode)
-    let bar = toolbar(s, window: w, title: "Libreria",
-                      subtitle: withVMs ? "8 macchine virtuali · 2 in esecuzione" : "Nessuna macchina virtuale")
+    let bar = toolbar(s, window: w, title: "Library",
+                      subtitle: withVMs ? "8 virtual machines · 2 running" : "No virtual machines")
     searchField(s, parent: bar)
-    let new = button(s, "secondary", "Nuova VM", parent: bar)
+    let new = button(s, "secondary", "New VM", parent: bar)
     var refs: ScreenRefs = ["window": w, "nuova": new]
 
     if !withVMs {
         let content = fillArea(s, "Contenuto", parent: w, padding: ["xl"],
                                props: ["mainAlign": "center", "crossAlign": "center"])
         let empty = s.instance(of: s.firstLayerComponent("EmptyState"), parent: content)
-        refs["crea"] = s.parent(of: s.find("Crea VM", in: empty))
+        refs["crea"] = s.parent(of: s.find("Create VM", in: empty))
         // Behind a sheet the empty state would peek out under it: the window shows only its frame.
         if behindSheet { s.set(empty, ["visible": false]) }
         return refs
@@ -241,23 +241,23 @@ func libraryWindow(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: 
         // Three columns fill the content width: (1100 − 2 × 24 − 2 × 16) / 3 = 340.
         s.set(c, ["width": 340])
         s.setText(s.find("debian-13", in: c), vm)
-        s.setText(s.find("4 CPU · 8 GiB di memoria · disco 64 GiB", in: c), caption)
+        s.setText(s.find("4 CPUs · 8 GiB of memory · 64 GiB disk", in: c), caption)
         return c
     }
     // In the app's order: bundles sorted by name (VMBundle.list), as ScreenshotTests creates them.
     // Suspended with its state saved: VMCard "suspended" (Riprendi, Impostazioni).
-    _ = card("suspended", "archivio", "2 CPU · 4 GiB di memoria · disco 32 GiB")
+    _ = card("suspended", "archivio", "2 CPUs · 4 GiB of memory · 32 GiB disk")
     // Started with `nido start`: VMCard "running-terminale" (Avvia disabled, Arresta active).
-    _ = card("running-terminale", "ci-runner", "2 CPU · 4 GiB di memoria · disco 32 GiB")
-    let stopped = card("stopped", "debian-13", "4 CPU · 8 GiB di memoria · disco 64 GiB")
+    _ = card("running-terminale", "ci-runner", "2 CPUs · 4 GiB of memory · 32 GiB disk")
+    let stopped = card("stopped", "debian-13", "4 CPUs · 8 GiB of memory · 64 GiB disk")
     refs["avvia"] = s.children(of: s.find("Azioni", in: stopped))[0]
-    _ = card("starting", "dev-box", "4 CPU · 8 GiB di memoria · disco 128 GiB")
-    _ = card("paused", "sandbox", "2 CPU · 2 GiB di memoria · disco 32 GiB")
-    _ = card("error", "test-arm", "4 CPU · 8 GiB di memoria · disco 64 GiB")
-    let unreadable = card("unreadable", "vecchia-vm", "CPU, memoria e disco sconosciuti")
-    s.setText(s.find("Debian 13 · arm64", in: unreadable), "Sistema sconosciuto")
+    _ = card("starting", "dev-box", "4 CPUs · 8 GiB of memory · 128 GiB disk")
+    _ = card("paused", "sandbox", "2 CPUs · 2 GiB of memory · 32 GiB disk")
+    _ = card("error", "test-arm", "4 CPUs · 8 GiB of memory · 64 GiB disk")
+    let unreadable = card("unreadable", "vecchia-vm", "CPU, memory and disk unknown")
+    s.setText(s.find("Debian 13 · arm64", in: unreadable), "Unknown system")
     s.setText(s.find("D", in: unreadable), "?")
-    let running = card("running", "web-staging", "2 CPU · 4 GiB di memoria · disco 32 GiB")
+    let running = card("running", "web-staging", "2 CPUs · 4 GiB of memory · 32 GiB disk")
     refs["apri"] = s.children(of: s.find("Azioni", in: running))[0]
     return refs
 }
@@ -313,7 +313,7 @@ func sheetActions(_ s: Script, parent: Int, action: String, kind: String = "prim
                   disabled: Bool = false) -> (cancel: Int, action: Int) {
     let row = stack(s, "Azioni", parent: parent, "horizontal", gap: "s",
                     props: ["sizingH": "fill", "mainAlign": "max"])
-    let cancel = button(s, disabled ? "disabled" : "secondary", "Annulla", parent: row)
+    let cancel = button(s, disabled ? "disabled" : "secondary", "Cancel", parent: row)
     let confirm = button(s, disabled ? "disabled" : kind, action, parent: row)
     return (cancel, confirm)
 }
@@ -335,7 +335,7 @@ func indeterminateBar(_ s: Script, parent: Int, width: Double) {
 /// `nextEnabled` false the Avanti button is disabled (as in the WizardStep "avanti disattivato").
 func wizardWindow(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Double = 0, mode: String,
                   nextEnabled: Bool = true, step: Int, total: Int = 5, title: String, description: String,
-                  next: String = "Avanti") -> (refs: ScreenRefs, slot: Int) {
+                  next: String = "Next") -> (refs: ScreenRefs, slot: Int) {
     var refs = libraryWindow(s, name, parent: parent, x: x, y: y, mode: mode, withVMs: false, behindSheet: true)
     let w = refs["window"]!
     addScrim(s, window: w)
@@ -348,9 +348,9 @@ func wizardWindow(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: D
         // A shorter path (from a template) shows only its own steps.
         if index >= total { s.set(segment, ["visible": false]) }
     }
-    s.setText(steps[5], "Passo \(step) di \(total)")
-    s.setText(s.find("Risorse", in: sheet), title)
-    s.setText(s.find("Scegli quanta CPU, memoria e disco del Mac assegnare a debian-13.", in: sheet), description)
+    s.setText(steps[5], "Step \(step) of \(total)")
+    s.setText(s.find("Resources", in: sheet), title)
+    s.setText(s.find("Choose how much of the Mac’s CPU, memory and disk to give debian-13.", in: sheet), description)
 
     let nav = s.children(of: s.find("Navigazione", in: sheet))  // Indietro, spacer, Annulla, Avanti
     if step == 1 { s.set(nav[0], ["visible": false]) }
@@ -389,10 +389,10 @@ func progressPanel(_ s: Script, slot: Int, phase: String, title: String, detail:
     s.set(p, ["sizingH": "fill"])
     if !keepActions { s.set(s.find("Azioni", in: p), ["visible": false]) }
     let defaults: [String: (String, String)] = [
-        "download": ("Download di Debian 13", "cloud.debian.org · 0,4 GiB di 1,2 GiB · circa 2 min"),
-        "verifica": ("Verifica dell'immagine", "Verifica del checksum SHA-512 · 1,2 GiB"),
-        "creazione": ("Creazione di debian-13", "Copia del disco (64 GiB) e preparazione di cloud-init"),
-        "errore": ("Download non riuscito", "Il checksum SHA-512 non corrisponde: il file scaricato è stato eliminato."),
+        "download": ("Downloading Debian 13", "cloud.debian.org · 0.4 GiB of 1.2 GiB · about 2 min"),
+        "verifica": ("Verifying the image", "Verifying the SHA-512 checksum · 1.2 GiB"),
+        "creazione": ("Creating debian-13", "Copying the disk (64 GiB) and preparing cloud-init"),
+        "errore": ("Download failed", "The SHA-512 checksum doesn’t match: the downloaded file was deleted."),
     ]
     let (oldTitle, oldDetail) = defaults[phase]!
     s.setText(s.find(oldTitle, in: p), title)
@@ -412,14 +412,14 @@ func stepperRow(_ s: Script, parent: Int, state: String = "normale", label: Stri
     let r = inSlot ? s.slotInsert(parent, component: component, replace: replace)
         : s.instance(of: component, parent: parent)
     s.set(r, ["sizingH": "fill"])
-    s.setText(s.find("Memoria", in: r), label)
-    let oldDetail = state == "normale" ? "Consigliati 4 GiB · al massimo 12 GiB" : "Oltre il limite: su questo Mac al massimo 12 GiB."
+    s.setText(s.find("Memory", in: r), label)
+    let oldDetail = state == "normale" ? "Recommended: 4 GiB · at most 12 GiB" : "Over the limit: at most 12 GiB on this Mac."
     s.setText(s.find(oldDetail, in: r), detail)
     s.setText(s.find(state == "normale" ? "8 GiB" : "16 GiB", in: r), value)
     return r
 }
 
-let resourcesDescription = "Scegli quanta CPU, memoria e disco del Mac assegnare a debian-13."
+let resourcesDescription = "Choose how much of the Mac’s CPU, memory and disk to give debian-13."
 
 /// S02: the system and, since M3c, the profile (Debian Base, Debian AI Starter) or a template.
 /// `profile`: base, ai, modello.
@@ -427,10 +427,10 @@ func s02System(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Doub
                profile: String = "base") -> ScreenRefs {
     let fromTemplate = profile == "modello"
     let (wizardRefs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode, step: 1,
-                                          total: fromTemplate ? 2 : 5, title: "Sistema",
+                                          total: fromTemplate ? 2 : 5, title: "System",
                                           description: fromTemplate
-                                              ? "Scegli il modello da cui creare la nuova macchina virtuale."
-                                              : "Scegli il sistema e il profilo della nuova macchina virtuale.")
+                                              ? "Choose the template for the new virtual machine."
+                                              : "Choose the system and profile of the new virtual machine.")
     var refs = wizardRefs
     // The system first (what runs), then the profile (what is prepared); a template replaces both.
     if !fromTemplate {
@@ -450,12 +450,12 @@ func s02System(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Doub
 
 func s03Confirm(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Double = 0, mode: String) -> ScreenRefs {
     let (refs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode, step: 2, title: "Download",
-                                    description: "Nido scarica l'immagine ufficiale e ne controlla l'integrità prima di usarla.",
-                                    next: "Scarica")
-    infoRow(s, parent: slot, "Origine", "cloud.debian.org", replace: true)
+                                    description: "Nido downloads the official image and checks its integrity before using it.",
+                                    next: "Download")
+    infoRow(s, parent: slot, "Source", "cloud.debian.org", replace: true)
     infoRow(s, parent: slot, "File", "debian-13-genericcloud-arm64.raw")
-    infoRow(s, parent: slot, "Dimensione", "1,2 GiB da scaricare")
-    infoRow(s, parent: slot, "Verifica", "checksum SHA-512")
+    infoRow(s, parent: slot, "Size", "1.2 GiB to download")
+    infoRow(s, parent: slot, "Verification", "SHA-512 checksum")
     return refs
 }
 
@@ -464,19 +464,19 @@ func s03Progress(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Do
     let failed = phase == "errore"
     let (refs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode,
                                     nextEnabled: failed, step: 2, title: "Download",
-                                    description: "Nido scarica l'immagine ufficiale e ne controlla l'integrità prima di usarla.",
-                                    next: failed ? "Riprova" : "Avanti")
+                                    description: "Nido downloads the official image and checks its integrity before using it.",
+                                    next: failed ? "Try Again" : "Next")
     switch phase {
     case "download":
-        progressPanel(s, slot: slot, phase: phase, title: "Download di Debian 13",
-                      detail: "cloud.debian.org · 0,4 GiB di 1,2 GiB · circa 2 min", fraction: 0.34)
+        progressPanel(s, slot: slot, phase: phase, title: "Downloading Debian 13",
+                      detail: "cloud.debian.org · 0.4 GiB of 1.2 GiB · about 2 min", fraction: 0.34)
     case "verifica":
-        progressPanel(s, slot: slot, phase: phase, title: "Verifica dell'immagine",
-                      detail: "Verifica del checksum SHA-512 · 1,2 GiB", fraction: 0.8)
+        progressPanel(s, slot: slot, phase: phase, title: "Verifying the image",
+                      detail: "Verifying the SHA-512 checksum · 1.2 GiB", fraction: 0.8)
     default:
-        progressPanel(s, slot: slot, phase: "errore", title: "Download non riuscito",
-                      detail: "Il checksum SHA-512 non corrisponde: il file scaricato è stato eliminato. "
-                        + "Riprova: Nido scarica di nuovo l'immagine.", fraction: nil)
+        progressPanel(s, slot: slot, phase: "errore", title: "Download failed",
+                      detail: "The SHA-512 checksum doesn’t match: the downloaded file was deleted. "
+                        + "Try again: Nido downloads the image again.", fraction: nil)
     }
     return refs
 }
@@ -484,24 +484,24 @@ func s03Progress(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Do
 func s04Resources(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Double = 0, mode: String,
                   overLimit: Bool, headroom: Bool = false) -> ScreenRefs {
     let (refs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode,
-                                    nextEnabled: !overLimit, step: 3, title: "Risorse",
+                                    nextEnabled: !overLimit, step: 3, title: "Resources",
                                     description: resourcesDescription)
-    stepperRow(s, parent: slot, label: "CPU", detail: "Consigliate 2 · al massimo 8 (core di questo Mac)", value: "4",
+    stepperRow(s, parent: slot, label: "CPU", detail: "Recommended: 2 · at most 8 (this Mac’s cores)", value: "4",
                replace: true)
     if overLimit {
-        stepperRow(s, parent: slot, state: "fuori limite", label: "Memoria",
-                   detail: "Oltre il limite: su questo Mac al massimo 12 GiB.", value: "16 GiB")
+        stepperRow(s, parent: slot, state: "fuori limite", label: "Memory",
+                   detail: "Over the limit: at most 12 GiB on this Mac.", value: "16 GiB")
     } else {
-        stepperRow(s, parent: slot, label: "Memoria", detail: "Consigliati 4 GiB · al massimo 12 GiB", value: "8 GiB")
+        stepperRow(s, parent: slot, label: "Memory", detail: "Recommended: 4 GiB · at most 12 GiB", value: "8 GiB")
     }
-    stepperRow(s, parent: slot, label: "Disco", detail: "Spazio libero sul Mac: 412 GiB", value: "64 GiB")
+    stepperRow(s, parent: slot, label: "Disk", detail: "Free space on the Mac: 412 GiB", value: "64 GiB")
     if headroom {
         // MemoryHeadroom: only a warning, Avanti stays enabled (starting is the user's choice).
         notice(s, parent: slot, inSlot: true, kind: "attenzione",
-               title: "La memoria delle VM accese supera il 75 % della RAM del Mac: rischio di crash del guest; "
-                + "riduci la memoria o chiudi altre VM/Docker.",
-               detail: "VM di Nido accese 8 GiB, altre VM (es. Docker) 2 GiB, questa VM 8 GiB: 18 GiB su 16 GiB. "
-                + "Nido avvia comunque la VM se lo scegli.")
+               title: "The memory of the running VMs exceeds 75% of the Mac’s RAM: the guest may crash; "
+                + "reduce the memory or close other VMs/Docker.",
+               detail: "Nido VMs running 8 GiB, other VMs (e.g. Docker) 2 GiB, this VM 8 GiB: 18 GiB of 16 GiB. "
+                + "Nido starts the VM anyway if you choose to.")
     }
     return refs
 }
@@ -511,78 +511,78 @@ func s04Resources(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: D
 func s05Access(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Double = 0, mode: String,
                vm: String = "debian-13", ollama: Bool = false) -> ScreenRefs {
     let (refs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode, step: 4,
-                                    title: "Accesso e software",
-                                    description: "Accedi a \(vm) via SSH con la tua chiave, senza password, e scegli "
-                                        + "cosa preparare al primo avvio.")
+                                    title: "Access and Software",
+                                    description: "Sign in to \(vm) over SSH with your key, no password, and choose "
+                                        + "what to set up at first boot.")
     let key = s.slotInsert(slot, component: s.firstLayerComponent("PickerRow"), replace: true)
     s.set(key, ["sizingH": "fill"])
-    s.setText(s.find("Etichetta", in: key), "Chiave SSH pubblica")
+    s.setText(s.find("Etichetta", in: key), "SSH public key")
     s.setText(s.find("Percorso", in: key), "~/.ssh/id_ed25519.pub · ssh-ed25519")
-    slotToggle(s, slot: slot, on: true, "Pacchetti essenziali",
-               "curl, git, python3, openssh-server, jq e altri strumenti di base. Nessun aggiornamento completo del sistema.")
+    slotToggle(s, slot: slot, on: true, "Essential packages",
+               "curl, git, python3, openssh-server, jq and other basic tools. No full system upgrade.")
     slotToggle(s, slot: slot, on: true, "Nido Guest Tools",
-               "Monitor di CPU, memoria e disco via vsock, senza rete. Servono per Ollama e per il ponte AI.")
-    slotToggle(s, slot: slot, on: ollama, "Installa Ollama dopo il primo avvio",
-               "Nido lo installa dalle fonti ufficiali quando la VM è pronta: puoi già usarla mentre scarica.")
+               "CPU, memory and disk monitoring over vsock, without the network. Ollama and the AI bridge need them.")
+    slotToggle(s, slot: slot, on: ollama, "Install Ollama after first boot",
+               "Nido installs it from the official sources once the VM is ready: you can already use the VM while it downloads.")
     if ollama {
-        infoRow(s, parent: slot, "Modello (facoltativo)", "llama3.2:1b",
-                note: "Uno solo, scaricato dopo Ollama. Con 4 GiB conviene un modello piccolo: è un consiglio, non una garanzia.")
+        infoRow(s, parent: slot, "Model (optional)", "llama3.2:1b",
+                note: "Only one, downloaded after Ollama. With 4 GiB a small model is best: this is a suggestion, not a guarantee.")
     }
     return refs
 }
 
 func s06Summary(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Double = 0, mode: String,
                 phase: String) -> ScreenRefs {
-    let description = "Controlla le scelte: Nido crea debian-13 e la avvia appena è pronta."
+    let description = "Check your choices: Nido creates debian-13 and starts it as soon as it’s ready."
     switch phase {
     case "riepilogo":
-        let (refs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode, step: 5, title: "Riepilogo",
-                                        description: description, next: "Crea e avvia")
-        infoRow(s, parent: slot, "Nome", "debian-13", replace: true)
-        infoRow(s, parent: slot, "Sistema", "Debian 13 · arm64 · Debian Base")
-        infoRow(s, parent: slot, "Risorse", "4 CPU · 8 GiB · disco 64 GiB")
-        infoRow(s, parent: slot, "Primo avvio", "Pacchetti essenziali · Guest Tools")
-        infoRow(s, parent: slot, "Accesso", "SSH · id_ed25519.pub")
-        infoRow(s, parent: slot, "Rete", "NAT")
+        let (refs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode, step: 5, title: "Summary",
+                                        description: description, next: "Create and Start")
+        infoRow(s, parent: slot, "Name", "debian-13", replace: true)
+        infoRow(s, parent: slot, "System", "Debian 13 · arm64 · Debian Base")
+        infoRow(s, parent: slot, "Resources", "4 CPUs · 8 GiB · 64 GiB disk")
+        infoRow(s, parent: slot, "First boot", "Essential packages · Guest Tools")
+        infoRow(s, parent: slot, "Access", "SSH · id_ed25519.pub")
+        infoRow(s, parent: slot, "Network", "NAT")
         return refs
     case "ai":
-        let (refs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode, step: 5, title: "Riepilogo",
-                                        description: "Controlla le scelte: Nido crea debian-ai e la avvia appena è pronta.",
-                                        next: "Crea e avvia")
-        infoRow(s, parent: slot, "Nome", "debian-ai", replace: true)
-        infoRow(s, parent: slot, "Sistema", "Debian 13 · arm64 · Debian AI Starter")
-        infoRow(s, parent: slot, "Risorse", "4 CPU · 4 GiB · disco 64 GiB")
-        infoRow(s, parent: slot, "Primo avvio", "Pacchetti essenziali · Guest Tools")
-        infoRow(s, parent: slot, "Dopo il primo avvio", "Ollama e il modello llama3.2:1b",
-                note: "La VM è usabile prima: l'avanzamento resta visibile nella sua finestra.")
-        infoRow(s, parent: slot, "Accesso", "SSH · id_ed25519.pub · rete NAT")
+        let (refs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode, step: 5, title: "Summary",
+                                        description: "Check your choices: Nido creates debian-ai and starts it as soon as it’s ready.",
+                                        next: "Create and Start")
+        infoRow(s, parent: slot, "Name", "debian-ai", replace: true)
+        infoRow(s, parent: slot, "System", "Debian 13 · arm64 · Debian AI Starter")
+        infoRow(s, parent: slot, "Resources", "4 CPUs · 4 GiB · 64 GiB disk")
+        infoRow(s, parent: slot, "First boot", "Essential packages · Guest Tools")
+        infoRow(s, parent: slot, "After first boot", "Ollama and the llama3.2:1b model",
+                note: "The VM is usable before then: the progress stays visible in its window.")
+        infoRow(s, parent: slot, "Access", "SSH · id_ed25519.pub · NAT network")
         return refs
     case "modello":
         let (refs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode, step: 2, total: 2,
-                                        title: "Riepilogo",
-                                        description: "Controlla le scelte: Nido copia debian-ai-base in ricerca-02 e la avvia.",
-                                        next: "Crea e avvia")
-        infoRow(s, parent: slot, "Nome", "ricerca-02", replace: true)
-        infoRow(s, parent: slot, "Modello", "debian-ai-base · Debian AI Starter")
-        infoRow(s, parent: slot, "Risorse", "4 CPU · 8 GiB · disco 64 GiB, come il modello")
-        infoRow(s, parent: slot, "Spazio sul Mac", "Nessuno in più finché i dischi non cambiano",
-                note: "Copia istantanea del disco (clonefile).")
-        infoRow(s, parent: slot, "Identità", "Nuova: indirizzo MAC, nome host, chiavi host SSH")
-        infoRow(s, parent: slot, "Cartelle condivise e ponte AI", "Nessuna · spento",
-                note: "Non passano dal modello alla nuova VM: li scegli tu, dopo.")
+                                        title: "Summary",
+                                        description: "Check your choices: Nido copies debian-ai-base to ricerca-02 and starts it.",
+                                        next: "Create and Start")
+        infoRow(s, parent: slot, "Name", "ricerca-02", replace: true)
+        infoRow(s, parent: slot, "Template", "debian-ai-base · Debian AI Starter")
+        infoRow(s, parent: slot, "Resources", "4 CPUs · 8 GiB · 64 GiB disk, like the template")
+        infoRow(s, parent: slot, "Space on the Mac", "No extra space until the disks change",
+                note: "Instant copy of the disk (clonefile).")
+        infoRow(s, parent: slot, "Identity", "New: MAC address, host name, SSH host keys")
+        infoRow(s, parent: slot, "Shared folders and AI bridge", "None · off",
+                note: "They don’t carry over from the template to the new VM: you choose them later.")
         return refs
     case "creazione":
         let (refs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode, nextEnabled: false,
-                                        step: 5, title: "Riepilogo", description: description, next: "Crea e avvia")
-        progressPanel(s, slot: slot, phase: "creazione", title: "Creazione di debian-13",
-                      detail: "Copia del disco (64 GiB) e preparazione di cloud-init", fraction: 0.6)
+                                        step: 5, title: "Summary", description: description, next: "Create and Start")
+        progressPanel(s, slot: slot, phase: "creazione", title: "Creating debian-13",
+                      detail: "Copying the disk (64 GiB) and preparing cloud-init", fraction: 0.6)
         return refs
     default:
-        let (refs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode, step: 5, title: "Riepilogo",
-                                        description: description, next: "Riprova")
-        progressPanel(s, slot: slot, phase: "errore", title: "Creazione non riuscita",
-                      detail: "Spazio su disco insufficiente: servono 64 GiB, sul Mac ne restano 41 GiB. "
-                        + "Libera spazio o riduci il disco al passo Risorse.", fraction: nil)
+        let (refs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode, step: 5, title: "Summary",
+                                        description: description, next: "Try Again")
+        progressPanel(s, slot: slot, phase: "errore", title: "Creation failed",
+                      detail: "Not enough disk space: 64 GiB needed, 41 GiB left on the Mac. "
+                        + "Free up space or make the disk smaller in the Resources step.", fraction: nil)
         return refs
     }
 }
@@ -638,7 +638,7 @@ func vmWindow(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Doubl
     ]
     for (key, id) in zip(names[state]!, buttons) { refs[key] = id }
     // M3c: the window's views (Schermo, Monitor, AI), see ScreensAI.swift.
-    vmTabs(s, window: w, selected: "Schermo", bridge: false)
+    vmTabs(s, window: w, selected: "Screen", bridge: false)
 
     switch state {
     case "starting":
@@ -655,34 +655,34 @@ func vmWindow(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Doubl
         s.bind(note, "cornerRadius", "Radius/m")
         s.stroke(note, "border")
         s.instance(of: s.variant("StatusBadge", "Stato=paused"), parent: note)
-        s.text("debian-13 resta in memoria dove l'hai lasciata. Riprendi per continuare.", parent: note,
+        s.text("debian-13 stays in memory where you left it. Resume to continue.", parent: note,
                size: "body", color: "textPrimary",
                props: ["sizingH": "fill", "textAutoResize": "height", "textAlign": "center"])
     default:
         let area = fillArea(s, "Contenuto", parent: w, padding: ["xl"],
                             props: ["mainAlign": "center", "crossAlign": "center"])
         let empty = s.instance(of: s.firstLayerComponent("EmptyState"), parent: area)
-        s.set(s.parent(of: s.find("Crea VM", in: empty)), ["visible": false])  // the toolbar has the action
+        s.set(s.parent(of: s.find("Create VM", in: empty)), ["visible": false])  // the toolbar has the action
         if state == "stopped" {
-            s.setText(s.find("Il nido è vuoto", in: empty), "debian-13 è arrestata")
+            s.setText(s.find("The nest is empty", in: empty), "debian-13 is stopped")
             s.setText(s.find(emptyStateBody, in: empty),
-                      "Ultimo arresto oggi alle 10:42. Avvia la VM dalla barra: il disco e le impostazioni restano come li hai lasciati.")
+                      "Last stopped today at 10:42. Start the VM from the toolbar: the disk and the settings stay as you left them.")
         } else if state == "suspended" {
             // VMWindowModel.stoppedTitle / stoppedMessage for a VM suspended from this window.
-            s.setText(s.find("Il nido è vuoto", in: empty), "debian-13 è sospesa")
+            s.setText(s.find("The nest is empty", in: empty), "debian-13 is suspended")
             s.setText(s.find(emptyStateBody, in: empty),
-                      "Lo stato della VM è salvato sul Mac: Riprendi per continuare da dove l'hai lasciata.")
+                      "The VM’s state is saved on the Mac: Resume to continue where you left off.")
         } else {
-            s.setText(s.find("Il nido è vuoto", in: empty), "Avvio non riuscito")
+            s.setText(s.find("The nest is empty", in: empty), "Start failed")
             s.bind(s.children(of: s.find("Nido", in: empty))[0], "fill", "statusError")
             s.setText(s.find(emptyStateBody, in: empty),
-                      "Il disco della VM (disk.img) non è leggibile. Controlla lo spazio libero sul Mac e premi Riprova.")
+                      "The VM’s disk (disk.img) can’t be read. Check the free space on the Mac and start it again.")
         }
     }
     return refs
 }
 
-let emptyStateBody = "Crea la prima macchina virtuale: Nido scarica Debian 13, ne verifica l'immagine e la prepara in pochi minuti."
+let emptyStateBody = "Create your first virtual machine: Nido downloads Debian 13, verifies the image and sets up the VM in a few minutes."
 
 /// S11: the VM fills the screen; the toolbar slides in from the top edge (shown here).
 func fullScreenWindow(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Double = 0, mode: String) -> ScreenRefs {
@@ -691,7 +691,7 @@ func fullScreenWindow(_ s: Script, _ name: String, parent: Int?, x: Double = 0, 
     let bar = s.instance(of: s.variant("VMToolbar", "Stato=running"), parent: w)
     s.set(bar, ["absolute": true, "x": 0, "y": 0, "effects": sheetShadow])
     let exit = s.children(of: bar).last!
-    s.setText(s.children(of: exit)[0], "Esci da schermo intero")
+    s.setText(s.children(of: exit)[0], "Exit Full Screen")
     return ["window": w, "esci": exit]
 }
 
@@ -720,7 +720,7 @@ func settingsWindow(_ s: Script, _ name: String, parent: Int?, x: Double, y: Dou
                color: isSelected ? "accentText" : later ? "textSecondary" : "textPrimary")
         if later {
             spacer(s, parent: item)
-            s.text("In arrivo", parent: item, size: "caption", color: "textSecondary")
+            s.text("Coming soon", parent: item, size: "caption", color: "textSecondary")
         }
     }
     let content = fillArea(s, "Contenuto", parent: body, padding: ["xl"])
@@ -736,10 +736,10 @@ func settingsWindow(_ s: Script, _ name: String, parent: Int?, x: Double, y: Dou
 
 func s08Settings(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Double = 0, mode: String,
                  running: Bool) -> ScreenRefs {
-    let (w, column) = settingsWindow(s, name, parent: parent, x: x, y: y, mode: mode, title: "Impostazioni di debian-13",
+    let (w, column) = settingsWindow(s, name, parent: parent, x: x, y: y, mode: mode, title: "debian-13 Settings",
                                      sections: vmSettingsSections, comingSoon: vmSettingsComingSoon, selected: "Hardware",
                                      heading: "Hardware",
-                                     intro: "CPU e memoria valgono dal prossimo avvio di debian-13.")
+                                     intro: "CPU and memory apply from the next start of debian-13.")
     if running {
         let notice = stack(s, "Avviso", parent: column, "horizontal", gap: "m", padding: ["m", "l"],
                            props: ["sizingH": "fill", "crossAlign": "center"])
@@ -747,21 +747,21 @@ func s08Settings(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Do
         s.bind(notice, "cornerRadius", "Radius/m")
         s.stroke(notice, "statusPaused")
         s.instance(of: s.variant("StatusBadge", "Stato=running"), parent: notice)
-        s.text("Arresta debian-13 per cambiare CPU e memoria.", parent: notice, size: "body", color: "textPrimary",
+        s.text("Stop debian-13 to change CPU and memory.", parent: notice, size: "body", color: "textPrimary",
                props: ["sizingH": "fill", "textAutoResize": "height"])
-        button(s, "secondary", "Arresta", parent: notice)
+        button(s, "secondary", "Stop", parent: notice)
     }
-    let lockedDetail = "Non modificabile mentre debian-13 è in esecuzione"
+    let lockedDetail = "Can’t be changed while debian-13 is running"
     let cpu = stepperRow(s, parent: column, label: "CPU",
-                         detail: running ? lockedDetail : "Consigliate 2 · al massimo 8 (core di questo Mac)",
+                         detail: running ? lockedDetail : "Recommended: 2 · at most 8 (this Mac’s cores)",
                          value: "4", inSlot: false)
-    let memory = stepperRow(s, parent: column, label: "Memoria",
-                            detail: running ? lockedDetail : "Consigliati 4 GiB · al massimo 12 GiB",
+    let memory = stepperRow(s, parent: column, label: "Memory",
+                            detail: running ? lockedDetail : "Recommended: 4 GiB · at most 12 GiB",
                             value: "8 GiB", inSlot: false)
     if running {
         for row in [cpu, memory] { s.set(row, ["opacity": 0.5]) }
     }
-    infoRow(s, parent: column, "Disco", "64 GiB", note: "La dimensione del disco si sceglie alla creazione.",
+    infoRow(s, parent: column, "Disk", "64 GiB", note: "The disk size is chosen when the VM is created.",
             inSlot: false)
     let toggle = s.instance(of: s.variant("ToggleRow", running ? "Stato=bloccata" : "Stato=attiva"), parent: column)
     s.set(toggle, ["sizingH": "fill"])
@@ -769,24 +769,24 @@ func s08Settings(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Do
 }
 
 func s10Preferences(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Double = 0, mode: String) -> ScreenRefs {
-    let (w, column) = settingsWindow(s, name, parent: parent, x: x, y: y, mode: mode, title: "Impostazioni di Nido",
-                                     sections: appSettingsSections, selected: "Generale", heading: "Generale",
-                                     intro: "Nido conserva le VM in una cartella condivisa con il comando nido.")
+    let (w, column) = settingsWindow(s, name, parent: parent, x: x, y: y, mode: mode, title: "Nido Settings",
+                                     sections: appSettingsSections, selected: "General", heading: "General",
+                                     intro: "Nido keeps the VMs in a folder it shares with the nido command.")
     let folder = s.instance(of: s.firstLayerComponent("PickerRow"), parent: column)
     s.set(folder, ["sizingH": "fill"])
-    s.setText(s.find("Etichetta", in: folder), "Cartella delle VM")
-    s.setText(s.find("Percorso", in: folder), "~/Library/Application Support/Nido/VMs · sola lettura")
-    s.setText(s.children(of: s.children(of: folder).last!)[0], "Mostra nel Finder")
-    infoRow(s, parent: column, "Versione", "Nido 0.2.0", inSlot: false)
-    infoRow(s, parent: column, "Licenza", "Apache License 2.0", note: "Nido è software libero: il codice è pubblico.",
+    s.setText(s.find("Etichetta", in: folder), "VM folder")
+    s.setText(s.find("Percorso", in: folder), "~/Library/Application Support/Nido/VMs · read only")
+    s.setText(s.children(of: s.children(of: folder).last!)[0], "Show in Finder")
+    infoRow(s, parent: column, "Version", "Nido 0.2.0", inSlot: false)
+    infoRow(s, parent: column, "License", "Apache License 2.0", note: "Nido is free software: its code is public.",
             inSlot: false)
     return ["window": w]
 }
 
 // MARK: - S08 sections Generale and Condivisione (VMSettingsView)
 
-let vmSettingsSections = ["Generale", "Hardware", "Condivisione", "Guest Tools", "Accesso", "Rete"]
-let vmSettingsComingSoon: Set<String> = ["Accesso", "Rete"]
+let vmSettingsSections = ["General", "Hardware", "Sharing", "Guest Tools", "Access", "Network"]
+let vmSettingsComingSoon: Set<String> = ["Access", "Network"]
 
 /// A PickerRow with its own label, note and button (Rimuovi, Copia, Installa Rosetta…).
 @discardableResult
@@ -806,9 +806,9 @@ func toggleRow(_ s: Script, parent: Int, on: Bool, locked: Bool = false, _ title
     let state = on ? (locked ? "bloccata" : "attiva") : "disattivata"
     let r = s.instance(of: s.variant("ToggleRow", "Stato=\(state)"), parent: parent)
     s.set(r, ["sizingH": "fill"])
-    s.setText(s.find("Sincronizza l'ora con il Mac", in: r), title)
-    let old = state == "bloccata" ? "Si può cambiare solo a VM arrestata."
-        : "Il Mac imposta l'ora della VM a ogni avvio e dopo la pausa."
+    s.setText(s.find("Sync the clock with the Mac", in: r), title)
+    let old = state == "bloccata" ? "Can be changed only with the VM stopped."
+        : "The Mac sets the VM’s clock at every start and after a pause."
     s.setText(s.find(old, in: r), explanation)
     if locked && !on { s.set(s.find("Interruttore", in: r), ["opacity": 0.5]) }
     return r
@@ -816,15 +816,15 @@ func toggleRow(_ s: Script, parent: Int, on: Bool, locked: Bool = false, _ title
 
 /// "Generale": name and MAC address (read-only), and the way to the snapshots (S09).
 func s08General(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Double = 0, mode: String) -> ScreenRefs {
-    let (w, column) = settingsWindow(s, name, parent: parent, x: x, y: y, mode: mode, title: "Impostazioni di debian-13",
+    let (w, column) = settingsWindow(s, name, parent: parent, x: x, y: y, mode: mode, title: "debian-13 Settings",
                                      sections: vmSettingsSections, comingSoon: vmSettingsComingSoon,
-                                     selected: "Generale", heading: "Generale",
-                                     intro: "Dati della macchina virtuale, in sola lettura, e i suoi snapshot.")
-    infoRow(s, parent: column, "Nome", "debian-13", note: "Il nome si sceglie alla creazione.", inSlot: false)
-    infoRow(s, parent: column, "Indirizzo MAC", "52:54:00:3a:9c:12", note: "Assegnato alla creazione della VM.",
+                                     selected: "General", heading: "General",
+                                     intro: "The virtual machine’s details, read only, and its snapshots.")
+    infoRow(s, parent: column, "Name", "debian-13", note: "The name is chosen when the VM is created.", inSlot: false)
+    infoRow(s, parent: column, "MAC address", "52:54:00:3a:9c:12", note: "Assigned when the VM was created.",
             inSlot: false)
-    let snapshots = pickerRow(s, parent: column, "Snapshot",
-                              "3 snapshot · l'ultimo, dopo-docker, del 24 ott 2026, 16:05", action: "Gestisci snapshot…")
+    let snapshots = pickerRow(s, parent: column, "Snapshots",
+                              "3 snapshots · the latest, after-docker, from Oct 24, 2026, 4:05 PM", action: "Manage Snapshots…")
     return ["window": w, "snapshot": s.children(of: snapshots).last!]
 }
 
@@ -832,51 +832,51 @@ func s08General(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Dou
 func sharedFolder(_ s: Script, parent: Int, name: String, hostPath: String, readOnly: Bool) {
     // The folder and its switch stay together (xs); groups sit further apart (s + 4).
     let group = stack(s, name, parent: parent, "vertical", gap: "xs", props: ["sizingH": "fill", "paddingBottom": 4])
-    pickerRow(s, parent: group, name, "\(hostPath) → /mnt/nido/\(name)", action: "Rimuovi")
-    toggleRow(s, parent: group, on: readOnly, "Sola lettura",
-              readOnly ? "La VM legge i file ma non può modificarli né cancellarli."
-                  : "La VM può modificare e cancellare i file di questa cartella sul Mac: attiva solo se ti serve.")
+    pickerRow(s, parent: group, name, "\(hostPath) → /mnt/nido/\(name)", action: "Remove")
+    toggleRow(s, parent: group, on: readOnly, "Read only",
+              readOnly ? "The VM reads the files but can’t change or delete them."
+                  : "The VM can change and delete the files in this folder on the Mac: turn this on only if you need it.")
 }
 
 /// "Condivisione": shared folders and Rosetta. `rosettaMissing`: no folders yet, a VM created by
 /// an older Nido (one-time guest command), Rosetta not installed on this Mac.
 func s08Sharing(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Double = 0, mode: String,
                 rosettaMissing: Bool, running: Bool = false) -> ScreenRefs {
-    let (w, column) = settingsWindow(s, name, parent: parent, x: x, y: y, mode: mode, title: "Impostazioni di debian-13",
+    let (w, column) = settingsWindow(s, name, parent: parent, x: x, y: y, mode: mode, title: "debian-13 Settings",
                                      sections: vmSettingsSections, comingSoon: vmSettingsComingSoon,
-                                     selected: "Condivisione", heading: "Condivisione",
-                                     intro: "Cartelle del Mac visibili nella VM in /mnt/nido. Aggiungere o togliere una "
-                                        + "cartella e cambiare la sola lettura hanno effetto subito, anche a VM accesa.")
+                                     selected: "Sharing", heading: "Sharing",
+                                     intro: "Folders on the Mac that the VM sees in /mnt/nido. Adding or removing a "
+                                        + "folder or changing read only takes effect right away, even while the VM is running.")
     if running {
         // A change while the VM runs: the share of the session is replaced at once (spec G).
         notice(s, parent: column, inSlot: false, kind: "informazione",
-               title: "Ha effetto subito: dataset ora è in sola lettura anche per debian-13 in esecuzione.",
-               detail: "I programmi che nella VM scrivevano in /mnt/nido/dataset ricevono un errore di sola lettura.")
+               title: "Takes effect right away: dataset is now read only for the running debian-13 too.",
+               detail: "Programs in the VM that were writing to /mnt/nido/dataset now get a read-only error.")
     }
     if rosettaMissing {
-        infoRow(s, parent: column, "Nessuna cartella condivisa", "",
-                note: "La VM non vede alcun file del Mac. Aggiungi una cartella per renderla visibile in /mnt/nido.",
+        infoRow(s, parent: column, "No shared folders", "",
+                note: "The VM can’t see any files on the Mac. Add a folder to make it visible in /mnt/nido.",
                 inSlot: false)
-        pickerRow(s, parent: column, "Cartelle condivise: VM creata con una versione precedente di Nido",
-                  "Per vedere le cartelle in /mnt/nido, esegui una volta nella VM:\n"
+        pickerRow(s, parent: column, "Shared folders: VM created with an earlier version of Nido",
+                  "To see the folders in /mnt/nido, run this once in the VM:\n"
                     + "sudo sh -c 'mkdir -p /etc/systemd/system && printf \"%s\\n\" \"[Unit]\" …'",
-                  action: "Copia")
+                  action: "Copy")
     } else {
         sharedFolder(s, parent: column, name: "progetti", hostPath: "/Users/anna/Progetti", readOnly: true)
         sharedFolder(s, parent: column, name: "dataset", hostPath: "/Volumes/Dati/dataset", readOnly: running)
     }
     let bar = stack(s, "Aggiungi", parent: column, "horizontal", gap: "m", props: ["sizingH": "fill"])
     spacer(s, parent: bar)
-    button(s, "primary", "Aggiungi cartella…", parent: bar)
+    button(s, "primary", "Add Folder…", parent: bar)
     if rosettaMissing {
-        toggleRow(s, parent: column, on: false, locked: true, "Rosetta (binari x86_64)",
-                  "Rosetta non è installata su questo Mac. Installala per attivarla.")
-        pickerRow(s, parent: column, "Rosetta non è installata su questo Mac",
-                  "L'installazione è un componente di sistema di macOS e richiede la tua conferma.",
-                  action: "Installa Rosetta…")
+        toggleRow(s, parent: column, on: false, locked: true, "Rosetta (x86_64 binaries)",
+                  "Rosetta isn’t installed on this Mac. Install it to turn it on.")
+        pickerRow(s, parent: column, "Rosetta isn’t installed on this Mac",
+                  "It’s a macOS system component; installing it needs your confirmation.",
+                  action: "Install Rosetta…")
     } else {
-        toggleRow(s, parent: column, on: true, "Rosetta (binari x86_64)",
-                  "La VM esegue i programmi Linux per Intel (x86_64) con Rosetta. Vale dal prossimo avvio.")
+        toggleRow(s, parent: column, on: true, "Rosetta (x86_64 binaries)",
+                  "The VM runs Linux programs for Intel (x86_64) with Rosetta. Applies from the next start.")
     }
     return ["window": w]
 }
@@ -887,9 +887,9 @@ func s08Sharing(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Dou
 typealias SnapshotFixture = (name: String, date: String, savedState: Bool)
 
 let snapshotFixtures: [SnapshotFixture] = [
-    ("dopo-docker", "24 ott 2026, 16:05", true),
-    ("prima-dell-aggiornamento", "24 ott 2026, 10:42", true),
-    ("installazione-pulita", "22 ott 2026, 09:15", false),
+    ("after-docker", "Oct 24, 2026, 4:05 PM", true),
+    ("before-update", "Oct 24, 2026, 10:42 AM", true),
+    ("installazione-pulita", "Oct 22, 2026, 9:15 AM", false),
 ]
 
 /// S09: the snapshots of one VM, newest first, under the current state (or the progress of a new
@@ -898,66 +898,66 @@ func snapshotsWindow(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y
                      phase: String, running: Bool = false, extra: SnapshotFixture? = nil) -> ScreenRefs {
     let w = window(s, name, parent: parent, x: x, y: y, mode: mode)
     let list = (extra.map { [$0] } ?? []) + (phase == "vuoto" ? [] : snapshotFixtures)
-    let vmState = running ? "debian-13 in esecuzione" : "debian-13 arrestata"
-    _ = toolbar(s, window: w, title: "Snapshot di debian-13",
-                subtitle: list.isEmpty ? "Nessuno snapshot · \(vmState)" : "\(list.count) snapshot · \(vmState)")
+    let vmState = running ? "debian-13 running" : "debian-13 stopped"
+    _ = toolbar(s, window: w, title: "Snapshots of debian-13",
+                subtitle: list.isEmpty ? "No snapshots · \(vmState)" : "\(list.count) snapshots · \(vmState)")
     var refs: ScreenRefs = ["window": w]
 
     if phase == "vuoto" {
         let content = fillArea(s, "Contenuto", parent: w, padding: ["xl"],
                                props: ["mainAlign": "center", "crossAlign": "center"])
         let empty = s.instance(of: s.firstLayerComponent("EmptyState"), parent: content)
-        s.setText(s.find("Il nido è vuoto", in: empty), "Nessuno snapshot")
+        s.setText(s.find("The nest is empty", in: empty), "No snapshots")
         s.setText(s.find(emptyStateBody, in: empty),
-                  "Uno snapshot conserva il disco di debian-13 così com'è adesso, e a VM accesa anche la memoria. "
-                    + "Potrai tornarci quando vuoi.")
-        let label = s.find("Crea VM", in: empty)
-        s.setText(label, "Crea snapshot…")
+                  "A snapshot keeps the disk of debian-13 as it is now, and its memory too if the VM is running. "
+                    + "You can go back to it anytime.")
+        let label = s.find("Create VM", in: empty)
+        s.setText(label, "Create Snapshot…")
         refs["crea"] = s.parent(of: label)
         return refs
     }
 
     let content = fillArea(s, "Contenuto", parent: w, padding: ["xl"], props: ["crossAlign": "center"])
     let column = stack(s, "Elenco", parent: content, "vertical", gap: "s", width: 720, props: ["sizingH": "fixed"])
-    s.text("Uno snapshot conserva disco e impostazioni della VM; preso a VM accesa, anche la memoria (con stato "
-           + "salvato). Ripristinarlo riporta debian-13 a quel momento.",
+    s.text("A snapshot keeps the VM’s disk and settings; taken while the VM is running, its memory too (with "
+           + "saved state). Restoring it takes debian-13 back to that moment.",
            parent: column, size: "body", color: "textSecondary",
            props: ["sizingH": "fill", "textAutoResize": "height"])
-    let top = stack(s, "Stato attuale", parent: column, "vertical", props: ["sizingH": "fill", "paddingTop": 8,
+    let top = stack(s, "Current state", parent: column, "vertical", props: ["sizingH": "fill", "paddingTop": 8,
                                                                             "paddingBottom": 8])
     switch phase {
     case "creazione":
-        progressPanel(s, slot: top, phase: "creazione", title: "Creazione di \(extra?.name ?? "snapshot-1")",
-                      detail: "debian-13 resta in pausa qualche secondo mentre Nido salva memoria e disco.",
+        progressPanel(s, slot: top, phase: "creazione", title: "Creating \(extra?.name ?? "snapshot-1")",
+                      detail: "debian-13 stays paused for a few seconds while Nido saves its memory and disk.",
                       fraction: 0.6, inSlot: false, width: 688)
     case "errore":
-        let panel = progressPanel(s, slot: top, phase: "errore", title: "Snapshot non riuscito",
-                                  detail: "Spazio insufficiente: servono 10 GiB, disponibili 4 GiB. "
-                                    + "Libera spazio sul Mac e riprova.",
+        let panel = progressPanel(s, slot: top, phase: "errore", title: "Snapshot failed",
+                                  detail: "Not enough space: 10 GiB needed, 4 GiB available. "
+                                    + "Free up space on the Mac and try again.",
                                   fraction: nil, inSlot: false, keepActions: true)
-        s.setText(s.children(of: s.children(of: s.find("Azioni", in: panel))[0])[0], "Chiudi")
+        s.setText(s.children(of: s.children(of: s.find("Azioni", in: panel))[0])[0], "Close")
     default:
         let current = s.instance(of: s.variant("SnapshotRow", "Stato=corrente"), parent: top)
         s.set(current, ["sizingH": "fill"])
         if running {
             // The StatusBadge of the running state (a nested variant switch would renumber the row).
-            let badge = s.children(of: s.children(of: s.find("Dettagli", in: current))[0])
+            let badge = s.children(of: s.children(of: s.find("Details", in: current))[0])
             s.bind(badge[0], "fill", "statusRunning")
-            s.setText(badge[1], "In esecuzione")
+            s.setText(badge[1], "Running")
         }
         refs["crea"] = s.children(of: s.find("Azioni", in: current))[0]
     }
 
-    s.text(phase == "creazione" ? "Snapshot (\(list.count))" : "Snapshot (\(list.count)), dal più recente",
+    s.text(phase == "creazione" ? "Snapshots (\(list.count))" : "Snapshots (\(list.count)), newest first",
            parent: column, size: "caption", style: "SemiBold", color: "textSecondary")
     for (index, snapshot) in list.enumerated() {
         let creating = phase == "creazione" && index == 0 && extra != nil
         let row = s.instance(of: s.variant("SnapshotRow", creating ? "Stato=in creazione" : "Stato=normale"),
                              parent: column)
         s.set(row, ["sizingH": "fill"])
-        s.setText(s.find("prima-dell-aggiornamento", in: row), snapshot.name)
+        s.setText(s.find("before-update", in: row), snapshot.name)
         if creating { continue }
-        s.setText(s.find("24 ott 2026, 10:42", in: row), snapshot.date)
+        s.setText(s.find("Oct 24, 2026, 10:42 AM", in: row), snapshot.date)
         if !snapshot.savedState { s.set(s.find("Stato salvato", in: row), ["visible": false]) }
         let actions = s.children(of: s.find("Azioni", in: row))
         // A secondary NidoButton looks disabled with the disabled variant's text colour and opacity
@@ -974,7 +974,7 @@ func snapshotsWindow(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y
         refs["elimina-\(snapshot.name)"] = actions[1]
     }
     if running {
-        s.text("Per ripristinare uno snapshot arresta prima debian-13.", parent: column, size: "caption",
+        s.text("To restore a snapshot, stop debian-13 first.", parent: column, size: "caption",
                color: "textSecondary")
     }
     return refs
@@ -985,15 +985,15 @@ func snapshotNameSheet(_ s: Script, _ name: String, parent: Int?, x: Double = 0,
                        running: Bool = false) -> ScreenRefs {
     var refs = snapshotsWindow(s, name, parent: parent, x: x, y: y, mode: mode, phase: "elenco", running: running)
     let message = running
-        ? "debian-13 è in esecuzione: Nido la mette in pausa per qualche secondo e salva anche la memoria."
-        : "Nido salva disco e impostazioni di debian-13 così come sono adesso."
-    let sheet = formSheet(s, window: refs["window"]!, title: "Crea uno snapshot di debian-13", message: message)
+        ? "debian-13 is running: Nido pauses it for a few seconds and saves its memory too."
+        : "Nido saves the disk and settings of debian-13 as they are now."
+    let sheet = formSheet(s, window: refs["window"]!, title: "Create a Snapshot of debian-13", message: message)
     // The name field and its rule read as one group (xs), apart from the buttons (m).
     let field = stack(s, "Campo", parent: sheet, "vertical", gap: "xs", props: ["sizingH": "fill"])
-    infoRow(s, parent: field, "Nome", "snapshot-1", inSlot: false)
-    s.text("Lettere, numeri, punto, trattino e trattino basso; diverso dagli altri snapshot di debian-13.",
+    infoRow(s, parent: field, "Name", "snapshot-1", inSlot: false)
+    s.text("Letters, numbers, periods, hyphens and underscores; different from the other snapshots of debian-13.",
            parent: field, size: "caption", color: "textSecondary", props: ["sizingH": "fill", "textAutoResize": "height"])
-    let (cancel, create) = sheetActions(s, parent: sheet, action: "Crea")
+    let (cancel, create) = sheetActions(s, parent: sheet, action: "Create")
     refs["annulla"] = cancel
     refs["conferma"] = create
     return refs
@@ -1004,13 +1004,13 @@ func snapshotConfirmSheet(_ s: Script, _ name: String, parent: Int?, x: Double =
                           restore: Bool) -> ScreenRefs {
     var refs = snapshotsWindow(s, name, parent: parent, x: x, y: y, mode: mode, phase: "elenco")
     let (cancel, action) = restore
-        ? confirmSheet(s, window: refs["window"]!, kind: "eliminazione", title: "Ripristinare prima-dell-aggiornamento?",
-                       message: "La VM tornerà allo stato del 24 ott 2026, 10:42; le modifiche successive andranno perse.",
-                       action: "Ripristina")
-        : confirmSheet(s, window: refs["window"]!, kind: "eliminazione", title: "Eliminare dopo-docker?",
-                       message: "Lo snapshot e la memoria salvata con esso saranno eliminati da questo Mac; "
-                        + "debian-13 resta com'è. L'operazione non si può annullare.",
-                       action: "Elimina")
+        ? confirmSheet(s, window: refs["window"]!, kind: "eliminazione", title: "Restore before-update?",
+                       message: "The VM will go back to its state as of Oct 24, 2026, 10:42 AM; later changes will be lost.",
+                       action: "Restore")
+        : confirmSheet(s, window: refs["window"]!, kind: "eliminazione", title: "Delete after-docker?",
+                       message: "The snapshot and the memory saved with it will be deleted from this Mac; "
+                        + "debian-13 stays as it is. This can’t be undone.",
+                       action: "Delete")
     refs["annulla"] = cancel
     refs["conferma"] = action
     return refs
@@ -1021,18 +1021,18 @@ func snapshotConfirmSheet(_ s: Script, _ name: String, parent: Int?, x: Double =
 func cloneSheet(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Double = 0, mode: String,
                 copying: Bool) -> ScreenRefs {
     var refs = libraryWindow(s, name, parent: parent, x: x, y: y, mode: mode, withVMs: true)
-    let sheet = formSheet(s, window: refs["window"]!, title: "Clonare debian-13?",
-                          message: "La copia avrà un nuovo indirizzo di rete e una nuova identità; al primo avvio prende "
-                            + "il nuovo nome come nome host. Rosetta viene copiata; cartelle condivise, ponte AI, "
-                            + "snapshot e stato sospeso no.")
-    let field = infoRow(s, parent: sheet, "Nome", "debian-13-copia", inSlot: false)
+    let sheet = formSheet(s, window: refs["window"]!, title: "Clone debian-13?",
+                          message: "The copy gets a new network address and a new identity; at first boot it takes "
+                            + "the new name as its host name. Rosetta is copied; shared folders, AI bridge, "
+                            + "snapshots and the suspended state aren’t.")
+    let field = infoRow(s, parent: sheet, "Name", "debian-13-copia", inSlot: false)
     if copying {
         s.set(field, ["opacity": 0.5])
         let progress = stack(s, "Avanzamento", parent: sheet, "vertical", gap: "xs", props: ["sizingH": "fill"])
-        s.text("Copia in corso…", parent: progress, size: "caption", color: "textSecondary")
+        s.text("Copying…", parent: progress, size: "caption", color: "textSecondary")
         indeterminateBar(s, parent: progress, width: 392)
     }
-    let (cancel, confirm) = sheetActions(s, parent: sheet, action: "Clona", disabled: copying)
+    let (cancel, confirm) = sheetActions(s, parent: sheet, action: "Clone", disabled: copying)
     refs["annulla"] = cancel
     refs["clona"] = confirm
     return refs

@@ -43,7 +43,7 @@ public enum L10n {
 
     /// Forces a language (nil = back to the system choice). Process-wide: tests that only need one
     /// language's text use `string(_:language:)` instead.
-    @_spi(Testing) public static func pin(_ language: String?) {
+    public static func pin(_ language: String?) {
         pinState.withLock { $0 = language }
     }
 
@@ -53,12 +53,16 @@ public enum L10n {
         return String(localized: key, bundle: languageBundles[code] ?? catalogBundle, locale: locale(for: code))
     }
 
+    /// Tests: the region number formats use in place of the Mac's, for this task only
+    /// (`L10n.$testRegion.withValue("US") { … }`), so an expected "1.5" holds on any Mac.
+    @_spi(Testing) @TaskLocal public static var testRegion: String?
+
     /// The locale for `language` (anything outside the five falls back to English), with the system's
     /// region when there is one: an English UI in Italy still formats numbers as "1,5". `region` is
     /// injectable for tests.
     @_spi(Testing) public static func locale(
         for language: String,
-        region: String? = Locale.current.region?.identifier
+        region: String? = testRegion ?? Locale.current.region?.identifier
     ) -> Locale {
         let code = normalized(language)
         guard let region, !region.isEmpty else { return Locale(identifier: code) }

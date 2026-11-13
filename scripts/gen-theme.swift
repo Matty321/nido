@@ -16,13 +16,13 @@ func fail(_ message: String) -> Never {
 
 let arguments = CommandLine.arguments
 guard arguments.count == 3 else {
-    fail("Uso: swift scripts/gen-theme.swift <tokens.json> <Theme.swift>")
+    fail("usage: swift scripts/gen-theme.swift <tokens.json> <Theme.swift>")
 }
 let inputPath = arguments[1]
 let outputPath = arguments[2]
 
 guard let data = FileManager.default.contents(atPath: inputPath) else {
-    fail("Impossibile leggere \(inputPath)")
+    fail("can’t read \(inputPath)")
 }
 guard
     let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -30,7 +30,7 @@ guard
     let collections = meta["variableCollections"] as? [String: [String: Any]],
     let variables = meta["variables"] as? [String: [String: Any]]
 else {
-    fail("\(inputPath) non è un export di variabili FigCraft valido (manca meta.variableCollections o meta.variables)")
+    fail("\(inputPath) is not a valid FigCraft variables export (missing meta.variableCollections or meta.variables)")
 }
 
 // MARK: - Naming
@@ -51,7 +51,7 @@ let swiftKeywords: Set<String> = [
 /// Turns a token name ("text/primary", "accent-text", "2xl") into a Swift identifier.
 func identifier(_ name: String, upperFirst: Bool = false) -> String {
     let parts = name.split(whereSeparator: { !($0.isLetter || $0.isNumber) }).map(String.init)
-    guard !parts.isEmpty else { fail("Nome di token non valido: \"\(name)\"") }
+    guard !parts.isEmpty else { fail("invalid token name: \"\(name)\"") }
     var result = parts[0] + parts.dropFirst().map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
     if upperFirst {
         result = result.prefix(1).uppercased() + result.dropFirst()
@@ -90,7 +90,7 @@ func resolve(_ variable: [String: Any], modeName: String?, depth: Int = 0) -> An
 func rgba(_ value: Any?, token: String) -> RGBA {
     guard let dict = value as? [String: Any],
           let r = dict["r"] as? Double, let g = dict["g"] as? Double, let b = dict["b"] as? Double
-    else { fail("Colore non leggibile per il token \(token)") }
+    else { fail("can’t read the color of token \(token)") }
     let a = dict["a"] as? Double ?? 1
     func byte(_ c: Double) -> Int { Int((min(max(c, 0), 1) * 255).rounded()) }
     return RGBA(r: byte(r), g: byte(g), b: byte(b), a: byte(a))
@@ -109,7 +109,7 @@ func colorArguments(light: RGBA, dark: RGBA) -> String {
 
 func numberLiteral(_ value: Any?, token: String) -> String {
     guard let number = value as? Double ?? (value as? Int).map(Double.init) else {
-        fail("Numero non leggibile per il token \(token)")
+        fail("can’t read the number of token \(token)")
     }
     if number == number.rounded() { return String(Int(number)) }
     var text = String(format: "%.4f", number)
@@ -147,14 +147,14 @@ for collection in sortedCollections {
         case "FLOAT":
             body.append("        static let \(id): CGFloat = \(numberLiteral(resolve(variable, modeName: nil), token: token))")
         case "STRING":
-            guard let text = resolve(variable, modeName: nil) as? String else { fail("Testo non leggibile per il token \(token)") }
+            guard let text = resolve(variable, modeName: nil) as? String else { fail("can’t read the text of token \(token)") }
             let escaped = text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
             body.append("        static let \(id) = \"\(escaped)\"")
         case "BOOLEAN":
-            guard let flag = resolve(variable, modeName: nil) as? Bool else { fail("Valore non leggibile per il token \(token)") }
+            guard let flag = resolve(variable, modeName: nil) as? Bool else { fail("can’t read the value of token \(token)") }
             body.append("        static let \(id) = \(flag)")
         default:
-            fail("Tipo non gestito per il token \(token)")
+            fail("unsupported type for token \(token)")
         }
     }
     body.append("    }")
@@ -209,6 +209,6 @@ do {
     try FileManager.default.createDirectory(at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
     try Data(output.utf8).write(to: outputURL, options: .atomic)
 } catch {
-    fail("Impossibile scrivere \(outputPath): \(error.localizedDescription)")
+    fail("can’t write \(outputPath): \(error.localizedDescription)")
 }
-print("Scritto \(outputPath) (\(variables.count) token).")
+print("Wrote \(outputPath) (\(variables.count) tokens).")

@@ -160,8 +160,11 @@ struct NidoOSTile: View {
                 .font(.nido(Theme.TypeSize.caption))
                 .foregroundStyle(Theme.Color.textSecondary)
         }
+        // A name or detail that wraps ("Ubuntu Server", a long translation) stays centred, and the
+        // tile fills the row's height: the row gives every tile the tallest one's (see the wizard).
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(Theme.Space.l)
-        .frame(maxWidth: .infinity)
         .background(state == .selected ? Theme.Color.surfaceRaised : Theme.Color.surface,
                     in: RoundedRectangle(cornerRadius: Theme.Radius.m))
         .overlay {
