@@ -2,7 +2,7 @@
 
 Le versioni di Nido, dalla più recente. L'app mostra la sezione della versione installata al primo avvio dopo un aggiornamento (menu Aiuto › Novità di Nido per rivederla).
 
-## [0.8.0] – 2026-11-11
+## [0.8.0] – 2026-11-13
 
 ### Lingue
 - **Nido parla inglese, italiano, tedesco, spagnolo e francese**: l'app, il comando `nido`, le note di versione e il README. L'inglese è la lingua di base; l'app segue la lingua di macOS, e con una lingua diversa da queste cinque è in inglese.

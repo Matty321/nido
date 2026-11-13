@@ -2,7 +2,7 @@
 
 Every Nido release, newest first. The first time Nido opens after an update, it shows the notes for the installed version (choose Help › What’s New in Nido to read them again).
 
-## [0.8.0] – 2026-11-11
+## [0.8.0] – 2026-11-13
 
 ### Languages
 - **Nido now speaks English, Italian, German, Spanish and French**: the app, the `nido` command, the release notes and the README. English is the base language. The app follows the language you use in macOS and falls back to English for any other language.
