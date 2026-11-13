@@ -4,6 +4,8 @@
 
 Nido is a virtual machine manager for Macs with Apple silicon. It runs Linux and macOS VMs on Apple’s Virtualization framework, from a native app or from the `nido` command in Terminal. It’s careful by default: Nido never goes online on its own, a VM reaches only the domains you allow, and it sees none of your Mac’s folders until you share one.
 
+<p align="center"><img src="docs/screenshots/en/library.png" alt="The library: three virtual machines, one running with the AI bridge active, and two templates" title="The library: three virtual machines, one running with the AI bridge active, and two templates" width="100%"></p>
+
 ## What Nido does
 
 - **Linux VMs from official cloud images**: Debian 13, Ubuntu Server 26.04 LTS and 24.04 LTS, for arm64. Nido downloads them only from the projects’ official sources and verifies them before use (SHA-512 for Debian, SHA-256 and Ubuntu’s signature for Ubuntu). You can also start from a local disk image, raw or qcow2.
@@ -13,6 +15,17 @@ Nido is a virtual machine manager for Macs with Apple silicon. It runs Linux and
 - **Controlled network**: a new VM reaches only the domains on its list, and Nido tells you about every connection it blocks.
 - **AI in Linux VMs**: Nido Guest Tools show the VM’s CPU, memory and disk without going through the network. Install Ollama and a model with one click and chat with it from the app, or connect a VM to Hugging Face Inference Providers through the optional AI bridge.
 - **In your language**: the app and the `nido` command speak English, Italian, German, Spanish and French, and follow the language you use in macOS.
+
+## Screenshots
+
+<p align="center">
+<img src="docs/screenshots/en/new-vm.png" alt="The New VM wizard: Debian, Ubuntu Server or macOS, with a profile" title="The New VM wizard: Debian, Ubuntu Server or macOS, with a profile" width="49%">
+<img src="docs/screenshots/en/monitor.png" alt="Monitor: CPU, memory and disk of a running Linux VM, read by the Guest Tools" title="Monitor: CPU, memory and disk of a running Linux VM, read by the Guest Tools" width="49%">
+</p>
+<p align="center">
+<img src="docs/screenshots/en/network.png" alt="Controlled network: the VM reaches only the domains on its list" title="Controlled network: the VM reaches only the domains on its list" width="49%">
+<img src="docs/screenshots/en/ai.png" alt="AI: Ollama inside the VM and the Hugging Face bridge with its limits" title="AI: Ollama inside the VM and the Hugging Face bridge with its limits" width="49%">
+</p>
 
 ## Requirements
 

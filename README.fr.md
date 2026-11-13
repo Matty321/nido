@@ -4,6 +4,8 @@
 
 Nido est un gestionnaire de machines virtuelles pour les Mac avec puce Apple. Il fait tourner des VM Linux et macOS sur le framework Virtualization d’Apple, depuis une app native ou avec la commande `nido` dans Terminal. Il est prudent par défaut : Nido ne se connecte jamais au réseau de lui-même, une VM n’atteint que les domaines que vous autorisez, et elle ne voit aucun dossier de votre Mac tant que vous n’en avez partagé aucun.
 
+<p align="center"><img src="docs/screenshots/fr/library.png" alt="La bibliothèque : trois machines virtuelles, dont une en marche avec le pont IA actif, et deux modèles" title="La bibliothèque : trois machines virtuelles, dont une en marche avec le pont IA actif, et deux modèles" width="100%"></p>
+
 ## Ce que fait Nido
 
 - **Des VM Linux à partir d’images cloud officielles** : Debian 13, Ubuntu Server 26.04 LTS et 24.04 LTS, pour arm64. Nido ne les télécharge que depuis les sources officielles des projets et les vérifie avant de s’en servir (SHA-512 pour Debian, SHA-256 et signature d’Ubuntu pour Ubuntu). Vous pouvez aussi partir d’une image disque locale, raw ou qcow2.
@@ -13,6 +15,17 @@ Nido est un gestionnaire de machines virtuelles pour les Mac avec puce Apple. Il
 - **Réseau contrôlé** : une nouvelle VM n’atteint que les domaines de sa liste, et Nido vous signale chaque connexion qu’il bloque.
 - **L’IA dans les VM Linux** : les Guest Tools de Nido affichent le CPU, la mémoire et le disque de la VM sans passer par le réseau. Installez Ollama et un modèle d’IA en un clic et discutez avec lui depuis l’app, ou reliez une VM aux Inference Providers de Hugging Face grâce au pont IA, facultatif.
 - **Dans votre langue** : l’app et la commande `nido` parlent anglais, italien, allemand, espagnol et français, et suivent la langue que vous utilisez dans macOS.
+
+## Captures d’écran
+
+<p align="center">
+<img src="docs/screenshots/fr/new-vm.png" alt="L’assistant Nouvelle VM : Debian, Ubuntu Server ou macOS, avec un profil" title="L’assistant Nouvelle VM : Debian, Ubuntu Server ou macOS, avec un profil" width="49%">
+<img src="docs/screenshots/fr/monitor.png" alt="Moniteur : processeur, mémoire et disque d’une VM Linux en marche, lus par les Guest Tools" title="Moniteur : processeur, mémoire et disque d’une VM Linux en marche, lus par les Guest Tools" width="49%">
+</p>
+<p align="center">
+<img src="docs/screenshots/fr/network.png" alt="Réseau contrôlé : la VM n’atteint que les domaines de sa liste" title="Réseau contrôlé : la VM n’atteint que les domaines de sa liste" width="49%">
+<img src="docs/screenshots/fr/ai.png" alt="IA : Ollama dans la VM et le pont vers Hugging Face avec ses limites" title="IA : Ollama dans la VM et le pont vers Hugging Face avec ses limites" width="49%">
+</p>
 
 ## Configuration requise
 

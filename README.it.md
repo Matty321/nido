@@ -4,6 +4,8 @@
 
 Nido è un gestore di macchine virtuali per i Mac con chip Apple. Fa girare VM Linux e macOS con il framework Virtualization di Apple, da un'app nativa o dal comando `nido` nel Terminale. È prudente per impostazione predefinita: Nido non si collega mai alla rete da solo, una VM raggiunge solo i domini che permetti e non vede nessuna cartella del Mac finché non ne condividi una.
 
+<p align="center"><img src="docs/screenshots/it/library.png" alt="La libreria: tre macchine virtuali, una accesa con il ponte AI attivo, e due modelli" title="La libreria: tre macchine virtuali, una accesa con il ponte AI attivo, e due modelli" width="100%"></p>
+
 ## Cosa fa Nido
 
 - **VM Linux dalle immagini cloud ufficiali**: Debian 13, Ubuntu Server 26.04 LTS e 24.04 LTS, per arm64. Nido le scarica solo dalle fonti ufficiali dei progetti e le verifica prima di usarle (SHA-512 per Debian, SHA-256 e firma di Ubuntu per Ubuntu). Puoi anche partire da un'immagine disco locale, raw o qcow2.
@@ -13,6 +15,17 @@ Nido è un gestore di macchine virtuali per i Mac con chip Apple. Fa girare VM L
 - **Rete controllata**: una VM nuova raggiunge solo i domini della sua lista, e Nido ti avvisa di ogni connessione che blocca.
 - **AI nelle VM Linux**: i Guest Tools di Nido mostrano CPU, memoria e disco della VM senza passare dalla rete. Installa Ollama e un modello con un clic e chatta con il modello dall'app, oppure collega una VM agli Inference Providers di Hugging Face con il ponte AI, facoltativo.
 - **Nella tua lingua**: l'app e il comando `nido` parlano inglese, italiano, tedesco, spagnolo e francese, e seguono la lingua che usi in macOS.
+
+## Schermate
+
+<p align="center">
+<img src="docs/screenshots/it/new-vm.png" alt="La creazione guidata (Nuova VM): Debian, Ubuntu Server o macOS, con un profilo" title="La creazione guidata (Nuova VM): Debian, Ubuntu Server o macOS, con un profilo" width="49%">
+<img src="docs/screenshots/it/monitor.png" alt="Monitor: CPU, memoria e disco di una VM Linux accesa, letti dai Guest Tools" title="Monitor: CPU, memoria e disco di una VM Linux accesa, letti dai Guest Tools" width="49%">
+</p>
+<p align="center">
+<img src="docs/screenshots/it/network.png" alt="Rete controllata: la VM raggiunge solo i domini della sua lista" title="Rete controllata: la VM raggiunge solo i domini della sua lista" width="49%">
+<img src="docs/screenshots/it/ai.png" alt="AI: Ollama dentro la VM e il ponte verso Hugging Face con i suoi limiti" title="AI: Ollama dentro la VM e il ponte verso Hugging Face con i suoi limiti" width="49%">
+</p>
 
 ## Requisiti
 

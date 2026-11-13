@@ -4,6 +4,8 @@
 
 Nido verwaltet virtuelle Maschinen auf Mac-Computern mit Apple Chip. Linux- und macOS-VMs laufen mit dem Virtualization-Framework von Apple, gesteuert über eine native App oder den Befehl `nido` im Terminal. Nido ist von Haus aus vorsichtig: Es geht nie von selbst online, eine VM erreicht nur die Domains, die du erlaubst, und sie sieht keinen Ordner deines Mac, bis du einen teilst.
 
+<p align="center"><img src="docs/screenshots/de/library.png" alt="Die Bibliothek: drei virtuelle Maschinen, eine davon läuft mit aktiver KI-Brücke, und zwei Vorlagen" title="Die Bibliothek: drei virtuelle Maschinen, eine davon läuft mit aktiver KI-Brücke, und zwei Vorlagen" width="100%"></p>
+
 ## Was Nido kann
 
 - **Linux-VMs aus offiziellen Cloud-Images**: Debian 13, Ubuntu Server 26.04 LTS und 24.04 LTS, jeweils für arm64. Nido lädt sie nur aus den offiziellen Quellen der Projekte herunter und prüft sie vor der Verwendung (SHA-512 bei Debian, SHA-256 und die Signatur von Ubuntu bei Ubuntu). Du kannst auch ein lokales Image verwenden, raw oder qcow2.
@@ -13,6 +15,17 @@ Nido verwaltet virtuelle Maschinen auf Mac-Computern mit Apple Chip. Linux- und 
 - **Kontrolliertes Netzwerk**: Eine neue VM erreicht nur die Domains auf ihrer Liste, und Nido meldet dir jede Verbindung, die es blockiert.
 - **KI in Linux-VMs**: Die Guest Tools von Nido zeigen CPU, Arbeitsspeicher und Festplatte der VM, ohne den Umweg über das Netzwerk. Installiere Ollama und ein Modell mit einem Klick und chatte in der App damit, oder verbinde eine VM über die optionale KI-Brücke mit den Inference Providers von Hugging Face.
 - **In deiner Sprache**: Die App und der Befehl `nido` sprechen Englisch, Italienisch, Deutsch, Spanisch und Französisch und folgen der Sprache, die du in macOS verwendest.
+
+## Bildschirmfotos
+
+<p align="center">
+<img src="docs/screenshots/de/new-vm.png" alt="Der Assistent „Neue VM“: Debian, Ubuntu Server oder macOS, mit einem Profil" title="Der Assistent „Neue VM“: Debian, Ubuntu Server oder macOS, mit einem Profil" width="49%">
+<img src="docs/screenshots/de/monitor.png" alt="Monitor: CPU, Arbeitsspeicher und Festplatte einer laufenden Linux-VM, gelesen von den Guest Tools" title="Monitor: CPU, Arbeitsspeicher und Festplatte einer laufenden Linux-VM, gelesen von den Guest Tools" width="49%">
+</p>
+<p align="center">
+<img src="docs/screenshots/de/network.png" alt="Kontrolliertes Netzwerk: Die VM erreicht nur die Domains auf ihrer Liste" title="Kontrolliertes Netzwerk: Die VM erreicht nur die Domains auf ihrer Liste" width="49%">
+<img src="docs/screenshots/de/ai.png" alt="KI: Ollama in der VM und die Brücke zu Hugging Face mit ihren Limits" title="KI: Ollama in der VM und die Brücke zu Hugging Face mit ihren Limits" width="49%">
+</p>
 
 ## Voraussetzungen
 
