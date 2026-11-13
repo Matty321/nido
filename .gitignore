@@ -1,0 +1,26 @@
+ref/
+.build/
+.swiftpm/
+design/preview/
+*.nidovm
+.DS_Store
+.superpowers/
+graphify-out
+design/build/
+App/build/
+xcuserdata/
+__pycache__/
+scripts/integration-probe/Package.resolved
+/ipsw/
+.build/gvproxy/
+dist/
+# Secrets that must never be committed (signing, notarization, local env).
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.p8
+*.cer
+*.mobileprovision
+*.provisionprofile

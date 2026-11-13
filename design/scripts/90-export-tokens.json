@@ -1,0 +1,10 @@
+[
+  {
+    "command": "variable.export",
+    "params": {
+      "collections": ["Color", "Space", "Radius", "Type"],
+      "format": "json",
+      "path": "design/tokens.json"
+    }
+  }
+]

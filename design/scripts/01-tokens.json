@@ -1,0 +1,7976 @@
+[
+  {
+    "command" : "page.rename",
+    "params" : {
+      "id" : 1,
+      "name" : "Tokens"
+    }
+  },
+  {
+    "command" : "variable.createCollection",
+    "expectId" : "VariableCollectionId:1",
+    "params" : {
+      "modes" : [
+        "Chiaro",
+        "Scuro"
+      ],
+      "name" : "Color"
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:1",
+    "params" : {
+      "collection" : "Color",
+      "name" : "accent",
+      "type" : "color",
+      "values" : {
+        "Chiaro" : "#1D6F64",
+        "Scuro" : "#4DB6A4"
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:2",
+    "params" : {
+      "collection" : "Color",
+      "name" : "accentText",
+      "type" : "color",
+      "values" : {
+        "Chiaro" : "#FFFFFF",
+        "Scuro" : "#0B1F1B"
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:3",
+    "params" : {
+      "collection" : "Color",
+      "name" : "background",
+      "type" : "color",
+      "values" : {
+        "Chiaro" : "#F3F1EC",
+        "Scuro" : "#151817"
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:4",
+    "params" : {
+      "collection" : "Color",
+      "name" : "surface",
+      "type" : "color",
+      "values" : {
+        "Chiaro" : "#FBFAF7",
+        "Scuro" : "#1D2120"
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:5",
+    "params" : {
+      "collection" : "Color",
+      "name" : "surfaceRaised",
+      "type" : "color",
+      "values" : {
+        "Chiaro" : "#FFFFFF",
+        "Scuro" : "#262B29"
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:6",
+    "params" : {
+      "collection" : "Color",
+      "name" : "border",
+      "type" : "color",
+      "values" : {
+        "Chiaro" : "#D9D4C8",
+        "Scuro" : "#3A403D"
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:7",
+    "params" : {
+      "collection" : "Color",
+      "name" : "textPrimary",
+      "type" : "color",
+      "values" : {
+        "Chiaro" : "#1E2320",
+        "Scuro" : "#ECEAE4"
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:8",
+    "params" : {
+      "collection" : "Color",
+      "name" : "textSecondary",
+      "type" : "color",
+      "values" : {
+        "Chiaro" : "#5B605A",
+        "Scuro" : "#A6AAA3"
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:9",
+    "params" : {
+      "collection" : "Color",
+      "name" : "statusRunning",
+      "type" : "color",
+      "values" : {
+        "Chiaro" : "#2F7D4E",
+        "Scuro" : "#5CC98A"
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:10",
+    "params" : {
+      "collection" : "Color",
+      "name" : "statusPaused",
+      "type" : "color",
+      "values" : {
+        "Chiaro" : "#9A6512",
+        "Scuro" : "#E2AA4C"
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:11",
+    "params" : {
+      "collection" : "Color",
+      "name" : "statusStopped",
+      "type" : "color",
+      "values" : {
+        "Chiaro" : "#6B6F69",
+        "Scuro" : "#9A9E97"
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:12",
+    "params" : {
+      "collection" : "Color",
+      "name" : "statusError",
+      "type" : "color",
+      "values" : {
+        "Chiaro" : "#B42B22",
+        "Scuro" : "#F07A6E"
+      }
+    }
+  },
+  {
+    "command" : "variable.createCollection",
+    "expectId" : "VariableCollectionId:2",
+    "params" : {
+      "modes" : [
+        "Valore"
+      ],
+      "name" : "Space"
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:13",
+    "params" : {
+      "collection" : "Space",
+      "name" : "xs",
+      "type" : "number",
+      "values" : {
+        "Valore" : 4
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:14",
+    "params" : {
+      "collection" : "Space",
+      "name" : "s",
+      "type" : "number",
+      "values" : {
+        "Valore" : 8
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:15",
+    "params" : {
+      "collection" : "Space",
+      "name" : "m",
+      "type" : "number",
+      "values" : {
+        "Valore" : 12
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:16",
+    "params" : {
+      "collection" : "Space",
+      "name" : "l",
+      "type" : "number",
+      "values" : {
+        "Valore" : 16
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:17",
+    "params" : {
+      "collection" : "Space",
+      "name" : "xl",
+      "type" : "number",
+      "values" : {
+        "Valore" : 24
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:18",
+    "params" : {
+      "collection" : "Space",
+      "name" : "xxl",
+      "type" : "number",
+      "values" : {
+        "Valore" : 32
+      }
+    }
+  },
+  {
+    "command" : "variable.createCollection",
+    "expectId" : "VariableCollectionId:3",
+    "params" : {
+      "modes" : [
+        "Valore"
+      ],
+      "name" : "Radius"
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:19",
+    "params" : {
+      "collection" : "Radius",
+      "name" : "s",
+      "type" : "number",
+      "values" : {
+        "Valore" : 6
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:20",
+    "params" : {
+      "collection" : "Radius",
+      "name" : "m",
+      "type" : "number",
+      "values" : {
+        "Valore" : 10
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:21",
+    "params" : {
+      "collection" : "Radius",
+      "name" : "l",
+      "type" : "number",
+      "values" : {
+        "Valore" : 14
+      }
+    }
+  },
+  {
+    "command" : "variable.createCollection",
+    "expectId" : "VariableCollectionId:4",
+    "params" : {
+      "modes" : [
+        "Valore"
+      ],
+      "name" : "Type"
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:22",
+    "params" : {
+      "collection" : "Type",
+      "name" : "caption",
+      "type" : "number",
+      "values" : {
+        "Valore" : 11
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:23",
+    "params" : {
+      "collection" : "Type",
+      "name" : "body",
+      "type" : "number",
+      "values" : {
+        "Valore" : 13
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:24",
+    "params" : {
+      "collection" : "Type",
+      "name" : "headline",
+      "type" : "number",
+      "values" : {
+        "Valore" : 15
+      }
+    }
+  },
+  {
+    "command" : "variable.create",
+    "expectId" : "VariableID:25",
+    "params" : {
+      "collection" : "Type",
+      "name" : "title",
+      "type" : "number",
+      "values" : {
+        "Valore" : 22
+      }
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 2,
+    "params" : {
+      "height" : 100,
+      "name" : "Token · Chiaro",
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 720,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        2
+      ],
+      "variable" : "VariableID:3"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        2
+      ],
+      "variable" : "VariableID:18"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "paddingTop",
+      "ids" : [
+        2
+      ],
+      "variable" : "VariableID:18"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "paddingRight",
+      "ids" : [
+        2
+      ],
+      "variable" : "VariableID:18"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "paddingBottom",
+      "ids" : [
+        2
+      ],
+      "variable" : "VariableID:18"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "paddingLeft",
+      "ids" : [
+        2
+      ],
+      "variable" : "VariableID:18"
+    }
+  },
+  {
+    "command" : "variable.setMode",
+    "params" : {
+      "collection" : "Color",
+      "ids" : [
+        2
+      ],
+      "mode" : "Chiaro"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 3,
+    "params" : {
+      "parent" : 2,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 22,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "Token di Nido · Chiaro",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        3
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        3
+      ],
+      "variable" : "VariableID:25"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 4,
+    "params" : {
+      "height" : 20,
+      "name" : "Colori",
+      "parent" : 2,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "fill",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        4
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 5,
+    "params" : {
+      "parent" : 4,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 15,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "Colori",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        5
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        5
+      ],
+      "variable" : "VariableID:24"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 6,
+    "params" : {
+      "height" : 20,
+      "name" : "Campioni",
+      "parent" : 4,
+      "props" : {
+        "clip" : false,
+        "crossGap" : 16,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fill",
+        "sizingV" : "hug",
+        "strokesIncluded" : false,
+        "wrap" : true
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        6
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 7,
+    "params" : {
+      "height" : 20,
+      "name" : "accent",
+      "parent" : 6,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        7
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 8,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 7,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        8
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        8
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        8
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        8
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        8
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 9,
+    "params" : {
+      "parent" : 7,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "accent",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        9
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        9
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 10,
+    "params" : {
+      "height" : 20,
+      "name" : "accentText",
+      "parent" : 6,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        10
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 11,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 10,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        11
+      ],
+      "variable" : "VariableID:2"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        11
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        11
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        11
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        11
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 12,
+    "params" : {
+      "parent" : 10,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "accentText",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        12
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        12
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 13,
+    "params" : {
+      "height" : 20,
+      "name" : "background",
+      "parent" : 6,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        13
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 14,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 13,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        14
+      ],
+      "variable" : "VariableID:3"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        14
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        14
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        14
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        14
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 15,
+    "params" : {
+      "parent" : 13,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "background",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        15
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        15
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 16,
+    "params" : {
+      "height" : 20,
+      "name" : "surface",
+      "parent" : 6,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        16
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 17,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 16,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        17
+      ],
+      "variable" : "VariableID:4"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        17
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        17
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        17
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        17
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 18,
+    "params" : {
+      "parent" : 16,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "surface",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        18
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        18
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 19,
+    "params" : {
+      "height" : 20,
+      "name" : "surfaceRaised",
+      "parent" : 6,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        19
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 20,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 19,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        20
+      ],
+      "variable" : "VariableID:5"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        20
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        20
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        20
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        20
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 21,
+    "params" : {
+      "parent" : 19,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "surfaceRaised",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        21
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        21
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 22,
+    "params" : {
+      "height" : 20,
+      "name" : "border",
+      "parent" : 6,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        22
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 23,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 22,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        23
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        23
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        23
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        23
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        23
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 24,
+    "params" : {
+      "parent" : 22,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "border",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        24
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        24
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 25,
+    "params" : {
+      "height" : 20,
+      "name" : "textPrimary",
+      "parent" : 6,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        25
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 26,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 25,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        26
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        26
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        26
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        26
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        26
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 27,
+    "params" : {
+      "parent" : 25,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "textPrimary",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        27
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        27
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 28,
+    "params" : {
+      "height" : 20,
+      "name" : "textSecondary",
+      "parent" : 6,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        28
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 29,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 28,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        29
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        29
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        29
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        29
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        29
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 30,
+    "params" : {
+      "parent" : 28,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "textSecondary",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        30
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        30
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 31,
+    "params" : {
+      "height" : 20,
+      "name" : "statusRunning",
+      "parent" : 6,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        31
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 32,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 31,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        32
+      ],
+      "variable" : "VariableID:9"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        32
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        32
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        32
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        32
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 33,
+    "params" : {
+      "parent" : 31,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "statusRunning",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        33
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        33
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 34,
+    "params" : {
+      "height" : 20,
+      "name" : "statusPaused",
+      "parent" : 6,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        34
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 35,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 34,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        35
+      ],
+      "variable" : "VariableID:10"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        35
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        35
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        35
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        35
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 36,
+    "params" : {
+      "parent" : 34,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "statusPaused",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        36
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        36
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 37,
+    "params" : {
+      "height" : 20,
+      "name" : "statusStopped",
+      "parent" : 6,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        37
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 38,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 37,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        38
+      ],
+      "variable" : "VariableID:11"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        38
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        38
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        38
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        38
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 39,
+    "params" : {
+      "parent" : 37,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "statusStopped",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        39
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        39
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 40,
+    "params" : {
+      "height" : 20,
+      "name" : "statusError",
+      "parent" : 6,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        40
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 41,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 40,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        41
+      ],
+      "variable" : "VariableID:12"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        41
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        41
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        41
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        41
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 42,
+    "params" : {
+      "parent" : 40,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "statusError",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        42
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        42
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 43,
+    "params" : {
+      "height" : 20,
+      "name" : "Spaziature",
+      "parent" : 2,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "fill",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        43
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 44,
+    "params" : {
+      "parent" : 43,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 15,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "Spaziature",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        44
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        44
+      ],
+      "variable" : "VariableID:24"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 45,
+    "params" : {
+      "height" : 20,
+      "name" : "Scala",
+      "parent" : 43,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        45
+      ],
+      "variable" : "VariableID:14"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 46,
+    "params" : {
+      "height" : 20,
+      "name" : "xs",
+      "parent" : 45,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "center",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        46
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 47,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 46,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 72,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 48,
+    "params" : {
+      "parent" : 47,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "xs · 4",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        48
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        48
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 49,
+    "params" : {
+      "height" : 12,
+      "name" : "Barra",
+      "parent" : 46,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 4,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        49
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "width",
+      "ids" : [
+        49
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 50,
+    "params" : {
+      "height" : 20,
+      "name" : "s",
+      "parent" : 45,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "center",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        50
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 51,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 50,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 72,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 52,
+    "params" : {
+      "parent" : 51,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "s · 8",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        52
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        52
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 53,
+    "params" : {
+      "height" : 12,
+      "name" : "Barra",
+      "parent" : 50,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 8,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        53
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "width",
+      "ids" : [
+        53
+      ],
+      "variable" : "VariableID:14"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 54,
+    "params" : {
+      "height" : 20,
+      "name" : "m",
+      "parent" : 45,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "center",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        54
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 55,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 54,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 72,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 56,
+    "params" : {
+      "parent" : 55,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "m · 12",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        56
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        56
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 57,
+    "params" : {
+      "height" : 12,
+      "name" : "Barra",
+      "parent" : 54,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 12,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        57
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "width",
+      "ids" : [
+        57
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 58,
+    "params" : {
+      "height" : 20,
+      "name" : "l",
+      "parent" : 45,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "center",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        58
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 59,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 58,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 72,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 60,
+    "params" : {
+      "parent" : 59,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "l · 16",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        60
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        60
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 61,
+    "params" : {
+      "height" : 12,
+      "name" : "Barra",
+      "parent" : 58,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 16,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        61
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "width",
+      "ids" : [
+        61
+      ],
+      "variable" : "VariableID:16"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 62,
+    "params" : {
+      "height" : 20,
+      "name" : "xl",
+      "parent" : 45,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "center",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        62
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 63,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 62,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 72,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 64,
+    "params" : {
+      "parent" : 63,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "xl · 24",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        64
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        64
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 65,
+    "params" : {
+      "height" : 12,
+      "name" : "Barra",
+      "parent" : 62,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 24,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        65
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "width",
+      "ids" : [
+        65
+      ],
+      "variable" : "VariableID:17"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 66,
+    "params" : {
+      "height" : 20,
+      "name" : "xxl",
+      "parent" : 45,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "center",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        66
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 67,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 66,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 72,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 68,
+    "params" : {
+      "parent" : 67,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "xxl · 32",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        68
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        68
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 69,
+    "params" : {
+      "height" : 12,
+      "name" : "Barra",
+      "parent" : 66,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 32,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        69
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "width",
+      "ids" : [
+        69
+      ],
+      "variable" : "VariableID:18"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 70,
+    "params" : {
+      "height" : 20,
+      "name" : "Raggi",
+      "parent" : 2,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "fill",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        70
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 71,
+    "params" : {
+      "parent" : 70,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 15,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "Raggi",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        71
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        71
+      ],
+      "variable" : "VariableID:24"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 72,
+    "params" : {
+      "height" : 20,
+      "name" : "Scala",
+      "parent" : 70,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        72
+      ],
+      "variable" : "VariableID:16"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 73,
+    "params" : {
+      "height" : 20,
+      "name" : "s",
+      "parent" : 72,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        73
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 74,
+    "params" : {
+      "height" : 48,
+      "name" : "Angolo",
+      "parent" : 73,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 64,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        74
+      ],
+      "variable" : "VariableID:5"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        74
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        74
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        74
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        74
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 75,
+    "params" : {
+      "parent" : 73,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "s · 6",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        75
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        75
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 76,
+    "params" : {
+      "height" : 20,
+      "name" : "m",
+      "parent" : 72,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        76
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 77,
+    "params" : {
+      "height" : 48,
+      "name" : "Angolo",
+      "parent" : 76,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 64,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        77
+      ],
+      "variable" : "VariableID:5"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        77
+      ],
+      "variable" : "VariableID:20"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        77
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        77
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        77
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 78,
+    "params" : {
+      "parent" : 76,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "m · 10",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        78
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        78
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 79,
+    "params" : {
+      "height" : 20,
+      "name" : "l",
+      "parent" : 72,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        79
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 80,
+    "params" : {
+      "height" : 48,
+      "name" : "Angolo",
+      "parent" : 79,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 64,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        80
+      ],
+      "variable" : "VariableID:5"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        80
+      ],
+      "variable" : "VariableID:21"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        80
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        80
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        80
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 81,
+    "params" : {
+      "parent" : 79,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "l · 14",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        81
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        81
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 82,
+    "params" : {
+      "height" : 20,
+      "name" : "Testo",
+      "parent" : 2,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "fill",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        82
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 83,
+    "params" : {
+      "parent" : 82,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 15,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "Testo",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        83
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        83
+      ],
+      "variable" : "VariableID:24"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 84,
+    "params" : {
+      "height" : 20,
+      "name" : "Scala",
+      "parent" : 82,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        84
+      ],
+      "variable" : "VariableID:14"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 85,
+    "params" : {
+      "height" : 20,
+      "name" : "title",
+      "parent" : 84,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "baseline",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        85
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 86,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 85,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 96,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 87,
+    "params" : {
+      "parent" : 86,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "title · 22",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        87
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        87
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 88,
+    "params" : {
+      "parent" : 85,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 22,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "Le tue macchine virtuali",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        88
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        88
+      ],
+      "variable" : "VariableID:25"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 89,
+    "params" : {
+      "height" : 20,
+      "name" : "headline",
+      "parent" : 84,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "baseline",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        89
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 90,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 89,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 96,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 91,
+    "params" : {
+      "parent" : 90,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "headline · 15",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        91
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        91
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 92,
+    "params" : {
+      "parent" : 89,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 15,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "debian-13",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        92
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        92
+      ],
+      "variable" : "VariableID:24"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 93,
+    "params" : {
+      "height" : 20,
+      "name" : "body",
+      "parent" : 84,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "baseline",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        93
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 94,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 93,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 96,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 95,
+    "params" : {
+      "parent" : 94,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "body · 13",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        95
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        95
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 96,
+    "params" : {
+      "parent" : 93,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 13,
+        "fontStyle" : "Regular"
+      },
+      "text" : "Debian 13 su arm64, 4 CPU e 8 GB di memoria.",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        96
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        96
+      ],
+      "variable" : "VariableID:23"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 97,
+    "params" : {
+      "height" : 20,
+      "name" : "caption",
+      "parent" : 84,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "baseline",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        97
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 98,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 97,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 96,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 99,
+    "params" : {
+      "parent" : 98,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "caption · 11",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        99
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        99
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 100,
+    "params" : {
+      "parent" : 97,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "Ultimo avvio oggi alle 9:41",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        100
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        100
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 101,
+    "params" : {
+      "height" : 100,
+      "name" : "Token · Scuro",
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 720,
+      "x" : 760,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        101
+      ],
+      "variable" : "VariableID:3"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        101
+      ],
+      "variable" : "VariableID:18"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "paddingTop",
+      "ids" : [
+        101
+      ],
+      "variable" : "VariableID:18"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "paddingRight",
+      "ids" : [
+        101
+      ],
+      "variable" : "VariableID:18"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "paddingBottom",
+      "ids" : [
+        101
+      ],
+      "variable" : "VariableID:18"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "paddingLeft",
+      "ids" : [
+        101
+      ],
+      "variable" : "VariableID:18"
+    }
+  },
+  {
+    "command" : "variable.setMode",
+    "params" : {
+      "collection" : "Color",
+      "ids" : [
+        101
+      ],
+      "mode" : "Scuro"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 102,
+    "params" : {
+      "parent" : 101,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 22,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "Token di Nido · Scuro",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        102
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        102
+      ],
+      "variable" : "VariableID:25"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 103,
+    "params" : {
+      "height" : 20,
+      "name" : "Colori",
+      "parent" : 101,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "fill",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        103
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 104,
+    "params" : {
+      "parent" : 103,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 15,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "Colori",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        104
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        104
+      ],
+      "variable" : "VariableID:24"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 105,
+    "params" : {
+      "height" : 20,
+      "name" : "Campioni",
+      "parent" : 103,
+      "props" : {
+        "clip" : false,
+        "crossGap" : 16,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fill",
+        "sizingV" : "hug",
+        "strokesIncluded" : false,
+        "wrap" : true
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        105
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 106,
+    "params" : {
+      "height" : 20,
+      "name" : "accent",
+      "parent" : 105,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        106
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 107,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 106,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        107
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        107
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        107
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        107
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        107
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 108,
+    "params" : {
+      "parent" : 106,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "accent",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        108
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        108
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 109,
+    "params" : {
+      "height" : 20,
+      "name" : "accentText",
+      "parent" : 105,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        109
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 110,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 109,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        110
+      ],
+      "variable" : "VariableID:2"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        110
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        110
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        110
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        110
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 111,
+    "params" : {
+      "parent" : 109,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "accentText",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        111
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        111
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 112,
+    "params" : {
+      "height" : 20,
+      "name" : "background",
+      "parent" : 105,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        112
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 113,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 112,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        113
+      ],
+      "variable" : "VariableID:3"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        113
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        113
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        113
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        113
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 114,
+    "params" : {
+      "parent" : 112,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "background",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        114
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        114
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 115,
+    "params" : {
+      "height" : 20,
+      "name" : "surface",
+      "parent" : 105,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        115
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 116,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 115,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        116
+      ],
+      "variable" : "VariableID:4"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        116
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        116
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        116
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        116
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 117,
+    "params" : {
+      "parent" : 115,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "surface",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        117
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        117
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 118,
+    "params" : {
+      "height" : 20,
+      "name" : "surfaceRaised",
+      "parent" : 105,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        118
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 119,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 118,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        119
+      ],
+      "variable" : "VariableID:5"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        119
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        119
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        119
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        119
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 120,
+    "params" : {
+      "parent" : 118,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "surfaceRaised",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        120
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        120
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 121,
+    "params" : {
+      "height" : 20,
+      "name" : "border",
+      "parent" : 105,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        121
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 122,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 121,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        122
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        122
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        122
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        122
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        122
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 123,
+    "params" : {
+      "parent" : 121,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "border",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        123
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        123
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 124,
+    "params" : {
+      "height" : 20,
+      "name" : "textPrimary",
+      "parent" : 105,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        124
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 125,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 124,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        125
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        125
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        125
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        125
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        125
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 126,
+    "params" : {
+      "parent" : 124,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "textPrimary",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        126
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        126
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 127,
+    "params" : {
+      "height" : 20,
+      "name" : "textSecondary",
+      "parent" : 105,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        127
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 128,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 127,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        128
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        128
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        128
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        128
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        128
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 129,
+    "params" : {
+      "parent" : 127,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "textSecondary",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        129
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        129
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 130,
+    "params" : {
+      "height" : 20,
+      "name" : "statusRunning",
+      "parent" : 105,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        130
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 131,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 130,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        131
+      ],
+      "variable" : "VariableID:9"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        131
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        131
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        131
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        131
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 132,
+    "params" : {
+      "parent" : 130,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "statusRunning",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        132
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        132
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 133,
+    "params" : {
+      "height" : 20,
+      "name" : "statusPaused",
+      "parent" : 105,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        133
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 134,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 133,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        134
+      ],
+      "variable" : "VariableID:10"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        134
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        134
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        134
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        134
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 135,
+    "params" : {
+      "parent" : 133,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "statusPaused",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        135
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        135
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 136,
+    "params" : {
+      "height" : 20,
+      "name" : "statusStopped",
+      "parent" : 105,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        136
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 137,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 136,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        137
+      ],
+      "variable" : "VariableID:11"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        137
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        137
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        137
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        137
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 138,
+    "params" : {
+      "parent" : 136,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "statusStopped",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        138
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        138
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 139,
+    "params" : {
+      "height" : 20,
+      "name" : "statusError",
+      "parent" : 105,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        139
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 140,
+    "params" : {
+      "height" : 48,
+      "name" : "Campione",
+      "parent" : 139,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 144,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        140
+      ],
+      "variable" : "VariableID:12"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        140
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        140
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        140
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        140
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 141,
+    "params" : {
+      "parent" : 139,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "statusError",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        141
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        141
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 142,
+    "params" : {
+      "height" : 20,
+      "name" : "Spaziature",
+      "parent" : 101,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "fill",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        142
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 143,
+    "params" : {
+      "parent" : 142,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 15,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "Spaziature",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        143
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        143
+      ],
+      "variable" : "VariableID:24"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 144,
+    "params" : {
+      "height" : 20,
+      "name" : "Scala",
+      "parent" : 142,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        144
+      ],
+      "variable" : "VariableID:14"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 145,
+    "params" : {
+      "height" : 20,
+      "name" : "xs",
+      "parent" : 144,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "center",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        145
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 146,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 145,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 72,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 147,
+    "params" : {
+      "parent" : 146,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "xs · 4",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        147
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        147
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 148,
+    "params" : {
+      "height" : 12,
+      "name" : "Barra",
+      "parent" : 145,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 4,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        148
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "width",
+      "ids" : [
+        148
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 149,
+    "params" : {
+      "height" : 20,
+      "name" : "s",
+      "parent" : 144,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "center",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        149
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 150,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 149,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 72,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 151,
+    "params" : {
+      "parent" : 150,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "s · 8",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        151
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        151
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 152,
+    "params" : {
+      "height" : 12,
+      "name" : "Barra",
+      "parent" : 149,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 8,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        152
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "width",
+      "ids" : [
+        152
+      ],
+      "variable" : "VariableID:14"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 153,
+    "params" : {
+      "height" : 20,
+      "name" : "m",
+      "parent" : 144,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "center",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        153
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 154,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 153,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 72,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 155,
+    "params" : {
+      "parent" : 154,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "m · 12",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        155
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        155
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 156,
+    "params" : {
+      "height" : 12,
+      "name" : "Barra",
+      "parent" : 153,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 12,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        156
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "width",
+      "ids" : [
+        156
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 157,
+    "params" : {
+      "height" : 20,
+      "name" : "l",
+      "parent" : 144,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "center",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        157
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 158,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 157,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 72,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 159,
+    "params" : {
+      "parent" : 158,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "l · 16",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        159
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        159
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 160,
+    "params" : {
+      "height" : 12,
+      "name" : "Barra",
+      "parent" : 157,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 16,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        160
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "width",
+      "ids" : [
+        160
+      ],
+      "variable" : "VariableID:16"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 161,
+    "params" : {
+      "height" : 20,
+      "name" : "xl",
+      "parent" : 144,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "center",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        161
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 162,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 161,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 72,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 163,
+    "params" : {
+      "parent" : 162,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "xl · 24",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        163
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        163
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 164,
+    "params" : {
+      "height" : 12,
+      "name" : "Barra",
+      "parent" : 161,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 24,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        164
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "width",
+      "ids" : [
+        164
+      ],
+      "variable" : "VariableID:17"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 165,
+    "params" : {
+      "height" : 20,
+      "name" : "xxl",
+      "parent" : 144,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "center",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        165
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 166,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 165,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 72,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 167,
+    "params" : {
+      "parent" : 166,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "xxl · 32",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        167
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        167
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 168,
+    "params" : {
+      "height" : 12,
+      "name" : "Barra",
+      "parent" : 165,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 32,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        168
+      ],
+      "variable" : "VariableID:1"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "width",
+      "ids" : [
+        168
+      ],
+      "variable" : "VariableID:18"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 169,
+    "params" : {
+      "height" : 20,
+      "name" : "Raggi",
+      "parent" : 101,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "fill",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        169
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 170,
+    "params" : {
+      "parent" : 169,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 15,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "Raggi",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        170
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        170
+      ],
+      "variable" : "VariableID:24"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 171,
+    "params" : {
+      "height" : 20,
+      "name" : "Scala",
+      "parent" : 169,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        171
+      ],
+      "variable" : "VariableID:16"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 172,
+    "params" : {
+      "height" : 20,
+      "name" : "s",
+      "parent" : 171,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        172
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 173,
+    "params" : {
+      "height" : 48,
+      "name" : "Angolo",
+      "parent" : 172,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 64,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        173
+      ],
+      "variable" : "VariableID:5"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        173
+      ],
+      "variable" : "VariableID:19"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        173
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        173
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        173
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 174,
+    "params" : {
+      "parent" : 172,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "s · 6",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        174
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        174
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 175,
+    "params" : {
+      "height" : 20,
+      "name" : "m",
+      "parent" : 171,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        175
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 176,
+    "params" : {
+      "height" : 48,
+      "name" : "Angolo",
+      "parent" : 175,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 64,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        176
+      ],
+      "variable" : "VariableID:5"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        176
+      ],
+      "variable" : "VariableID:20"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        176
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        176
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        176
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 177,
+    "params" : {
+      "parent" : 175,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "m · 10",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        177
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        177
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 178,
+    "params" : {
+      "height" : 20,
+      "name" : "l",
+      "parent" : 171,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        178
+      ],
+      "variable" : "VariableID:13"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 179,
+    "params" : {
+      "height" : 48,
+      "name" : "Angolo",
+      "parent" : 178,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "strokesIncluded" : false
+      },
+      "width" : 64,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        179
+      ],
+      "variable" : "VariableID:5"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "cornerRadius",
+      "ids" : [
+        179
+      ],
+      "variable" : "VariableID:21"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        179
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        179
+      ],
+      "strokeAlign" : "inside",
+      "strokeWeight" : 1
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "stroke",
+      "ids" : [
+        179
+      ],
+      "variable" : "VariableID:6"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 180,
+    "params" : {
+      "parent" : 178,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "l · 14",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        180
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        180
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 181,
+    "params" : {
+      "height" : 20,
+      "name" : "Testo",
+      "parent" : 101,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "fill",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        181
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 182,
+    "params" : {
+      "parent" : 181,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 15,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "Testo",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        182
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        182
+      ],
+      "variable" : "VariableID:24"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 183,
+    "params" : {
+      "height" : 20,
+      "name" : "Scala",
+      "parent" : 181,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "vertical",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        183
+      ],
+      "variable" : "VariableID:14"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 184,
+    "params" : {
+      "height" : 20,
+      "name" : "title",
+      "parent" : 183,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "baseline",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        184
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 185,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 184,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 96,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 186,
+    "params" : {
+      "parent" : 185,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "title · 22",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        186
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        186
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 187,
+    "params" : {
+      "parent" : 184,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 22,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "Le tue macchine virtuali",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        187
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        187
+      ],
+      "variable" : "VariableID:25"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 188,
+    "params" : {
+      "height" : 20,
+      "name" : "headline",
+      "parent" : 183,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "baseline",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        188
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 189,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 188,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 96,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 190,
+    "params" : {
+      "parent" : 189,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "headline · 15",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        190
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        190
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 191,
+    "params" : {
+      "parent" : 188,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 15,
+        "fontStyle" : "SemiBold"
+      },
+      "text" : "debian-13",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        191
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        191
+      ],
+      "variable" : "VariableID:24"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 192,
+    "params" : {
+      "height" : 20,
+      "name" : "body",
+      "parent" : 183,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "baseline",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        192
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 193,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 192,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 96,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 194,
+    "params" : {
+      "parent" : 193,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "body · 13",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        194
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        194
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 195,
+    "params" : {
+      "parent" : 192,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 13,
+        "fontStyle" : "Regular"
+      },
+      "text" : "Debian 13 su arm64, 4 CPU e 8 GB di memoria.",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        195
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        195
+      ],
+      "variable" : "VariableID:23"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 196,
+    "params" : {
+      "height" : 20,
+      "name" : "caption",
+      "parent" : 183,
+      "props" : {
+        "clip" : false,
+        "crossAlign" : "baseline",
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "hug",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 100,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "gap",
+      "ids" : [
+        196
+      ],
+      "variable" : "VariableID:15"
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 197,
+    "params" : {
+      "height" : 20,
+      "name" : "Etichetta",
+      "parent" : 196,
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ],
+        "layout" : "horizontal",
+        "sizingH" : "fixed",
+        "sizingV" : "hug",
+        "strokesIncluded" : false
+      },
+      "width" : 96,
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 198,
+    "params" : {
+      "parent" : 197,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "caption · 11",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        198
+      ],
+      "variable" : "VariableID:8"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        198
+      ],
+      "variable" : "VariableID:22"
+    }
+  },
+  {
+    "command" : "text.create",
+    "expectId" : 199,
+    "params" : {
+      "parent" : 196,
+      "props" : {
+        "fontFamily" : "Inter",
+        "fontSize" : 11,
+        "fontStyle" : "Regular"
+      },
+      "text" : "Ultimo avvio oggi alle 9:41",
+      "x" : 0,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fill",
+      "ids" : [
+        199
+      ],
+      "variable" : "VariableID:7"
+    }
+  },
+  {
+    "command" : "variable.bind",
+    "params" : {
+      "field" : "fontSize",
+      "ids" : [
+        199
+      ],
+      "variable" : "VariableID:22"
+    }
+  }
+]

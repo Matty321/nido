@@ -1,0 +1,238 @@
+{
+  "error": false,
+  "meta": {
+    "variableCollections": {
+      "VariableCollectionId:1": {
+        "defaultModeId": "VariableCollectionId:1/mode1",
+        "hiddenFromPublishing": false,
+        "id": "VariableCollectionId:1",
+        "key": "VariableCollectionId:1",
+        "modes": [
+          {
+            "modeId": "VariableCollectionId:1/mode1",
+            "name": "Chiaro"
+          },
+          {
+            "modeId": "VariableCollectionId:1/mode2",
+            "name": "Scuro"
+          }
+        ],
+        "name": "Color",
+        "remote": false,
+        "variableIds": [
+          "VariableID:1",
+          "VariableID:2",
+          "VariableID:3",
+          "VariableID:4",
+          "VariableID:5",
+          "VariableID:6"
+        ]
+      },
+      "VariableCollectionId:2": {
+        "defaultModeId": "VariableCollectionId:2/mode1",
+        "hiddenFromPublishing": false,
+        "id": "VariableCollectionId:2",
+        "key": "VariableCollectionId:2",
+        "modes": [
+          {
+            "modeId": "VariableCollectionId:2/mode1",
+            "name": "Valore"
+          }
+        ],
+        "name": "Space",
+        "remote": false,
+        "variableIds": [
+          "VariableID:7"
+        ]
+      }
+    },
+    "variables": {
+      "VariableID:1": {
+        "codeSyntax": {},
+        "description": "",
+        "hiddenFromPublishing": false,
+        "id": "VariableID:1",
+        "key": "VariableID:1",
+        "name": "background",
+        "remote": false,
+        "resolvedType": "COLOR",
+        "scopes": [
+          "ALL_SCOPES"
+        ],
+        "valuesByMode": {
+          "VariableCollectionId:1/mode1": {
+            "a": 1.0,
+            "b": 1.0,
+            "g": 1.0,
+            "r": 1.0
+          },
+          "VariableCollectionId:1/mode2": {
+            "a": 1.0,
+            "b": 1.0,
+            "g": 1.0,
+            "r": 1.0
+          }
+        },
+        "variableCollectionId": "VariableCollectionId:1"
+      },
+      "VariableID:2": {
+        "codeSyntax": {},
+        "description": "",
+        "hiddenFromPublishing": false,
+        "id": "VariableID:2",
+        "key": "VariableID:2",
+        "name": "surface",
+        "remote": false,
+        "resolvedType": "COLOR",
+        "scopes": [
+          "ALL_SCOPES"
+        ],
+        "valuesByMode": {
+          "VariableCollectionId:1/mode1": {
+            "a": 1.0,
+            "b": 1.0,
+            "g": 1.0,
+            "r": 1.0
+          },
+          "VariableCollectionId:1/mode2": {
+            "a": 1.0,
+            "b": 1.0,
+            "g": 1.0,
+            "r": 1.0
+          }
+        },
+        "variableCollectionId": "VariableCollectionId:1"
+      },
+      "VariableID:3": {
+        "codeSyntax": {},
+        "description": "",
+        "hiddenFromPublishing": false,
+        "id": "VariableID:3",
+        "key": "VariableID:3",
+        "name": "textPrimary",
+        "remote": false,
+        "resolvedType": "COLOR",
+        "scopes": [
+          "ALL_SCOPES"
+        ],
+        "valuesByMode": {
+          "VariableCollectionId:1/mode1": {
+            "a": 1.0,
+            "b": 0.10196078568696976,
+            "g": 0.10196078568696976,
+            "r": 0.10196078568696976
+          },
+          "VariableCollectionId:1/mode2": {
+            "a": 1.0,
+            "b": 0.10196078568696976,
+            "g": 0.10196078568696976,
+            "r": 0.10196078568696976
+          }
+        },
+        "variableCollectionId": "VariableCollectionId:1"
+      },
+      "VariableID:4": {
+        "codeSyntax": {},
+        "description": "",
+        "hiddenFromPublishing": false,
+        "id": "VariableID:4",
+        "key": "VariableID:4",
+        "name": "textSecondary",
+        "remote": false,
+        "resolvedType": "COLOR",
+        "scopes": [
+          "ALL_SCOPES"
+        ],
+        "valuesByMode": {
+          "VariableCollectionId:1/mode1": {
+            "a": 1.0,
+            "b": 0.6039215922355652,
+            "g": 0.6039215922355652,
+            "r": 0.6039215922355652
+          },
+          "VariableCollectionId:1/mode2": {
+            "a": 1.0,
+            "b": 0.6039215922355652,
+            "g": 0.6039215922355652,
+            "r": 0.6039215922355652
+          }
+        },
+        "variableCollectionId": "VariableCollectionId:1"
+      },
+      "VariableID:5": {
+        "codeSyntax": {},
+        "description": "",
+        "hiddenFromPublishing": false,
+        "id": "VariableID:5",
+        "key": "VariableID:5",
+        "name": "accent",
+        "remote": false,
+        "resolvedType": "COLOR",
+        "scopes": [
+          "ALL_SCOPES"
+        ],
+        "valuesByMode": {
+          "VariableCollectionId:1/mode1": {
+            "a": 1.0,
+            "b": 0.3921568691730499,
+            "g": 0.43529412150382996,
+            "r": 0.11372549086809158
+          },
+          "VariableCollectionId:1/mode2": {
+            "a": 1.0,
+            "b": 0.3921568691730499,
+            "g": 0.43529412150382996,
+            "r": 0.11372549086809158
+          }
+        },
+        "variableCollectionId": "VariableCollectionId:1"
+      },
+      "VariableID:6": {
+        "codeSyntax": {},
+        "description": "",
+        "hiddenFromPublishing": false,
+        "id": "VariableID:6",
+        "key": "VariableID:6",
+        "name": "accentText",
+        "remote": false,
+        "resolvedType": "COLOR",
+        "scopes": [
+          "ALL_SCOPES"
+        ],
+        "valuesByMode": {
+          "VariableCollectionId:1/mode1": {
+            "a": 1.0,
+            "b": 1.0,
+            "g": 1.0,
+            "r": 1.0
+          },
+          "VariableCollectionId:1/mode2": {
+            "a": 1.0,
+            "b": 1.0,
+            "g": 1.0,
+            "r": 1.0
+          }
+        },
+        "variableCollectionId": "VariableCollectionId:1"
+      },
+      "VariableID:7": {
+        "codeSyntax": {},
+        "description": "",
+        "hiddenFromPublishing": false,
+        "id": "VariableID:7",
+        "key": "VariableID:7",
+        "name": "s",
+        "remote": false,
+        "resolvedType": "FLOAT",
+        "scopes": [
+          "ALL_SCOPES"
+        ],
+        "valuesByMode": {
+          "VariableCollectionId:2/mode1": 8.0
+        },
+        "variableCollectionId": "VariableCollectionId:2"
+      }
+    }
+  },
+  "status": 200
+}

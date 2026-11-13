@@ -1,0 +1,12 @@
+{
+  "license": "SPDX-License-Identifier: Apache-2.0",
+  "project": "containers/gvisor-tap-vsock",
+  "version": "0.9.0",
+  "architecture": "darwin universal (arm64 + x86_64)",
+  "file": "gvproxy-darwin",
+  "url": "https://github.com/containers/gvisor-tap-vsock/releases/download/v0.9.0/gvproxy-darwin",
+  "size": 26951570,
+  "sha256": "e2a6825ba789fe588828b418c09aaf16525dec6d8cb2d16c94e72535dd4606be",
+  "source": "GitHub release containers/gvisor-tap-vsock v0.9.0 (https://api.github.com/repos/containers/gvisor-tap-vsock/releases, published 2026-10-08T13:33:49Z): asset digest and sha256sums",
+  "checked": "2026-11-02"
+}

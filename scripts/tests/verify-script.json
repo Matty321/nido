@@ -1,0 +1,6 @@
+[
+  {"command": "variable.createCollection", "expectId": "VariableCollectionId:1", "params": {"name": "Color", "modes": ["Chiaro", "Scuro"]}},
+  {"command": "variable.create", "expectId": "VariableID:1", "params": {"collection": "Color", "name": "surface", "type": "color", "values": {"Chiaro": "#FBFAF7", "Scuro": "#1D2120"}}},
+  {"command": "frame.create", "expectId": 2, "params": {"x": 0, "y": 0, "width": 320, "height": 120, "name": "debian-13"}},
+  {"command": "variable.bind", "params": {"ids": [2], "field": "fill", "variable": "VariableID:1"}}
+]

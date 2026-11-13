@@ -1,0 +1,12 @@
+{
+  "license": "SPDX-License-Identifier: Apache-2.0",
+  "version": "0.40.10",
+  "architecture": "aarch64",
+  "file": "ollama-linux-arm64.tar.zst",
+  "url": "https://github.com/ollama/ollama/releases/download/v0.40.10/ollama-linux-arm64.tar.zst",
+  "size": 1564567595,
+  "sha256": "57dca26f51efc050112b733a65dea6f6c8e68da7a2946afd7c1eb8834d9eeb92",
+  "extracted_size_estimate": 3221225472,
+  "source": "GitHub release ollama/ollama v0.40.10 (https://api.github.com/repos/ollama/ollama/releases, published 2026-10-23T15:03:59Z): asset digest and sha256sum.txt",
+  "checked": "2026-10-24"
+}

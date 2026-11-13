@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0
+[Unit]
+Description=Nido Guest Tools (vsock monitor)
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/nido-guest-tools/bin/nido-guest-tools
+DynamicUser=yes
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_VSOCK
+ReadOnlyPaths=-/var/lib/nido-provision
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

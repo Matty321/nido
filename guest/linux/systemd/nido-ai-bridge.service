@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: Apache-2.0
+[Unit]
+Description=Nido AI bridge (guest loopback 127.0.0.1:11435 to the Mac over vsock)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/nido-guest-tools/bin/nido-ai-bridge
+DynamicUser=yes
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_VSOCK
+IPAddressDeny=any
+IPAddressAllow=localhost
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

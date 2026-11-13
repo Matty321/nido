@@ -1,0 +1,462 @@
+[
+  {
+    "command" : "page.select",
+    "params" : {
+      "id" : 1598
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 18094,
+    "params" : {
+      "height" : 1024,
+      "name" : "AppIcon",
+      "props" : {
+        "clip" : false,
+        "fills" : [
+
+        ]
+      },
+      "width" : 1024,
+      "x" : 12040,
+      "y" : 0
+    }
+  },
+  {
+    "command" : "frame.create",
+    "expectId" : 18095,
+    "params" : {
+      "height" : 824,
+      "name" : "Fondo",
+      "parent" : 18094,
+      "props" : {
+        "clip" : true,
+        "cornerRadius" : 185,
+        "cornerSmoothing" : 0.59999999999999998,
+        "effects" : [
+          {
+            "color" : "#0000004D",
+            "offset" : [
+              0,
+              10
+            ],
+            "radius" : 20,
+            "spread" : 0,
+            "type" : "dropShadow"
+          }
+        ],
+        "fills" : [
+          {
+            "from" : [
+              0.5,
+              0
+            ],
+            "stops" : [
+              "#2F9A87",
+              "#134A42"
+            ],
+            "to" : [
+              0.5,
+              1
+            ],
+            "type" : "linearGradient"
+          }
+        ]
+      },
+      "width" : 824,
+      "x" : 100,
+      "y" : 100
+    }
+  },
+  {
+    "command" : "shape.ellipse",
+    "expectId" : 18096,
+    "params" : {
+      "height" : 620,
+      "parent" : 18095,
+      "props" : {
+        "fills" : [
+          {
+            "stops" : [
+              "#FFFFFF38",
+              "#FFFFFF00"
+            ],
+            "type" : "radialGradient"
+          }
+        ]
+      },
+      "width" : 620,
+      "x" : 102,
+      "y" : 70
+    }
+  },
+  {
+    "command" : "shape.ellipse",
+    "expectId" : 18097,
+    "params" : {
+      "height" : 170,
+      "parent" : 18095,
+      "props" : {
+        "fills" : [
+          "#5E3A1B"
+        ]
+      },
+      "width" : 600,
+      "x" : 112,
+      "y" : 455
+    }
+  },
+  {
+    "command" : "vector.create",
+    "expectId" : 18098,
+    "params" : {
+      "parent" : 18095,
+      "path" : "M 412 214 C 506 214 562 382 562 474 C 562 562 496 616 412 616 C 328 616 262 562 262 474 C 262 382 318 214 412 214 Z",
+      "props" : {
+        "fills" : [
+          {
+            "from" : [
+              0.29999999999999999,
+              0.10000000000000001
+            ],
+            "stops" : [
+              "#FFFDF7",
+              "#E6D2AE"
+            ],
+            "to" : [
+              0.75,
+              1
+            ],
+            "type" : "linearGradient"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18098
+      ],
+      "name" : "Uovo"
+    }
+  },
+  {
+    "command" : "shape.ellipse",
+    "expectId" : 18099,
+    "params" : {
+      "height" : 100,
+      "parent" : 18095,
+      "props" : {
+        "fills" : [
+          "#FFFFFF"
+        ],
+        "opacity" : 0.69999999999999996
+      },
+      "width" : 60,
+      "x" : 318,
+      "y" : 290
+    }
+  },
+  {
+    "command" : "vector.create",
+    "expectId" : 18100,
+    "params" : {
+      "parent" : 18095,
+      "path" : "M 96 540 C 200 604 624 604 728 540 C 712 704 576 772 412 772 C 248 772 112 704 96 540 Z",
+      "props" : {
+        "fills" : [
+          {
+            "from" : [
+              0.5,
+              0
+            ],
+            "stops" : [
+              "#DDA65C",
+              "#9C6129"
+            ],
+            "to" : [
+              0.5,
+              1
+            ],
+            "type" : "linearGradient"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18100
+      ],
+      "name" : "Nido davanti"
+    }
+  },
+  {
+    "command" : "vector.create",
+    "expectId" : 18101,
+    "params" : {
+      "parent" : 18095,
+      "path" : "M 132 604 C 270 700 540 712 690 598",
+      "props" : {
+        "fills" : [
+
+        ]
+      }
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18101
+      ],
+      "name" : "Filo 1"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        18101
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18101
+      ],
+      "strokeAlign" : "center",
+      "strokeCap" : "round",
+      "strokes" : [
+        "#F6D497"
+      ],
+      "strokeWeight" : 16
+    }
+  },
+  {
+    "command" : "vector.create",
+    "expectId" : 18102,
+    "params" : {
+      "parent" : 18095,
+      "path" : "M 176 676 C 320 748 520 748 652 666",
+      "props" : {
+        "fills" : [
+
+        ]
+      }
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18102
+      ],
+      "name" : "Filo 2"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        18102
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18102
+      ],
+      "strokeAlign" : "center",
+      "strokeCap" : "round",
+      "strokes" : [
+        "#F6D497"
+      ],
+      "strokeWeight" : 14
+    }
+  },
+  {
+    "command" : "vector.create",
+    "expectId" : 18103,
+    "params" : {
+      "parent" : 18095,
+      "path" : "M 128 572 C 250 650 430 700 560 690",
+      "props" : {
+        "fills" : [
+
+        ]
+      }
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18103
+      ],
+      "name" : "Filo 3"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        18103
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18103
+      ],
+      "strokeAlign" : "center",
+      "strokeCap" : "round",
+      "strokes" : [
+        "#7E4B1F"
+      ],
+      "strokeWeight" : 12
+    }
+  },
+  {
+    "command" : "vector.create",
+    "expectId" : 18104,
+    "params" : {
+      "parent" : 18095,
+      "path" : "M 250 736 C 380 650 560 630 712 576",
+      "props" : {
+        "fills" : [
+
+        ]
+      }
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18104
+      ],
+      "name" : "Filo 4"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        18104
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18104
+      ],
+      "strokeAlign" : "center",
+      "strokeCap" : "round",
+      "strokes" : [
+        "#7E4B1F"
+      ],
+      "strokeWeight" : 12
+    }
+  },
+  {
+    "command" : "vector.create",
+    "expectId" : 18105,
+    "params" : {
+      "parent" : 18095,
+      "path" : "M 100 544 L 52 506",
+      "props" : {
+        "fills" : [
+
+        ]
+      }
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18105
+      ],
+      "name" : "Filo 5"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        18105
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18105
+      ],
+      "strokeAlign" : "center",
+      "strokeCap" : "round",
+      "strokes" : [
+        "#B87A38"
+      ],
+      "strokeWeight" : 18
+    }
+  },
+  {
+    "command" : "vector.create",
+    "expectId" : 18106,
+    "params" : {
+      "parent" : 18095,
+      "path" : "M 724 544 L 774 500",
+      "props" : {
+        "fills" : [
+
+        ]
+      }
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18106
+      ],
+      "name" : "Filo 6"
+    }
+  },
+  {
+    "command" : "stroke.add",
+    "params" : {
+      "ids" : [
+        18106
+      ]
+    }
+  },
+  {
+    "command" : "node.set",
+    "params" : {
+      "ids" : [
+        18106
+      ],
+      "strokeAlign" : "center",
+      "strokeCap" : "round",
+      "strokes" : [
+        "#B87A38"
+      ],
+      "strokeWeight" : 18
+    }
+  }
+]
