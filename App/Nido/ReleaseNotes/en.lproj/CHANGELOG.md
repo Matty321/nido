@@ -2,10 +2,16 @@
 
 Every Nido release, newest first. The first time Nido opens after an update, it shows the notes for the installed version (choose Help › What’s New in Nido to read them again).
 
-## [0.8.1] – 2026-11-13
+## [0.8.1] – 2026-11-14
 
 ### Languages
 - **Choose Nido’s language in Settings › General › Language**: English, Italian, German, Spanish, French or the same as the system. Nido closes and opens again in the new language; with a VM running, it first asks what to do with it, as when you quit. It’s the same setting as System Settings › General › Language & Region › Applications.
+
+### Library
+- **Each VM has its own color**: its mark in the library shows the system’s logo (Debian’s swirl, Apple’s logo for macOS; Ubuntu keeps its letter) on one of eight quiet tints. The New VM wizard proposes a color no other VM has; change it any time in **Settings › General › Color**.
+
+### Fixes
+- **The system tiles of the New VM wizard line up**: a name or a detail on two lines (“Ubuntu Server”, longer translations) no longer makes its tile taller than the others or shifts them.
 
 ## [0.8.0] – 2026-11-13
 

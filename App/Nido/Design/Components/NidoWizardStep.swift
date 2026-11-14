@@ -147,12 +147,9 @@ struct NidoOSTile: View {
 
     var body: some View {
         VStack(spacing: Theme.Space.s) {
-            Text(verbatim: glyph)
-                .font(.nido(Theme.TypeSize.title, .bold))
-                .foregroundStyle(state == .selected ? Theme.Color.accentText : Theme.Color.textSecondary)
-                .frame(width: Theme.Layout.osTileGlyph, height: Theme.Layout.osTileGlyph)
-                .background(state == .selected ? Theme.Color.accent : Theme.Color.background,
-                            in: RoundedRectangle(cornerRadius: Theme.Radius.m))
+            NidoSystemMark(system: .init(glyph: glyph), size: Theme.Layout.osTileGlyph,
+                           fill: state == .selected ? Theme.Color.accent : Theme.Color.background,
+                           mark: state == .selected ? Theme.Color.accentText : Theme.Color.textSecondary)
             Text(verbatim: name)
                 .font(.nido(Theme.TypeSize.body, .semibold))
                 .foregroundStyle(Theme.Color.textPrimary)

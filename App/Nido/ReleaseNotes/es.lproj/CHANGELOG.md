@@ -2,10 +2,16 @@
 
 Todas las versiones de Nido, de la más reciente a la más antigua. La primera vez que Nido se abre tras una actualización, muestra las novedades de la versión instalada (para volver a verlas, elige Ayuda › Novedades de Nido).
 
-## [0.8.1] – 2026-11-13
+## [0.8.1] – 2026-11-14
 
 ### Idiomas
 - **El idioma de Nido se elige en Ajustes › General › Idioma**: inglés, italiano, alemán, español, francés o igual que el sistema. Nido se cierra y se vuelve a abrir en el idioma nuevo; si hay una VM en ejecución, antes pregunta qué hacer con ella, como al salir. Es el mismo ajuste que Ajustes del Sistema › General › Idioma y región › Apps.
+
+### Biblioteca
+- **Cada VM tiene su propio color**: su símbolo en la biblioteca muestra el logotipo del sistema (la espiral de Debian, el logotipo de Apple para macOS; Ubuntu conserva su letra) sobre uno de ocho tonos discretos. El asistente Nueva VM propone un color que ninguna otra VM tiene; puedes cambiarlo cuando quieras en **Ajustes › General › Color**.
+
+### Correcciones
+- **Las tarjetas de sistema del asistente Nueva VM quedan alineadas**: un nombre o un detalle en dos líneas (“Ubuntu Server”, las traducciones más largas) ya no hace su tarjeta más alta que las demás ni las desplaza.
 
 ## [0.8.0] – 2026-11-13
 

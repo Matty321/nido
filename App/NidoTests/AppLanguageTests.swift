@@ -695,10 +695,23 @@ struct AppLanguageTests {
             "Il software di Nido dentro la VM: monitor, preparazione di Ollama e ponte AI. Nido lo installa via SSH con la chiave della VM; pacchetti, file e modelli restano come sono.",
         "With the controlled network, every connection of the VM goes through Nido: only connections to the allowed domains get through; everything else is blocked, logged without its content and reported.":
             "Con la rete controllata ogni collegamento della VM passa da Nido: escono solo i domini permessi, il resto viene bloccato, registrato senza contenuto e segnalato.",
-        "The virtual machine’s details, its snapshots and the account nido ssh logs in to macOS with.":
-            "Dati della macchina virtuale, i suoi snapshot e l'account con cui nido ssh entra in macOS.",
-        "The virtual machine’s details, read only, and its snapshots.":
-            "Dati della macchina virtuale, in sola lettura, e i suoi snapshot.",
+        "The virtual machine’s details, its color, its snapshots and the account nido ssh logs in to macOS with.":
+            "Dati della macchina virtuale, il suo colore, i suoi snapshot e l'account con cui nido ssh entra in macOS.",
+        "The virtual machine’s details, its color and its snapshots.":
+            "Dati della macchina virtuale, il suo colore e i suoi snapshot.",
+        // Generale › Colore and S06: a VM's tint (VMTint).
+        "Color": "Colore",
+        "Tells this VM apart in the library.": "Distingue questa VM nella libreria.",
+        "Tells this VM apart in the library. You can change it later in its settings.":
+            "Distingue questa VM nella libreria. Puoi cambiarlo più tardi nelle sue impostazioni.",
+        "Slate": "Ardesia",
+        "Indigo": "Indaco",
+        "Plum": "Prugna",
+        "Rose": "Rosa",
+        "Clay": "Argilla",
+        "Olive": "Oliva",
+        "Sea": "Mare",
+        "Graphite": "Grafite",
         "The name is chosen when the VM is created.": "Il nome si sceglie alla creazione.",
         "MAC address": "Indirizzo MAC",
         "Assigned when the VM was created.": "Assegnato alla creazione della VM.",
@@ -944,6 +957,8 @@ struct AppLanguageTests {
             "de:Monitor", "es:Monitor", "de:Hardware", "es:Hardware", "de:Kernel", "es:Kernel", "de:OK", "fr:OK",
             "fr:Architecture", "es:%lld d %lld h", "es:%lld h %lld min", "fr:%lld h %lld min", "es:%lld min", "fr:%lld min",
             "es:General",
+            // VM colours that keep their name.
+            "es:Color", "de:Indigo", "fr:Indigo", "fr:Rose", "fr:Olive", "fr:Graphite",
         ])
     }
 

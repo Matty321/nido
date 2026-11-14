@@ -51,11 +51,11 @@ final class LanguageScreensTests: XCTestCase, ScreenFixtures {
         try makeBundle("sandbox", cpu: 2, memoryGiB: 2, diskGiB: 32)
         try makeBundle("test-arm", cpu: 4, memoryGiB: 8, diskGiB: 64)
         try makeBundle("vecchia-vm", config: Data("{ non è json".utf8))
-        try makeBundle("archivio", cpu: 2, memoryGiB: 4, diskGiB: 32, suspended: true)
+        try makeBundle("archive", cpu: 2, memoryGiB: 4, diskGiB: 32, suspended: true)
         try holdLock("ci-runner", owner: "cli")
         app = launch(extra: ["-NidoFakeStates", "dev-box=starting,web-staging=running,sandbox=paused,test-arm=error"])
         window = libraryWindow(app)
-        XCTAssertTrue(card("archivio", in: window).buttons["action-resumeSuspended"].waitForExistence(timeout: 10))
+        XCTAssertTrue(card("archive", in: window).buttons["action-resumeSuspended"].waitForExistence(timeout: 10))
         XCTAssertTrue(card("web-staging", in: window).buttons["action-open"].waitForExistence(timeout: 10))
         XCTAssertTrue(card("sandbox", in: window).buttons["action-resume"].waitForExistence(timeout: 10))
         XCTAssertTrue(card("test-arm", in: window).buttons["action-retry"].waitForExistence(timeout: 10))
@@ -87,18 +87,21 @@ final class LanguageScreensTests: XCTestCase, ScreenFixtures {
     /// Templates, the AI bridge pill, Save as Template and Edit Template.
     @MainActor
     func testLibraryTemplates() throws {
-        try makeBundle("archivio", cpu: 2, memoryGiB: 4, diskGiB: 32, suspended: true)
+        try makeBundle("archive", cpu: 2, memoryGiB: 4, diskGiB: 32, suspended: true)
         try makeAIBundle()
-        try makeBundle("ricerca-01", cpu: 4, memoryGiB: 8, diskGiB: 64)
+        try makeBundle("research-01", cpu: 4, memoryGiB: 8, diskGiB: 64)
         try makeTemplates()
+        // The templates' files take a few KiB: the library shows sizes like real ones. Flags with a
+        // value go before the bare -NidoFakeAIRouter: after it, the defaults parser would pair it with
+        // the next flag and leave the value as a file to open, and the library window would not open.
         let app = launch(extra: ["-NidoFakeStates", "debian-ai=running", "-NidoFakeGuest", "debian-ai=values",
-                                 "-NidoFakeAIRouter"])
+                                 "-NidoFakeTemplateSizes", "debian-ai-base=9.8,debian-base=2.4", "-NidoFakeAIRouter"])
         let window = libraryWindow(app)
         XCTAssertTrue(element("library-templates", in: window).waitForExistence(timeout: 10))
         XCTAssertTrue(element("bridge-pill", in: card("debian-ai", in: window)).waitForExistence(timeout: 15))
         capture(window, app: app, "library-templates")
 
-        openCardMenu("ricerca-01", item: "saveAsTemplate", in: window, app: app)
+        openCardMenu("research-01", item: "saveAsTemplate", in: window, app: app)
         XCTAssertTrue(element("save-template-sheet", in: app).waitForExistence(timeout: 5))
         capture(window, app: app, "library-save-template")
         app.buttons["confirm-cancel"].firstMatch.click()

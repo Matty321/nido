@@ -20,7 +20,7 @@ struct VMSettingsRoot: View {
     var body: some View {
         Group {
             if let model {
-                VMSettingsView(model: model, network: network, onStop: stop)
+                VMSettingsView(model: model, network: network, tints: environment?.tints, onStop: stop)
             } else if let failure {
                 StartupErrorView(message: failure)
             } else {
@@ -69,6 +69,8 @@ struct VMSettingsView: View {
     @Bindable var model: VMSettingsModel
     /// Rete (M3d); nil when it could not be built (the section stays disabled).
     var network: NetworkSettingsModel?
+    /// The VMs' tints (Generale › Colore); nil without an environment (the row is hidden).
+    var tints: VMTintStore?
     let onStop: () async -> Void
 
     @Environment(\.openWindow) private var openWindow
@@ -124,14 +126,20 @@ struct VMSettingsView: View {
         case "Rete":
             String(localized: "With the controlled network, every connection of the VM goes through Nido: only connections to the allowed domains get through; everything else is blocked, logged without its content and reported.")
         default: model.showsSSHUser
-            ? String(localized: "The virtual machine’s details, its snapshots and the account nido ssh logs in to macOS with.")
-            : String(localized: "The virtual machine’s details, read only, and its snapshots.")
+            ? String(localized: "The virtual machine’s details, its color, its snapshots and the account nido ssh logs in to macOS with.")
+            : String(localized: "The virtual machine’s details, its color and its snapshots.")
         }
     }
 
     private var general: some View {
         Group {
             NidoInfoRow("Name", model.name, note: "The name is chosen when the VM is created.")
+            if let tints {
+                // Applies at once, in the library and the VM's window: no Save, it changes no file.
+                NidoColorRow(
+                    selection: Binding(get: { tints.tint(for: model.name) }, set: { tints.set($0, for: model.name) }),
+                    note: "Tells this VM apart in the library.")
+            }
             NidoInfoRow("MAC address", model.macAddress, note: "Assigned when the VM was created.")
             // The way to S09 from the settings (the VM window has a Snapshot button too).
             NidoPickerRow(label: "Snapshots", path: model.snapshotSummary, buttonLabel: "Manage Snapshots…") {

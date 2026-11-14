@@ -13,18 +13,29 @@ struct LibraryView: View {
 
     init(environment: AppEnvironment) {
         let paths = environment.paths
+        #if DEBUG
+            let fakeTemplateSizes = environment.fakeTemplateSizes
+        #else
+            let fakeTemplateSizes: [String: UInt64] = [:]
+        #endif
         _model = State(initialValue: LibraryModel(
             registry: environment.registry, control: LiveVMControl(paths: paths),
             cloner: LiveVMCloner(paths: paths), templates: LiveVMTemplates(paths: paths),
             stopAppVM: { name in await environment.sessions.stop(name) },
             resumeAppVM: { name in await environment.sessions.resume(name) },
-            forget: { name in environment.sessions.forget(name) },
+            // A deleted VM's tint goes too: a new VM with its name starts from its own.
+            forget: { name in
+                environment.sessions.forget(name)
+                environment.tints.remove(name.rawValue)
+            },
             revealInFinder: { name in Self.reveal(name, in: paths) },
             liveState: { name in environment.sessions.liveState(of: name) },
             appRunsMachine: { name in environment.sessions.runsMachine(name) },
             isSnapshotting: { name in environment.sessions.isSnapshotting(name) },
             isBridgeActive: { name in environment.sessions.isAIBridgeActive(name) },
-            measureTemplate: { name in LiveVMTemplates.allocatedBytes(of: name, paths: paths) },
+            measureTemplate: { name in
+                fakeTemplateSizes[name] ?? LiveVMTemplates.allocatedBytes(of: name, paths: paths)
+            },
             installs: environment.macInstalls))
         self.environment = environment
     }
@@ -198,7 +209,7 @@ struct LibraryView: View {
                     VStack(alignment: .leading, spacing: Theme.Space.l) {
                         LibrarySectionHeading(title: "Virtual Machines", caption: "\(model.entries.count)")
                         vmGrid
-                        TemplatesSection(model: model, columns: columns)
+                        TemplatesSection(model: model, tints: environment.tints, columns: columns)
                             .padding(.top, Theme.Space.s)
                     }
                     .padding(Theme.Space.xl)
@@ -233,6 +244,7 @@ struct LibraryView: View {
         TimelineView(.periodic(from: .now, by: 1)) { _ in
             NidoVMCard(
                 name: job.name.rawValue, system: "macOS \(job.version)", glyph: "M",
+                tint: environment.tints.tint(for: job.name.rawValue),
                 resources: LibraryModel.resources(of: job), state: .installing(job.cardText, job.fraction)
             ) {
                 // Finished, until the library lists the VM: nothing left to show or cancel.
@@ -251,6 +263,7 @@ struct LibraryView: View {
             name: vm.name,
             system: LibraryModel.system(of: vm),
             glyph: LibraryModel.glyph(of: vm),
+            tint: environment.tints.tint(for: vm.name),
             resources: LibraryModel.resources(of: vm),
             state: model.cardState(for: vm),
             bridgeActive: model.showsBridgePill(for: vm),
@@ -314,6 +327,7 @@ struct LibraryView: View {
             freeDiskBytes: Self.freeSpace(at: environment.paths.root), checkHeadroom: checkHeadroom,
             macInstaller: environment.macInstaller, installs: environment.macInstalls,
             presetIPSW: environment.ipswFile)
+        wizard.tint = environment.tints.freshTint(for: wizard.name, among: model.items.map(\.name))
         configure(wizard)
         self.wizard = wizard
         environment.activeWizard = wizard
@@ -324,7 +338,9 @@ struct LibraryView: View {
     private func configure(_ wizard: WizardModel) {
         let library = model
         let sessions = environment.sessions
+        let tints = environment.tints
         wizard.onCreated = { [weak wizard] (name: VMName) in
+            if let wizard { tints.set(wizard.tint, for: name.rawValue) }
             // "Crea e avvia": the window follows the first boot (phase 1, then the chosen phase 2)
             // and the VM starts; the RAM warning was shown at Risorse already. A macOS VM opens for
             // Setup Assistant once installed (its RAM is checked then: the installation took time).

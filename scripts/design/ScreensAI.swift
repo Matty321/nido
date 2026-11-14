@@ -161,13 +161,8 @@ func aiScreenComponents(_ s: Script, board: Int) {
         s.stroke(c, "border")
         let top = stack(s, "Intestazione", parent: c, "horizontal", gap: "m",
                         props: ["crossAlign": "center", "sizingH": "fill"])
-        let glyph = stack(s, "System", parent: top, "horizontal",
-                          props: ["mainAlign": "center", "crossAlign": "center", "sizingH": "fixed", "sizingV": "fixed"])
-        s.set(glyph, ["width": 40, "height": 40])
-        s.bind(glyph, "fill", "background")
-        s.bind(glyph, "cornerRadius", "Radius/s")
-        s.stroke(glyph, "border")
-        s.text("D", parent: glyph, size: "headline", style: "Bold", color: "accent")
+        // A template keeps the tint of the VM it was saved from: Plum in the component.
+        systemMark(s, parent: top, size: 40, fill: "vmPlumFill", mark: "vmPlum")
         let names = stack(s, "Name", parent: top, "vertical", gap: "xs", props: ["sizingH": "fill"])
         s.text("debian-ai-base", parent: names, size: "headline", style: "SemiBold", color: "textPrimary")
         s.text("Debian 13 · Debian AI Starter", parent: names, size: "caption", color: "textSecondary")
@@ -986,6 +981,7 @@ func libraryTemplates(_ s: Script, _ name: String, parent: Int?, mode: String, s
         s.set(c, ["width": 340])
         s.setText(s.find("debian-13", in: c), vm)
         s.setText(s.find("4 CPUs · 8 GiB of memory · 64 GiB disk", in: c), caption)
+        tintMark(s, in: c, tint: designTint(for: vm))
         return c
     }
     _ = card("suspended", "archivio", "2 CPUs · 4 GiB of memory · 32 GiB disk")
@@ -994,8 +990,10 @@ func libraryTemplates(_ s: Script, _ name: String, parent: Int?, mode: String, s
     _ = card("stopped", "ricerca-01", "4 CPUs · 8 GiB of memory · 64 GiB disk")
     librarySection(s, parent: content, "Templates", "2 · 12.2 GiB on the Mac · they don’t start: they’re for creating new VMs")
     let templates = stack(s, "Templates", parent: content, "horizontal", gap: "l", props: ["sizingH": "fill"])
-    _ = s.instance(of: s.firstLayerComponent("TemplateCard"), parent: templates)
+    let aiBase = s.instance(of: s.firstLayerComponent("TemplateCard"), parent: templates)
+    tintMark(s, in: aiBase, tint: designTint(for: "debian-ai-base"))
     let base = s.instance(of: s.firstLayerComponent("TemplateCard"), parent: templates)
+    tintMark(s, in: base, tint: designTint(for: "debian-base"))
     s.setText(s.find("debian-ai-base", in: base), "debian-base")
     s.setText(s.find("Debian 13 · Debian AI Starter", in: base), "Debian 13 · Debian Base")
     s.setText(s.find("4 CPUs · 8 GiB of memory · 64 GiB disk", in: base), "2 CPUs · 2 GiB of memory · 32 GiB disk")

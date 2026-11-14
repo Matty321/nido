@@ -154,14 +154,8 @@ func buildComponents(firstID: Int) -> Script {
             s.stroke(c, "border")
             let top = stack(s, "Intestazione", parent: c, "horizontal", gap: "m",
                             props: ["crossAlign": "center", "sizingH": "fill"])
-            let glyph = stack(s, "System", parent: top, "horizontal",
-                              props: ["mainAlign": "center", "crossAlign": "center", "sizingH": "fixed",
-                                      "sizingV": "fixed", "width": 40, "height": 40])
-            s.set(glyph, ["width": 40, "height": 40])
-            s.bind(glyph, "fill", "background")
-            s.bind(glyph, "cornerRadius", "Radius/s")
-            s.stroke(glyph, "border")
-            s.text("D", parent: glyph, size: "headline", style: "Bold", color: "accent")
+            // The VM's system on its own tint (Settings › General › Color): Sea in the component.
+            systemMark(s, parent: top, size: 40, fill: "vmSeaFill", mark: "vmSea")
             let names = stack(s, "Name", parent: top, "vertical", gap: "xs", props: ["sizingH": "fill"])
             s.text("debian-13", parent: names, size: "headline", style: "SemiBold", color: "textPrimary")
             s.text("Debian 13 · arm64", parent: names, size: "caption", color: "textSecondary")
@@ -220,14 +214,10 @@ func buildComponents(firstID: Int) -> Script {
             s.bind(t, "fill", state == "selezionato" ? "surfaceRaised" : "surface")
             s.bind(t, "cornerRadius", "Radius/m")
             s.stroke(t, state == "selezionato" ? "accent" : "border", weight: state == "selezionato" ? 2 : 1)
-            let glyph = stack(s, "System", parent: t, "horizontal",
-                              props: ["mainAlign": "center", "crossAlign": "center", "sizingH": "fixed",
-                                      "sizingV": "fixed"])
-            s.set(glyph, ["width": 48, "height": 48])
-            s.bind(glyph, "fill", state == "selezionato" ? "accent" : "background")
-            s.bind(glyph, "cornerRadius", "Radius/m")
-            s.text(letter, parent: glyph, size: "title", style: "Bold",
-                   color: state == "selezionato" ? "accentText" : "textSecondary")
+            // Debian shows its swirl; Ubuntu and Windows keep a letter (their logos need permission).
+            systemMark(s, parent: t, size: 48, fill: state == "selezionato" ? "accent" : "background",
+                       mark: state == "selezionato" ? "accentText" : "textSecondary",
+                       letter: letter == "D" ? nil : letter)
             s.text(name, parent: t, size: "body", style: "SemiBold", color: "textPrimary")
             s.text(detail, parent: t, size: "caption", color: "textSecondary")
             if state == "disattivato" { s.set(t, ["opacity": 0.5]) }

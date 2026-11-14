@@ -2,12 +2,12 @@
   {
     "command" : "page.select",
     "params" : {
-      "id" : 1598
+      "id" : 1752
     }
   },
   {
     "command" : "frame.create",
-    "expectId" : 18094,
+    "expectId" : 18489,
     "params" : {
       "height" : 1024,
       "name" : "AppIcon",
@@ -24,11 +24,11 @@
   },
   {
     "command" : "frame.create",
-    "expectId" : 18095,
+    "expectId" : 18490,
     "params" : {
       "height" : 824,
       "name" : "Fondo",
-      "parent" : 18094,
+      "parent" : 18489,
       "props" : {
         "clip" : true,
         "cornerRadius" : 185,
@@ -70,10 +70,10 @@
   },
   {
     "command" : "shape.ellipse",
-    "expectId" : 18096,
+    "expectId" : 18491,
     "params" : {
       "height" : 620,
-      "parent" : 18095,
+      "parent" : 18490,
       "props" : {
         "fills" : [
           {
@@ -92,10 +92,10 @@
   },
   {
     "command" : "shape.ellipse",
-    "expectId" : 18097,
+    "expectId" : 18492,
     "params" : {
       "height" : 170,
-      "parent" : 18095,
+      "parent" : 18490,
       "props" : {
         "fills" : [
           "#5E3A1B"
@@ -108,9 +108,9 @@
   },
   {
     "command" : "vector.create",
-    "expectId" : 18098,
+    "expectId" : 18493,
     "params" : {
-      "parent" : 18095,
+      "parent" : 18490,
       "path" : "M 412 214 C 506 214 562 382 562 474 C 562 562 496 616 412 616 C 328 616 262 562 262 474 C 262 382 318 214 412 214 Z",
       "props" : {
         "fills" : [
@@ -137,17 +137,17 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18098
+        18493
       ],
       "name" : "Uovo"
     }
   },
   {
     "command" : "shape.ellipse",
-    "expectId" : 18099,
+    "expectId" : 18494,
     "params" : {
       "height" : 100,
-      "parent" : 18095,
+      "parent" : 18490,
       "props" : {
         "fills" : [
           "#FFFFFF"
@@ -161,9 +161,9 @@
   },
   {
     "command" : "vector.create",
-    "expectId" : 18100,
+    "expectId" : 18495,
     "params" : {
-      "parent" : 18095,
+      "parent" : 18490,
       "path" : "M 96 540 C 200 604 624 604 728 540 C 712 704 576 772 412 772 C 248 772 112 704 96 540 Z",
       "props" : {
         "fills" : [
@@ -190,16 +190,16 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18100
+        18495
       ],
       "name" : "Nido davanti"
     }
   },
   {
     "command" : "vector.create",
-    "expectId" : 18101,
+    "expectId" : 18496,
     "params" : {
-      "parent" : 18095,
+      "parent" : 18490,
       "path" : "M 132 604 C 270 700 540 712 690 598",
       "props" : {
         "fills" : [
@@ -212,7 +212,7 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18101
+        18496
       ],
       "name" : "Filo 1"
     }
@@ -221,7 +221,7 @@
     "command" : "stroke.add",
     "params" : {
       "ids" : [
-        18101
+        18496
       ]
     }
   },
@@ -229,7 +229,7 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18101
+        18496
       ],
       "strokeAlign" : "center",
       "strokeCap" : "round",
@@ -241,9 +241,9 @@
   },
   {
     "command" : "vector.create",
-    "expectId" : 18102,
+    "expectId" : 18497,
     "params" : {
-      "parent" : 18095,
+      "parent" : 18490,
       "path" : "M 176 676 C 320 748 520 748 652 666",
       "props" : {
         "fills" : [
@@ -256,7 +256,7 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18102
+        18497
       ],
       "name" : "Filo 2"
     }
@@ -265,7 +265,7 @@
     "command" : "stroke.add",
     "params" : {
       "ids" : [
-        18102
+        18497
       ]
     }
   },
@@ -273,7 +273,7 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18102
+        18497
       ],
       "strokeAlign" : "center",
       "strokeCap" : "round",
@@ -285,9 +285,9 @@
   },
   {
     "command" : "vector.create",
-    "expectId" : 18103,
+    "expectId" : 18498,
     "params" : {
-      "parent" : 18095,
+      "parent" : 18490,
       "path" : "M 128 572 C 250 650 430 700 560 690",
       "props" : {
         "fills" : [
@@ -300,7 +300,7 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18103
+        18498
       ],
       "name" : "Filo 3"
     }
@@ -309,7 +309,7 @@
     "command" : "stroke.add",
     "params" : {
       "ids" : [
-        18103
+        18498
       ]
     }
   },
@@ -317,7 +317,7 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18103
+        18498
       ],
       "strokeAlign" : "center",
       "strokeCap" : "round",
@@ -329,9 +329,9 @@
   },
   {
     "command" : "vector.create",
-    "expectId" : 18104,
+    "expectId" : 18499,
     "params" : {
-      "parent" : 18095,
+      "parent" : 18490,
       "path" : "M 250 736 C 380 650 560 630 712 576",
       "props" : {
         "fills" : [
@@ -344,7 +344,7 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18104
+        18499
       ],
       "name" : "Filo 4"
     }
@@ -353,7 +353,7 @@
     "command" : "stroke.add",
     "params" : {
       "ids" : [
-        18104
+        18499
       ]
     }
   },
@@ -361,7 +361,7 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18104
+        18499
       ],
       "strokeAlign" : "center",
       "strokeCap" : "round",
@@ -373,9 +373,9 @@
   },
   {
     "command" : "vector.create",
-    "expectId" : 18105,
+    "expectId" : 18500,
     "params" : {
-      "parent" : 18095,
+      "parent" : 18490,
       "path" : "M 100 544 L 52 506",
       "props" : {
         "fills" : [
@@ -388,7 +388,7 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18105
+        18500
       ],
       "name" : "Filo 5"
     }
@@ -397,7 +397,7 @@
     "command" : "stroke.add",
     "params" : {
       "ids" : [
-        18105
+        18500
       ]
     }
   },
@@ -405,7 +405,7 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18105
+        18500
       ],
       "strokeAlign" : "center",
       "strokeCap" : "round",
@@ -417,9 +417,9 @@
   },
   {
     "command" : "vector.create",
-    "expectId" : 18106,
+    "expectId" : 18501,
     "params" : {
-      "parent" : 18095,
+      "parent" : 18490,
       "path" : "M 724 544 L 774 500",
       "props" : {
         "fills" : [
@@ -432,7 +432,7 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18106
+        18501
       ],
       "name" : "Filo 6"
     }
@@ -441,7 +441,7 @@
     "command" : "stroke.add",
     "params" : {
       "ids" : [
-        18106
+        18501
       ]
     }
   },
@@ -449,7 +449,7 @@
     "command" : "node.set",
     "params" : {
       "ids" : [
-        18106
+        18501
       ],
       "strokeAlign" : "center",
       "strokeCap" : "round",

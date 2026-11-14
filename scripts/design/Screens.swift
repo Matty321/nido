@@ -153,6 +153,26 @@ func screenComponents(_ s: Script) {
         s.combine(variants, name: "InfoRow", parent: box)
     }
 
+    // ColorRow: a VM's tint, chosen among the eight (Settings › General, the wizard's summary).
+    do {
+        let box = section("ColorRow", "a VM’s color: eight tints, the chosen one ringed")
+        let r = row("ColorRow", parent: box)
+        let labels = stack(s, "Testo", parent: r, "vertical", gap: "xs", props: ["sizingH": "fill"])
+        s.text("Color", parent: labels, size: "body", style: "SemiBold", color: "textPrimary")
+        s.text("Tells this VM apart in the library.", parent: labels, size: "caption", color: "textSecondary",
+               props: ["sizingH": "fill", "textAutoResize": "height"])
+        let swatches = stack(s, "Colori", parent: r, "horizontal", gap: "xs", props: ["crossAlign": "center"])
+        for tint in vmTints {
+            let ring = stack(s, "Colore=\(tint)", parent: swatches, "horizontal",
+                             props: ["mainAlign": "center", "crossAlign": "center", "sizingH": "fixed", "sizingV": "fixed"])
+            s.set(ring, ["width": 24, "height": 24, "cornerRadius": 12])
+            s.stroke(ring, tint == "Sea" ? "accent" : "surface", weight: 2)
+            let dot = s.ellipse(parent: ring, size: 16)
+            s.bind(dot, "fill", "vm\(tint)")
+        }
+        s.makeComponent(r)
+    }
+
     // PickerRow: a file or folder with its action.
     do {
         let box = section("PickerRow", "chosen file or folder, with its action")
@@ -183,12 +203,12 @@ func screenComponents(_ s: Script) {
             let mac = selection == "macos"
             let debian = s.instance(of: s.variant("OSTile", mac ? "Stato=normale" : "Stato=selezionato"), parent: tiles)
             if mac {
-                s.setText(s.find("U", in: debian), "D")
+                markLetter(s, in: debian, nil)
                 s.setText(s.find("Ubuntu 24.04", in: debian), "Debian 13")
                 s.setText(s.find("arm64 · 2.6 GiB", in: debian), "arm64 · 1.2 GiB")
             }
             let macTile = s.instance(of: s.variant("OSTile", mac ? "Stato=selezionato" : "Stato=normale"), parent: tiles)
-            s.setText(s.find(mac ? "D" : "U", in: macTile), "M")
+            markLetter(s, in: macTile, "M")
             s.setText(s.find(mac ? "Debian 13" : "Ubuntu 24.04", in: macTile), "macOS")
             s.setText(s.find(mac ? "arm64 · 1.2 GiB" : "arm64 · 2.6 GiB", in: macTile), "from an IPSW file")
             _ = s.instance(of: s.variant("OSTile", "Stato=disattivato"), parent: tiles)
@@ -242,6 +262,7 @@ func libraryWindow(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: 
         s.set(c, ["width": 340])
         s.setText(s.find("debian-13", in: c), vm)
         s.setText(s.find("4 CPUs · 8 GiB of memory · 64 GiB disk", in: c), caption)
+        tintMark(s, in: c, tint: designTint(for: vm))
         return c
     }
     // In the app's order: bundles sorted by name (VMBundle.list), as ScreenshotTests creates them.
@@ -256,7 +277,7 @@ func libraryWindow(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: 
     _ = card("error", "test-arm", "4 CPUs · 8 GiB of memory · 64 GiB disk")
     let unreadable = card("unreadable", "vecchia-vm", "CPU, memory and disk unknown")
     s.setText(s.find("Debian 13 · arm64", in: unreadable), "Unknown system")
-    s.setText(s.find("D", in: unreadable), "?")
+    markLetter(s, in: unreadable, "?")
     let running = card("running", "web-staging", "2 CPUs · 4 GiB of memory · 32 GiB disk")
     refs["apri"] = s.children(of: s.find("Azioni", in: running))[0]
     return refs
@@ -539,6 +560,7 @@ func s06Summary(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Dou
         let (refs, slot) = wizardWindow(s, name, parent: parent, x: x, y: y, mode: mode, step: 5, title: "Summary",
                                         description: description, next: "Create and Start")
         infoRow(s, parent: slot, "Name", "debian-13", replace: true)
+        colorRow(s, parent: slot, tint: "Clay", note: "Tells this VM apart in the library. You can change it later in its settings.")
         infoRow(s, parent: slot, "System", "Debian 13 · arm64 · Debian Base")
         infoRow(s, parent: slot, "Resources", "4 CPUs · 8 GiB · 64 GiB disk")
         infoRow(s, parent: slot, "First boot", "Essential packages · Guest Tools")
@@ -819,8 +841,9 @@ func s08General(_ s: Script, _ name: String, parent: Int?, x: Double = 0, y: Dou
     let (w, column) = settingsWindow(s, name, parent: parent, x: x, y: y, mode: mode, title: "debian-13 Settings",
                                      sections: vmSettingsSections, comingSoon: vmSettingsComingSoon,
                                      selected: "General", heading: "General",
-                                     intro: "The virtual machine’s details, read only, and its snapshots.")
+                                     intro: "The virtual machine’s details, its color and its snapshots.")
     infoRow(s, parent: column, "Name", "debian-13", note: "The name is chosen when the VM is created.", inSlot: false)
+    colorRow(s, parent: column, tint: designTint(for: "debian-13"), inSlot: false)
     infoRow(s, parent: column, "MAC address", "52:54:00:3a:9c:12", note: "Assigned when the VM was created.",
             inSlot: false)
     let snapshots = pickerRow(s, parent: column, "Snapshots",

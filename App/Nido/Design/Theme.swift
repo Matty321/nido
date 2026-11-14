@@ -22,6 +22,22 @@ enum Theme {
         static let surfaceRaised = SwiftUI.Color(light: 0xFFFFFF, dark: 0x262B29)
         static let textPrimary = SwiftUI.Color(light: 0x1E2320, dark: 0xECEAE4)
         static let textSecondary = SwiftUI.Color(light: 0x5B605A, dark: 0xA6AAA3)
+        static let vmClay = SwiftUI.Color(light: 0x814F39, dark: 0xE6B098)
+        static let vmClayFill = SwiftUI.Color(light: 0xF8E5DD, dark: 0x443027)
+        static let vmGraphite = SwiftUI.Color(light: 0x5F5D59, dark: 0xBFBEB8)
+        static let vmGraphiteFill = SwiftUI.Color(light: 0xEAE9E7, dark: 0x363533)
+        static let vmIndigo = SwiftUI.Color(light: 0x55588A, dark: 0xB4B9EF)
+        static let vmIndigoFill = SwiftUI.Color(light: 0xE6E8FB, dark: 0x323348)
+        static let vmOlive = SwiftUI.Color(light: 0x606134, dark: 0xC0C294)
+        static let vmOliveFill = SwiftUI.Color(light: 0xEAEBDB, dark: 0x363725)
+        static let vmPlum = SwiftUI.Color(light: 0x734F75, dark: 0xD6AED7)
+        static let vmPlumFill = SwiftUI.Color(light: 0xF2E4F3, dark: 0x3E2F3F)
+        static let vmRose = SwiftUI.Color(light: 0x814A60, dark: 0xE6AAC0)
+        static let vmRoseFill = SwiftUI.Color(light: 0xF9E3EA, dark: 0x442E36)
+        static let vmSea = SwiftUI.Color(light: 0x316673, dark: 0x94C8D5)
+        static let vmSeaFill = SwiftUI.Color(light: 0xDCEDF2, dark: 0x25393E)
+        static let vmSlate = SwiftUI.Color(light: 0x376285, dark: 0x97C3E9)
+        static let vmSlateFill = SwiftUI.Color(light: 0xDDECF9, dark: 0x273746)
     }
 
     enum Radius {

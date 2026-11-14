@@ -104,4 +104,4 @@ The app ends up in `App/build/Build/Products/Release/Nido.app`; copy it to the A
 
 ## License
 
-Nido is free software under the Apache License 2.0: see [LICENSE](LICENSE). It includes `gvproxy` from the gvisor-tap-vsock project (Apache-2.0), whose license and notice ship inside the app, and it uses Sparkle (MIT) and swift-argument-parser (Apache-2.0).
+Nido is free software under the Apache License 2.0: see [LICENSE](LICENSE). It includes `gvproxy` from the gvisor-tap-vsock project (Apache-2.0), whose license and notice ship inside the app, and it uses Sparkle (MIT) and swift-argument-parser (Apache-2.0). The Debian swirl on Debian VMs is the [Debian Open Use Logo](https://www.debian.org/logos/) (Copyright © 1999 Software in the Public Interest, Inc., and others; LGPL-3.0-or-later or CC-BY-SA-3.0). Apple, macOS, Debian and Ubuntu are trademarks of their owners; Nido isn’t affiliated with them.

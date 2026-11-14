@@ -8,8 +8,10 @@ struct NidoVMCard<Actions: View>: View {
     let name: String
     /// "Debian 13 · arm64", "Ubuntu 26.04 LTS · arm64", or "Sistema sconosciuto".
     let system: String
-    /// The letter in the system tile ("D", or "?").
+    /// The system of the mark ("D", "U", "M", or "?": `NidoSystemMark.System(glyph:)`).
     let glyph: String
+    /// The VM's own tint (Settings › General › Color).
+    var tint: VMTint = .graphite
     /// "4 CPU · 8 GiB di memoria · disco 64 GiB".
     let resources: String
     let state: State
@@ -73,14 +75,7 @@ struct NidoVMCard<Actions: View>: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: Theme.Space.m) {
-            Text(glyph)
-                .font(.nido(Theme.TypeSize.headline, .bold))
-                .foregroundStyle(Theme.Color.accent)
-                .frame(width: Theme.Layout.cardGlyph, height: Theme.Layout.cardGlyph)
-                .background(Theme.Color.background, in: RoundedRectangle(cornerRadius: Theme.Radius.s))
-                .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s)
-                    .strokeBorder(Theme.Color.border, lineWidth: Theme.Layout.hairline))
-                .accessibilityHidden(true)
+            NidoSystemMark(system: .init(glyph: glyph), tint: tint, size: Theme.Layout.cardGlyph)
             VStack(alignment: .leading, spacing: Theme.Space.xs) {
                 Text(name)
                     .font(.nido(Theme.TypeSize.headline, .semibold))

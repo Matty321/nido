@@ -26,6 +26,7 @@ struct LibrarySectionHeading: View {
 /// the library when there are no templates.
 struct TemplatesSection: View {
     let model: LibraryModel
+    let tints: VMTintStore
     let columns: [GridItem]
 
     var body: some View {
@@ -42,7 +43,8 @@ struct TemplatesSection: View {
 
     private func card(_ vm: VMSummary) -> some View {
         NidoTemplateCard(
-            name: vm.name, system: LibraryModel.system(of: vm), resources: LibraryModel.resources(of: vm),
+            name: vm.name, system: LibraryModel.system(of: vm), glyph: LibraryModel.glyph(of: vm),
+            tint: tints.tint(for: vm.name), resources: LibraryModel.resources(of: vm),
             space: model.spaceText(for: vm)
         ) {
             ForEach(model.buttons(for: vm), id: \.action) { button in
@@ -69,6 +71,10 @@ struct TemplatesSection: View {
 struct NidoTemplateCard<Actions: View>: View {
     let name: String
     let system: String
+    /// The system of the mark ("D", "U", "M": `NidoSystemMark.System(glyph:)`).
+    let glyph: String
+    /// The template's tint: the one of the VM it was saved from.
+    let tint: VMTint
     let resources: String
     /// "Uses 9.8 GiB on the Mac".
     let space: String
@@ -77,14 +83,7 @@ struct NidoTemplateCard<Actions: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.m) {
             HStack(alignment: .center, spacing: Theme.Space.m) {
-                Text(verbatim: "D")
-                    .font(.nido(Theme.TypeSize.headline, .bold))
-                    .foregroundStyle(Theme.Color.accent)
-                    .frame(width: Theme.Layout.cardGlyph, height: Theme.Layout.cardGlyph)
-                    .background(Theme.Color.background, in: RoundedRectangle(cornerRadius: Theme.Radius.s))
-                    .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s)
-                        .strokeBorder(Theme.Color.border, lineWidth: Theme.Layout.hairline))
-                    .accessibilityHidden(true)
+                NidoSystemMark(system: .init(glyph: glyph), tint: tint, size: Theme.Layout.cardGlyph)
                 VStack(alignment: .leading, spacing: Theme.Space.xs) {
                     Text(verbatim: name)
                         .font(.nido(Theme.TypeSize.headline, .semibold))

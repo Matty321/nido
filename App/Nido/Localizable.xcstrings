@@ -8290,6 +8290,35 @@
         }
       }
     },
+    "Clay" : {
+      "comment" : "A VM color.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arcilla"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Argile"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Argilla"
+          }
+        }
+      }
+    },
     "Clear" : {
       "comment" : "Clears the chat.",
       "localizations" : {
@@ -8540,6 +8569,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Codice"
+          }
+        }
+      }
+    },
+    "Color" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Farbe"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Color"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couleur"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colore"
           }
         }
       }
@@ -11461,6 +11518,35 @@
         }
       }
     },
+    "Graphite" : {
+      "comment" : "A VM color.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Graphit"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grafito"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Graphite"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grafite"
+          }
+        }
+      }
+    },
     "Guest Tools" : {
       "shouldTranslate" : false
     },
@@ -12246,6 +12332,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aumenta %@"
+          }
+        }
+      }
+    },
+    "Indigo" : {
+      "comment" : "A VM color.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indigo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Índigo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indigo"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indaco"
           }
         }
       }
@@ -16157,6 +16272,35 @@
         }
       }
     },
+    "Olive" : {
+      "comment" : "A VM color.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oliv"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oliva"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Olive"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oliva"
+          }
+        }
+      }
+    },
     "Ollama and %@ verified at %@" : {
       "localizations" : {
         "de" : {
@@ -17342,6 +17486,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fase 2 · dopo l'avvio"
+          }
+        }
+      }
+    },
+    "Plum" : {
+      "comment" : "A VM color.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pflaume"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ciruela"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prune"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prugna"
           }
         }
       }
@@ -18732,6 +18905,35 @@
         }
       }
     },
+    "Rose" : {
+      "comment" : "A VM color.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rosé"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rosa"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rose"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rosa"
+          }
+        }
+      }
+    },
     "Rosetta (x86_64 binaries)" : {
       "localizations" : {
         "de" : {
@@ -19377,6 +19579,35 @@
         }
       }
     },
+    "Sea" : {
+      "comment" : "A VM color.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meer"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mer"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mare"
+          }
+        }
+      }
+    },
     "Search VMs" : {
       "localizations" : {
         "de" : {
@@ -19825,6 +20056,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dimensione"
+          }
+        }
+      }
+    },
+    "Slate" : {
+      "comment" : "A VM color.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schiefer"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pizarra"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ardoise"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ardesia"
           }
         }
       }
@@ -21344,6 +21604,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sistema"
+          }
+        }
+      }
+    },
+    "Tells this VM apart in the library." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebt diese VM in der Bibliothek von den anderen ab."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distingue esta VM en la biblioteca."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distingue cette VM dans la bibliothèque."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distingue questa VM nella libreria."
+          }
+        }
+      }
+    },
+    "Tells this VM apart in the library. You can change it later in its settings." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebt diese VM in der Bibliothek von den anderen ab. Du kannst sie später in ihren Einstellungen ändern."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distingue esta VM en la biblioteca. Puedes cambiarlo más tarde en sus ajustes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distingue cette VM dans la bibliothèque. Vous pourrez la changer plus tard dans ses réglages."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distingue questa VM nella libreria. Puoi cambiarlo più tardi nelle sue impostazioni."
           }
         }
       }
@@ -24113,58 +24429,58 @@
         }
       }
     },
-    "The virtual machine’s details, its snapshots and the account nido ssh logs in to macOS with." : {
+    "The virtual machine’s details, its color and its snapshots." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Daten der virtuellen Maschine, ihre Schnappschüsse und der Account, mit dem sich nido ssh bei macOS anmeldet."
+            "value" : "Die Daten der virtuellen Maschine, ihre Farbe und ihre Schnappschüsse."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los datos de la máquina virtual, sus instantáneas y la cuenta con la que nido ssh entra en macOS."
+            "value" : "Los datos de la máquina virtual, su color y sus instantáneas."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les informations de la machine virtuelle, ses instantanés et le compte avec lequel nido ssh se connecte à macOS."
+            "value" : "Les informations de la machine virtuelle, sa couleur et ses instantanés."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dati della macchina virtuale, i suoi snapshot e l'account con cui nido ssh entra in macOS."
+            "value" : "Dati della macchina virtuale, il suo colore e i suoi snapshot."
           }
         }
       }
     },
-    "The virtual machine’s details, read only, and its snapshots." : {
+    "The virtual machine’s details, its color, its snapshots and the account nido ssh logs in to macOS with." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Daten der virtuellen Maschine (nur lesbar) und ihre Schnappschüsse."
+            "value" : "Die Daten der virtuellen Maschine, ihre Farbe, ihre Schnappschüsse und der Account, mit dem sich nido ssh bei macOS anmeldet."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los datos de la máquina virtual, de solo lectura, y sus instantáneas."
+            "value" : "Los datos de la máquina virtual, su color, sus instantáneas y la cuenta con la que nido ssh entra en macOS."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les informations de la machine virtuelle, en lecture seule, et ses instantanés."
+            "value" : "Les informations de la machine virtuelle, sa couleur, ses instantanés et le compte avec lequel nido ssh se connecte à macOS."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dati della macchina virtuale, in sola lettura, e i suoi snapshot."
+            "value" : "Dati della macchina virtuale, il suo colore, i suoi snapshot e l'account con cui nido ssh entra in macOS."
           }
         }
       }

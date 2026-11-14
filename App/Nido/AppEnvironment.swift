@@ -59,6 +59,9 @@ final class AppEnvironment {
     /// DEBUG only: the updater exists but is never started, whatever the feed (UI tests of the
     /// "Cerca aggiornamenti…" item; no network, no Sparkle state).
     nonisolated static let updatesPreviewFlag = "-NidoUpdatesPreview"
+    /// DEBUG only: the space templates show on the Mac, "name=GiB,…" (screenshot tests: the
+    /// fixtures' files take a few KiB).
+    nonisolated static let fakeTemplateSizesFlag = "-NidoFakeTemplateSizes"
 
     let paths: NidoPaths
     let registry: VMRegistry
@@ -78,6 +81,8 @@ final class AppEnvironment {
     let aiBridge: AIBridgeServices
     /// Watches every VM's network log and notifies its blocks (M3d).
     let egress: EgressMonitor
+    /// Each VM's tint (Settings › General › Color), shared by the library and every window.
+    let tints: VMTintStore
     /// The RAM warning before a start and in the wizard (off with the DEBUG fakes).
     let checksMemoryHeadroom: Bool
     /// "Novità di Nido" opens by itself after an update only on the user's own VM root: never in
@@ -96,6 +101,19 @@ final class AppEnvironment {
         let wizardFixture: WizardModel.Fixture?
         /// DEBUG `-NidoOpenVM`: the library opens this VM's window at launch, once.
         @ObservationIgnored private var openAtLaunch: VMName?
+        /// DEBUG `-NidoFakeTemplateSizes`: bytes shown for these templates instead of their files'.
+        let fakeTemplateSizes: [String: UInt64]
+
+        /// "debian-ai-base=9.8,debian-base=2.4" (GiB); nil when a pair is malformed.
+        nonisolated static func parseTemplateSizes(_ value: String) -> [String: UInt64]? {
+            var sizes: [String: UInt64] = [:]
+            for pair in value.split(separator: ",") {
+                let parts = pair.split(separator: "=", maxSplits: 1)
+                guard parts.count == 2, let gib = Double(parts[1]), gib >= 0 else { return nil }
+                sizes[String(parts[0])] = UInt64(gib * Double(1 << 30))
+            }
+            return sizes
+        }
 
         /// The VM of `-NidoOpenVM`, the first time only (a library window opened again does
         /// not reopen it).
@@ -120,7 +138,7 @@ final class AppEnvironment {
             if isDebug, root == NidoPaths.defaultRoot() {
                 for flag in [Self.fakeSessionsFlag, Self.fakeStatesFlag, Self.wizardFixtureFlag, Self.fakeAIRouterFlag,
                              Self.fakeGuestFlag, Self.ipswFileFlag, Self.fakeMacInstallerFlag, Self.openVMFlag,
-                             Self.notificationsFlag]
+                             Self.notificationsFlag, Self.fakeTemplateSizesFlag]
                 where arguments.contains(flag) {
                     throw LaunchError.requiresRoot(flag)
                 }
@@ -159,6 +177,13 @@ final class AppEnvironment {
                     .appendingPathComponent("nido-fixture-cache-\(UUID().uuidString)", isDirectory: true)
             self.wizardFixture = fixture
             self.openAtLaunch = try Self.resolveOpenVM(arguments: arguments, isDebug: isDebug)
+            self.fakeTemplateSizes = try Self.debugValue(after: Self.fakeTemplateSizesFlag, in: arguments, isDebug: isDebug)
+                .map { value in
+                    guard let sizes = Self.parseTemplateSizes(value) else {
+                        throw LaunchError.invalidValue(Self.fakeTemplateSizesFlag, value)
+                    }
+                    return sizes
+                } ?? [:]
             usesFixtures = fixture != nil
             let plans = try Self.debugValue(after: Self.fakeStatesFlag, in: arguments, isDebug: isDebug)
                 .map { value in
@@ -201,12 +226,17 @@ final class AppEnvironment {
         var poster: (any EgressNotificationPosting)?
         var authenticator: any OwnerAuthenticator = LocalOwnerAuthenticator()
         var egressDefaults = UserDefaults.standard
+        var tintDefaults = UserDefaults.standard
         #if DEBUG
             if isDebug, root != NidoPaths.defaultRoot() {
                 // A test root keeps its log cursors in a throwaway domain, emptied at each launch.
                 let suite = "io.gitlab.pichierri.Nido.debug-egress"
                 egressDefaults = UserDefaults(suiteName: suite) ?? .standard
                 egressDefaults.removePersistentDomain(forName: suite)
+                // Its VMs' tints too: the UI tests' app has the user's bundle identifier.
+                let tintSuite = "io.gitlab.pichierri.Nido.debug-tints"
+                tintDefaults = UserDefaults(suiteName: tintSuite) ?? .standard
+                tintDefaults.removePersistentDomain(forName: tintSuite)
             }
             if let value = try Self.debugValue(after: Self.notificationsFlag, in: arguments, isDebug: isDebug) {
                 guard value == "allowed" || value == "denied" else {
@@ -226,6 +256,7 @@ final class AppEnvironment {
             egress = EgressMonitor(paths: paths, poster: system, authenticator: authenticator, defaults: egressDefaults)
             system.monitor = egress
         }
+        tints = VMTintStore(defaults: tintDefaults)
         // Never on the main actor: ending an orphan waits up to a few seconds for it to exit.
         DispatchQueue.global(qos: .utility).async(execute: sweepOrphans)
         #if DEBUG

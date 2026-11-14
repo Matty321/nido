@@ -92,7 +92,7 @@ func macCard(_ s: Script, grid: Int, _ state: String, _ vm: String, system: Stri
     s.set(c, ["width": 340])
     s.setText(s.find("debian-13", in: c), vm)
     s.setText(s.find("Debian 13 · arm64", in: c), system)
-    s.setText(s.find("D", in: c), glyph)
+    tintMark(s, in: c, tint: designTint(for: vm), letter: glyph == "D" ? nil : glyph)
     s.setText(s.find("4 CPUs · 8 GiB of memory · 64 GiB disk", in: c), caption)
     if let reason { s.setText(s.find("Cloning in progress", in: c), reason) }
     return c

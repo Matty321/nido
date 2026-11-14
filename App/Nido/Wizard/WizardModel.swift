@@ -143,6 +143,9 @@ final class WizardModel: Identifiable {
         @ObservationIgnored private var fixtureSelectsFirstTemplate = false
     #endif
 
+    /// The new VM's tint (S06 Colore): the library proposes one no VM has yet and keeps the
+    /// chosen one once the VM exists.
+    var tint: VMTint = .graphite
     /// After "Crea e avvia" succeeded: the library opens the VM's window.
     var onCreated: @MainActor (VMName) -> Void = { _ in }
     /// Annulla, or the wizard is done: the library closes the sheet.

@@ -1,0 +1,11 @@
+Debian Open Use Logo
+
+Nido draws the Debian swirl (Assets.xcassets/DebianLogo) on the mark of Debian virtual machines.
+
+Debian Open Use Logo(s) Copyright (c) 1999 Software in the Public Interest, Inc., and others.
+Released under the terms of the GNU Lesser General Public License, version 3 or any later
+version, or, at your option, of the Creative Commons Attribution-ShareAlike 3.0 Unported License.
+https://www.debian.org/logos/
+
+Debian is a registered trademark of Software in the Public Interest, Inc. Nido is not affiliated
+with the Debian project.

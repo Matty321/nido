@@ -20,7 +20,20 @@ let colorTokens: [(String, String, String)] = [
     ("statusPaused", "#9A6512", "#E2AA4C"),
     ("statusStopped", "#6B6F69", "#9A9E97"),
     ("statusError", "#B42B22", "#F07A6E"),
+    // VM tints (the system mark of a VM, chosen per VM): the mark and its tile's fill. OKLCH
+    // L 0.48 / 0.80 for the mark, 0.935 / 0.33 for the fill, low chroma: they tell VMs apart without
+    // competing with the accent (actions) or the status colours. Mark on fill ≥ 5.3:1 in both modes.
+    ("vmSlate", "#376285", "#97C3E9"), ("vmSlateFill", "#DDECF9", "#273746"),
+    ("vmIndigo", "#55588A", "#B4B9EF"), ("vmIndigoFill", "#E6E8FB", "#323348"),
+    ("vmPlum", "#734F75", "#D6AED7"), ("vmPlumFill", "#F2E4F3", "#3E2F3F"),
+    ("vmRose", "#814A60", "#E6AAC0"), ("vmRoseFill", "#F9E3EA", "#442E36"),
+    ("vmClay", "#814F39", "#E6B098"), ("vmClayFill", "#F8E5DD", "#443027"),
+    ("vmOlive", "#606134", "#C0C294"), ("vmOliveFill", "#EAEBDB", "#363725"),
+    ("vmSea", "#316673", "#94C8D5"), ("vmSeaFill", "#DCEDF2", "#25393E"),
+    ("vmGraphite", "#5F5D59", "#BFBEB8"), ("vmGraphiteFill", "#EAE9E7", "#363533"),
 ]
+/// The VM tints in the order the app offers them (VMTint, Settings › General › Color).
+let vmTints = ["Slate", "Indigo", "Plum", "Rose", "Clay", "Olive", "Sea", "Graphite"]
 let spaceTokens: [(String, Double)] = [("xs", 4), ("s", 8), ("m", 12), ("l", 16), ("xl", 24), ("xxl", 32)]
 let radiusTokens: [(String, Double)] = [("s", 6), ("m", 10), ("l", 14)]
 let typeTokens: [(String, Double)] = [("caption", 11), ("body", 13), ("headline", 15), ("title", 22)]

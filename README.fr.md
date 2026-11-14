@@ -104,4 +104,4 @@ L’app se trouve ensuite dans `App/build/Build/Products/Release/Nido.app` : co
 
 ## Licence
 
-Nido est un logiciel libre distribué sous licence Apache 2.0 : voir [LICENSE](LICENSE). Il inclut `gvproxy`, du projet gvisor-tap-vsock (Apache-2.0), dont la licence et l’avis sont fournis dans l’app, et il utilise Sparkle (MIT) et swift-argument-parser (Apache-2.0).
+Nido est un logiciel libre distribué sous licence Apache 2.0 : voir [LICENSE](LICENSE). Il inclut `gvproxy`, du projet gvisor-tap-vsock (Apache-2.0), dont la licence et l’avis sont fournis dans l’app, et il utilise Sparkle (MIT) et swift-argument-parser (Apache-2.0). La spirale des VM Debian est le [Debian Open Use Logo](https://www.debian.org/logos/) (Copyright © 1999 Software in the Public Interest, Inc., et autres ; LGPL-3.0-or-later ou CC-BY-SA-3.0). Apple, macOS, Debian et Ubuntu sont des marques de leurs propriétaires respectifs ; Nido n’est affilié à aucun d’eux.

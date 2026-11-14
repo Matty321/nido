@@ -59,6 +59,11 @@ let rules: [Rule] = {
             list.append(Rule(foreground: status, background: bg, minimum: minimum, optional: true))
         }
     }
+    // VM tints: the system mark (logo or letter) on its tile, and the colour swatch on the card.
+    for tint in ["Slate", "Indigo", "Plum", "Rose", "Clay", "Olive", "Sea", "Graphite"] {
+        list.append(Rule(foreground: "vm\(tint)", background: "vm\(tint)Fill", minimum: 4.5, optional: true))
+        list.append(Rule(foreground: "vm\(tint)", background: "surface", minimum: 3.0, optional: true))
+    }
     return list
 }()
 

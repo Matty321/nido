@@ -409,6 +409,8 @@ struct WizardView: View {
             NidoProgressPanel(verbatim: String(localized: "Installation failed"), detail: message, isError: true)
         default:
             nameRow
+            NidoColorRow(selection: $model.tint,
+                         note: "Tells this VM apart in the library. You can change it later in its settings.")
             ForEach(model.summaryRows, id: \.self) { row in
                 NidoInfoRow(verbatim: row.label, row.value, note: row.note)
             }
@@ -434,6 +436,8 @@ struct WizardView: View {
             NidoProgressPanel(verbatim: String(localized: "Creation failed"), detail: message, isError: true)
         default:
             nameRow
+            NidoColorRow(selection: $model.tint,
+                         note: "Tells this VM apart in the library. You can change it later in its settings.")
             ForEach(model.summaryRows, id: \.self) { row in
                 NidoInfoRow(verbatim: row.label, row.value, note: row.note)
             }
