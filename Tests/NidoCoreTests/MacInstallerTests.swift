@@ -61,6 +61,8 @@ private struct FakeInstaller: MacOSInstalling {
     var steps: [Double] = []
     var ending: Ending = .success
     let record = InstallRecord()
+    /// Called with the config when the installation starts.
+    var onInstall: (@Sendable (VMConfig) -> Void)?
 
     func install(
         bundle: VMBundle, config: VMConfig, ipsw: URL, progress: @escaping @Sendable (Double) -> Void
@@ -69,6 +71,7 @@ private struct FakeInstaller: MacOSInstalling {
         record.seen.withLock {
             $0 = InstallRecord.Seen(bundleURL: bundle.url, config: config, ipsw: ipsw, existingFiles: names.sorted())
         }
+        onInstall?(config)
         for step in steps { progress(step) }
         switch ending {
         case .success:
@@ -97,9 +100,11 @@ private struct InstallEnv {
     }
 
     func installer(
-        _ fake: FakeInstaller, loader: FakeLoader = FakeLoader(), available: UInt64 = 1 << 50
+        _ fake: FakeInstaller, loader: FakeLoader = FakeLoader(), available: UInt64 = 1 << 50,
+        passwords: any GuestPasswordStore = MemoryGuestPasswordStore()
     ) -> MacInstaller {
         var environment = MacInstaller.Environment()
+        environment.passwords = passwords
         environment.loader = loader
         environment.hostVersion = OperatingSystemVersion(majorVersion: 26, minorVersion: 7, patchVersion: 1)
         environment.availableCapacity = { _ in available }
@@ -107,12 +112,13 @@ private struct InstallEnv {
         return MacInstaller(paths: paths, environment: environment)
     }
 
-    func request(name: String = "mac", cpus: Int = 2, memory: UInt64 = 4 * gib, disk: UInt64 = 64 * gib) throws
-        -> MacVMRequest
-    {
+    func request(
+        name: String = "mac", cpus: Int = 2, memory: UInt64 = 4 * gib, disk: UInt64 = 64 * gib,
+        account: MacAccountRequest? = nil, agentAccess: Bool = false
+    ) throws -> MacVMRequest {
         MacVMRequest(
             name: try VMName(name), ipsw: ipsw, cpuCount: cpus, memoryBytes: memory, diskBytes: disk,
-            sshUser: "mattia", publicKey: validKey)
+            sshUser: "mattia", publicKey: validKey, account: account, agentAccess: agentAccess)
     }
 
     /// Entries of the root (hidden ones too), sorted; empty when the root does not exist.
@@ -131,7 +137,145 @@ private func mode(_ url: URL) -> Int? {
     return Int(info.st_mode & 0o777)
 }
 
+/// Records when the password was saved, and what the root held at that moment; can create a folder
+/// at the VM's final path while saving, so the rename after it fails.
+private final class SpyPasswordStore: GuestPasswordStore, @unchecked Sendable {
+    private let lock = NSLock()
+    private var items: [UUID: GuestPassword] = [:]
+    var rootAtSave: [String]?
+    var blockDestination: URL?
+    let root: URL
+    init(root: URL) { self.root = root }
+
+    /// Every save fails as the Keychain would.
+    var refuses = false
+    func read(vm: UUID) throws -> GuestPassword? { lock.withLock { items[vm] } }
+    func has(_ vm: UUID) -> Bool { lock.withLock { items[vm] != nil } }
+    func save(_ password: GuestPassword, vm: UUID) throws {
+        if refuses { throw GuestPasswordStoreError.keychain(-25293) }
+        rootAtSave = ((try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? []).sorted()
+        if let blockDestination {
+            try FileManager.default.createDirectory(at: blockDestination, withIntermediateDirectories: true)
+        }
+        lock.withLock { items[vm] = password }
+    }
+    func delete(vm: UUID) throws { lock.withLock { items[vm] = nil } }
+    var count: Int { lock.withLock { items.count } }
+}
+
 @Suite struct MacInstallerTests {
+    @Test func installWritesAccountAndAgentAccess() async throws {
+        let env = try InstallEnv()
+        defer { env.cleanup() }
+        let password = try #require(GuestPassword("abcde-fghjk-mnpqr-stuvw"))
+        let store = MemoryGuestPasswordStore()
+        let account = MacAccountRequest(fullName: "Mattia Pichierri", password: password)
+        let bundle = try await env.installer(FakeInstaller(), passwords: store)
+            .install(try env.request(account: account, agentAccess: true)) { _ in }
+        let config = try bundle.readConfig()
+        #expect(config.macAccountFullName == "Mattia Pichierri")
+        #expect(config.agentAccess == true)
+        #expect(config.macProvisioningSent == nil)
+        #expect(try store.read(vm: config.id) == password)
+
+        let plain = try await env.installer(FakeInstaller(), passwords: store)
+            .install(try env.request(name: "plain")) { _ in }
+        let plainConfig = try plain.readConfig()
+        #expect(plainConfig.macAccountFullName == nil && plainConfig.agentAccess == nil)
+        #expect(try store.read(vm: plainConfig.id) == nil)
+    }
+
+    @Test func installSavesPasswordBeforeRename() async throws {
+        let env = try InstallEnv()
+        defer { env.cleanup() }
+        let store = SpyPasswordStore(root: env.paths.root)
+        let account = MacAccountRequest(fullName: "A B", password: try #require(GuestPassword("secret-1")))
+        _ = try await env.installer(FakeInstaller(), passwords: store).install(try env.request(account: account)) { _ in }
+        // At the save the VM did not exist yet: only the staging folder was in the root.
+        let seen = try #require(store.rootAtSave)
+        #expect(seen.count == 1 && seen[0].hasPrefix(".creating-"))
+    }
+
+    @Test func failedInstallDeletesPassword() async throws {
+        let env = try InstallEnv()
+        defer { env.cleanup() }
+        let store = SpyPasswordStore(root: env.paths.root)
+        // The folder appears at the final path while the password is saved: the rename fails.
+        store.blockDestination = env.paths.bundleURL(for: try VMName("mac"))
+        let account = MacAccountRequest(fullName: "A B", password: try #require(GuestPassword("secret-1")))
+        await #expect(throws: NidoError.self) {
+            _ = try await env.installer(FakeInstaller(), passwords: store)
+                .install(try env.request(account: account)) { _ in }
+        }
+        #expect(store.count == 0)
+    }
+
+    // Install without a password stored when the install itself fails (installer error).
+    @Test func installerFailureStoresNoPassword() async throws {
+        let env = try InstallEnv()
+        defer { env.cleanup() }
+        let store = SpyPasswordStore(root: env.paths.root)
+        let account = MacAccountRequest(fullName: "A B", password: try #require(GuestPassword("secret-1")))
+        let fake = FakeInstaller(ending: .failure(NSError(domain: "x", code: 1)))
+        await #expect(throws: (any Error).self) {
+            _ = try await env.installer(fake, passwords: store).install(try env.request(account: account)) { _ in }
+        }
+        #expect(env.rootEntries().isEmpty)
+        // Saved before the installer ran, removed again by its failure.
+        #expect(store.rootAtSave != nil)
+        #expect(store.count == 0)
+    }
+
+    /// The Keychain is asked before the long installation: a refusal ends it before the installer
+    /// runs, and nothing is left behind.
+    @Test func keychainRefusalStopsBeforeTheInstaller() async throws {
+        let env = try InstallEnv()
+        defer { env.cleanup() }
+        let store = SpyPasswordStore(root: env.paths.root)
+        store.refuses = true
+        let account = MacAccountRequest(fullName: "A B", password: try #require(GuestPassword("secret-1")))
+        let fake = FakeInstaller()
+        await #expect(throws: GuestPasswordStoreError.keychain(-25293)) {
+            _ = try await env.installer(fake, passwords: store).install(try env.request(account: account)) { _ in }
+        }
+        #expect(fake.record.seen.withLock { $0 } == nil)
+        #expect(env.rootEntries().isEmpty)
+    }
+
+    /// The password is in the Keychain while the installer runs (keyed by the new VM's id).
+    @Test func passwordIsSavedBeforeTheInstaller() async throws {
+        let env = try InstallEnv()
+        defer { env.cleanup() }
+        let store = SpyPasswordStore(root: env.paths.root)
+        let account = MacAccountRequest(fullName: "A B", password: try #require(GuestPassword("secret-1")))
+        var fake = FakeInstaller()
+        fake.onInstall = { config in #expect(store.has(config.id)) }
+        _ = try await env.installer(fake, passwords: store).install(try env.request(account: account)) { _ in }
+        #expect(fake.record.seen.withLock { $0 } != nil)
+        #expect(store.count == 1)
+    }
+
+    /// What macOS would refuse at the first start is refused at the creation, before anything is
+    /// created (needs the macOS 27 Virtualization; the account path needs a macOS 27 host).
+    @Test(.enabled(if: MacFirstBoot.canValidate, "needs macOS 27 Virtualization"))
+    func invalidAccountIsRefusedAtCreation() async throws {
+        let env = try InstallEnv()
+        defer { env.cleanup() }
+        let store = SpyPasswordStore(root: env.paths.root)
+        let fake = FakeInstaller()
+        let short = MacAccountRequest(fullName: "A B", password: try #require(GuestPassword("abc")))
+        await #expect(throws: MacProvisioningError.self) {
+            _ = try await env.installer(fake, passwords: store).install(try env.request(account: short)) { _ in }
+        }
+        let blank = MacAccountRequest(fullName: "  ", password: try #require(GuestPassword("secret-1")))
+        await #expect(throws: MacProvisioningError.self) {
+            _ = try await env.installer(fake, passwords: store).install(try env.request(account: blank)) { _ in }
+        }
+        #expect(fake.record.seen.withLock { $0 } == nil)
+        #expect(store.rootAtSave == nil)
+        #expect(env.rootEntries().isEmpty)
+    }
+
     @Test func installCreatesMacBundle() async throws {
         let env = try InstallEnv()
         defer { env.cleanup() }

@@ -86,6 +86,15 @@ public enum NidoError: Error, Equatable, Sendable {
     case isTemplate(String)
     /// The VM (name) is not a template.
     case notATemplate(String)
+    /// `nido skill install` found a `SKILL.md` (path) that nido did not write; `--force` replaces it.
+    case skillForeignFile(String)
+    /// The `SKILL.md` (path) is a symbolic link: never followed, never replaced.
+    case skillTargetIsLink(String)
+    /// `NidoAgent.app` is not in this Nido build (or is not the signed helper Nido ships).
+    case macAgentUnavailable
+    /// Another running owner already serves the agent control socket (path): a VM whose id
+    /// starts with the same 8 hex digits, or a copy of the same bundle. It is never taken over.
+    case agentSocketInUse(String)
     /// The VM (name) has a suspended state: it cannot become a template until it is resumed and stopped.
     case templateHasSuspendedState(String)
     /// The key of the template (path, possibly empty) no longer exists and none was given.

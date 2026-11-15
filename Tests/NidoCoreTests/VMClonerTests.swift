@@ -28,8 +28,10 @@ private struct CloneEnv {
                 diskBytes: 4 * mib, publicKey: validKey, profile: profile))
     }
 
-    func cloner(_ environment: VMCloner.Environment = .init()) -> VMCloner {
-        VMCloner(paths: paths, runner: SystemProcessRunner(), environment: environment)
+    func cloner(
+        _ environment: VMCloner.Environment = .init(), passwords: any GuestPasswordStore = MemoryGuestPasswordStore()
+    ) -> VMCloner {
+        VMCloner(paths: paths, runner: SystemProcessRunner(), passwords: passwords, environment: environment)
     }
 
     /// Entries of the VM root (hidden ones too), sorted.
@@ -55,6 +57,12 @@ private struct CloneEnv {
     }
 
     func cleanup() { try? FileManager.default.removeItem(at: tmp) }
+}
+
+private struct ThrowingPasswordStore: GuestPasswordStore {
+    func read(vm: UUID) throws -> GuestPassword? { throw GuestPasswordStoreError.keychain(-25293) }
+    func save(_ password: GuestPassword, vm: UUID) throws { throw GuestPasswordStoreError.keychain(-25293) }
+    func delete(vm: UUID) throws { throw GuestPasswordStoreError.keychain(-25293) }
 }
 
 private func mode(_ url: URL) throws -> Int {
@@ -92,6 +100,39 @@ private struct InjectedFailure: Error {}
         // The clone starts with the bridge off; the source keeps its policy.
         #expect(try clone.readConfig().aiBridge == nil)
         #expect(try env.source.readConfig().aiBridge == policy)
+    }
+
+    @Test func cloneTurnsAgentAccessOff() async throws {
+        let env = try CloneEnv()
+        defer { env.cleanup() }
+        _ = try env.source.updateConfig { $0.agentAccess = true }
+
+        let clone = try await env.cloner().clone(try VMName("sorgente"), as: try VMName("copia"), owner: .cli)
+
+        #expect(try clone.readConfig().agentAccess == nil)
+        #expect(try env.source.readConfig().agentAccess == true)
+    }
+
+    /// The guest's disk, and so its keyboard layout, is copied: the clone keeps the choice.
+    @Test func cloneKeepsTheGuestKeyboardLayout() async throws {
+        let env = try CloneEnv()
+        defer { env.cleanup() }
+        _ = try env.source.updateConfig { $0.guestKeyboardLayoutID = "com.apple.keylayout.Italian-Pro" }
+
+        let clone = try await env.cloner().clone(try VMName("sorgente"), as: try VMName("copia"), owner: .cli)
+
+        #expect(try clone.readConfig().guestKeyboardLayoutID == "com.apple.keylayout.Italian-Pro")
+    }
+
+    /// A Linux guest has no account password: a failing Keychain never stops its clone.
+    @Test func linuxCloneNeverTouchesTheKeychain() async throws {
+        let env = try CloneEnv()
+        defer { env.cleanup() }
+
+        let clone = try await env.cloner(passwords: ThrowingPasswordStore())
+            .clone(try VMName("sorgente"), as: try VMName("copia"), owner: .cli)
+
+        #expect(try clone.readConfig().name == (try VMName("copia")))
     }
 
     @Test func cloneGetsNewIdentity() async throws {
@@ -583,8 +624,35 @@ private struct InjectedFailure: Error {}
 
 /// Clones of macOS guests (M3b): no seed; a new `VZMacMachineIdentifier` and MAC instead.
 @Suite struct MacClonerTests {
-    private func cloner(_ fixture: MacFixture, _ environment: VMCloner.Environment = .init()) -> VMCloner {
-        VMCloner(paths: fixture.paths, runner: SystemProcessRunner(), environment: environment)
+    private func cloner(
+        _ fixture: MacFixture, _ environment: VMCloner.Environment = .init(),
+        passwords: any GuestPasswordStore = MemoryGuestPasswordStore()
+    ) -> VMCloner {
+        VMCloner(paths: fixture.paths, runner: SystemProcessRunner(), passwords: passwords, environment: environment)
+    }
+
+    @Test func cloneCopiesPasswordAndSentFlag() async throws {
+        let fixture = try MacFixture()
+        defer { fixture.cleanup() }
+        let source = fixture.bundle
+        try MachineFileCopy.writeNewFile(source.authorizedKeyURL, data: Data((validKey + "\n").utf8))
+        let passwords = MemoryGuestPasswordStore()
+        let sourceID = try source.readConfig().id
+        try passwords.save(try #require(GuestPassword("s3cret")), vm: sourceID)
+        try source.updateConfig {
+            $0.macProvisioningSent = true
+            $0.macAccountFullName = "Agent Smith"
+        }
+
+        let clone = try await cloner(fixture, passwords: passwords)
+            .clone(try VMName("mac"), as: try VMName("copia"), owner: .cli)
+
+        let config = try clone.readConfig()
+        #expect(config.macProvisioningSent == true)
+        #expect(config.macAccountFullName == "Agent Smith")
+        #expect(config.id != sourceID)
+        #expect(try passwords.read(vm: config.id) == GuestPassword("s3cret"))
+        #expect(try passwords.read(vm: sourceID) == GuestPassword("s3cret"))
     }
 
     private func rootEntries(_ fixture: MacFixture) throws -> [String] {

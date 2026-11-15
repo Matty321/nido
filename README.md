@@ -9,7 +9,7 @@ Nido is a virtual machine manager for Macs with Apple silicon. It runs Linux and
 ## What Nido does
 
 - **Linux VMs from official cloud images**: Debian 13, Ubuntu Server 26.04 LTS and 24.04 LTS, for arm64. Nido downloads them only from the projects’ official sources and verifies them before use (SHA-512 for Debian, SHA-256 and Ubuntu’s signature for Ubuntu). You can also start from a local disk image, raw or qcow2.
-- **macOS VMs from an IPSW file** you’ve downloaded. Nido only reads the file: it never downloads, changes or moves it. Installation takes 4 to 20 minutes.
+- **macOS VMs from an IPSW file**, yours or downloaded from Apple when you ask. Nido never changes or moves a file you chose, and downloads macOS from Apple only when you ask. Installation takes 4 to 20 minutes.
 - **Snapshots, suspend, clones and templates**: go back to an earlier state, pick up a suspended VM where you left it, copy a stopped VM in an instant, or save one as a template for new VMs.
 - **Shared folders and Rosetta**: share a Mac folder with a VM, read only unless you choose otherwise, and run x86_64 programs in Linux VMs with Rosetta.
 - **Controlled network**: a new VM reaches only the domains on its list, and Nido tells you about every connection it blocks.
@@ -32,7 +32,7 @@ Nido is a virtual machine manager for Macs with Apple silicon. It runs Linux and
 - A Mac with Apple silicon.
 - macOS 26 or later.
 - Disk space for your VMs. For a Linux VM, the New VM wizard proposes a 16 GiB disk with the Base profile and 32 GiB with AI Starter (more if the image is larger), and `nido create` uses 20 GiB; a macOS VM gets 64 GiB. You can choose another size.
-- For a macOS VM: an IPSW restore image of a macOS version no newer than the one on your Mac.
+- For a macOS VM: an IPSW restore image of a macOS version no newer than the one on your Mac (Nido can download it from Apple when you ask; Apple’s offer may be a newer minor version, and Nido checks the major version).
 
 ## Install
 
@@ -69,13 +69,25 @@ nido snapshot create dev clean
 
 The command follows your Mac’s language. To choose another one, set `NIDO_LANGUAGE` to `en`, `it`, `de`, `es` or `fr`, for example in scripts that read its output.
 
+## A Mac for agents
+
+A macOS VM can be a separate Mac that an AI agent drives while you keep using yours. The agent sees that VM’s screen and sends clicks and keys to it; nothing reaches your Mac, not the pointer, the keyboard or the clipboard. The channel is off by default and goes through the VM’s own socket (vsock), not the network.
+
+1. Turn it on for a macOS VM in its **VM Settings › Agent** (**Settings** in the VM’s window), or with `nido agent enable <vm>`, then restart the VM. `nido agent disable <vm>` turns it off at once. `nido agent status <vm>` shows where things stand.
+2. Install the helper with **Install Nido Agent** in the same pane, or `nido agent setup <vm>`. Nido copies the signed helper into the VM over SSH. In the VM, allow Screen Recording and Accessibility, nothing else.
+3. Connect your agent. For Claude Code: `nido skill install`, then `claude mcp add nido-<vm> -- nido mcp <vm>`. For any other MCP client, `nido mcp <vm> --config` prints the configuration. For scripts: `nido act <vm> …`.
+
+When you create a macOS VM on a Mac with macOS 27 from a macOS 27 or later image, the wizard has an account step: your full name, a password that Nido generates (or one you choose) and **Let an agent use this Mac**; the CLI equivalent is `nido create <vm> --ipsw <path> --account "Full Name" --agent`. The first start then skips Setup Assistant: the account exists and logs in by itself. With agent access on, Nido waits for Remote Login, authorizes its SSH key once with that password, installs Nido Agent and shows the progress in the window. The one manual step is in the VM: allow Screen Recording and Accessibility (Settings › Agent shows the password after Touch ID, and `nido agent password <vm>` prints it). On a Mac with macOS 26, or with an older guest, there is no account step; `nido agent setup` and Settings › Agent ask for the account password once if Nido’s key isn’t authorized yet.
+
+If the VM uses FileVault, log in through its window at each start; until then the agent can’t see anything useful. The agent never answers permission or password prompts in the VM: it stops and asks you. What it reads on the VM’s screen is data, not instructions. [docs/SECURITY.md](docs/SECURITY.md) explains the limits.
+
 ## Privacy and the network
 
-- **Nido never goes online on its own** and sends no usage data. Every download is one you asked for: a system image after you confirm it, the Ollama archive when you install Ollama, an update when you check for one or turn on automatic checks.
+- **Nido never goes online on its own** and sends no usage data. Every download is one you asked for: a system image after you confirm it, the macOS image from Apple when you ask for it, the Ollama archive when you install Ollama, an update when you check for one or turn on automatic checks.
 - **Controlled network**: a new VM reaches only the domains on its list, which starts with what the system needs for packages, updates and the clock. Everything else is blocked, including addresses never looked up by name, DNS to other servers, IPv6 and the Mac’s own services. Adding a domain asks for Touch ID or your Mac password; removing one doesn’t. The Network tab in the VM window and `nido net log` show where connections went, never what they carried. The controlled network stops accidental and careless traffic, not a guest with root access that’s determined to get out: [docs/SECURITY.md](docs/SECURITY.md) explains the limits.
 - **Shared folders**: none by default. Each one is read only unless you choose otherwise, you can remove it at any time, even while the VM is running in the app, and clones and templates don’t inherit it.
 - **AI bridge**: off by default for every VM. When you turn it on, prompts and replies leave your Mac for Hugging Face and the provider that serves the model. Your access token stays in the Mac’s Keychain and never enters the VM; each VM has its own token and request limits, and the bridge’s log records no content. With Ollama, the chat stays in the VM and in the app’s memory.
-- **Access to a VM** is with an SSH key only: Linux VMs created by Nido have no password.
+- **Access to a VM** is with an SSH key. Linux VMs created by Nido have no password. For a macOS VM created with an account, or authorized with the account password, Nido keeps that password in the Mac’s Keychain (one item per VM, never in the VM’s bundle, deleted with the VM) and uses it once, to authorize its key; after that, access is by key only. The first login trusts the VM’s host key on first use: [docs/SECURITY.md](docs/SECURITY.md) explains the risk and how to avoid it.
 
 The threat model and every security control are in [docs/SECURITY.md](docs/SECURITY.md).
 

@@ -15,12 +15,13 @@ struct VMSettingsRoot: View {
 
     @State private var model: VMSettingsModel?
     @State private var network: NetworkSettingsModel?
+    @State private var agent: AgentSettingsModel?
     @State private var failure: String?
 
     var body: some View {
         Group {
             if let model {
-                VMSettingsView(model: model, network: network, tints: environment?.tints, onStop: stop)
+                VMSettingsView(model: model, network: network, agent: agent, tints: environment?.tints, onStop: stop)
             } else if let failure {
                 StartupErrorView(message: failure)
             } else {
@@ -53,6 +54,22 @@ struct VMSettingsRoot: View {
                 bundle: bundle, config: try bundle.readConfig(), authenticator: environment.egress.authenticator,
                 isRunning: { settings?.isLocked ?? true },
                 onConfigurationChanged: { sessions.configurationChanged(vmName) })
+            let config = try bundle.readConfig()
+            if model?.showsAgent == true {
+                agent = AgentSettingsModel(
+                    bundle: bundle, config: config,
+                    isRunning: { settings?.isLocked ?? true },
+                    status: AgentSettingsModel.liveStatus(bundle: bundle, config: config),
+                    setup: AgentSettingsModel.liveSetup(bundle: bundle, passwords: environment.guestPasswords),
+                    passwords: environment.guestPasswords, authenticator: environment.ownerAuthenticator,
+                    isWindowSettingUp: { sessions.isSettingUpAgent(name) },
+                    // Only this app's own session reaches the guest's clipboard (never the
+                    // control socket of `nido act` and agents).
+                    copyToVM: { text, seconds in await sessions.copyToGuestClipboard(name, text: text, clearAfter: seconds) },
+                    // Agent access is part of a saved state's configuration: the suspended note
+                    // and the VM's window read it again.
+                    onConfigurationChanged: { settings?.configurationWritten() })
+            }
         } catch {
             failure = String(localized: "Can’t open the settings of \(name): \(error.localizedDescription)")
         }
@@ -69,6 +86,8 @@ struct VMSettingsView: View {
     @Bindable var model: VMSettingsModel
     /// Rete (M3d); nil when it could not be built (the section stays disabled).
     var network: NetworkSettingsModel?
+    /// Agent (a macOS VM's agent access); nil for a Linux VM or a template.
+    var agent: AgentSettingsModel?
     /// The VMs' tints (Generale › Colore); nil without an environment (the row is hidden).
     var tints: VMTintStore?
     let onStop: () async -> Void
@@ -81,7 +100,8 @@ struct VMSettingsView: View {
         NidoSettingsShell(
             verbatim: String(localized: "\(model.name) Settings", comment: "The VM settings window’s title; %@ is the VM’s name."),
             // Accesso is a feature of a later version; Rete needs its model.
-            sections: model.sectionNames.map { .init(verbatim: VMSettingsModel.sectionTitle($0), id: $0) }
+            sections: model.sectionNames.filter { $0 != "Agent" || agent != nil }
+                .map { .init(verbatim: VMSettingsModel.sectionTitle($0), id: $0) }
                 + [.init(verbatim: VMSettingsModel.sectionTitle("Accesso"), id: "Accesso", isEnabled: false),
                    .init(verbatim: VMSettingsModel.sectionTitle("Rete"), id: "Rete", isEnabled: network != nil)],
             selection: $section,
@@ -92,6 +112,7 @@ struct VMSettingsView: View {
             case "Generale": general
             case "Condivisione": sharing
             case "Guest Tools" where model.showsGuestTools: guestToolsSection
+            case "Agent" where agent != nil && model.showsAgent: agentSection
             case "Rete" where network != nil: networkSection
             default: hardware
             }
@@ -107,6 +128,8 @@ struct VMSettingsView: View {
                     Task { await model.installRosetta() }
                 })
         }
+        // A running installation survives a change of section; it ends with the window.
+        .onDisappear { agent?.cancelInstall() }
         .task { if model.showsGuestTools { await model.guestTools.load() } }
         .task {
             // The lock changes when the VM starts or stops somewhere else.
@@ -123,6 +146,8 @@ struct VMSettingsView: View {
         case "Condivisione": model.sharesIntro
         case "Guest Tools":
             String(localized: "Nido’s software inside the VM: the monitor, the Ollama setup and the AI bridge. Nido installs it over SSH with the VM’s key; packages, files and models stay as they are.")
+        case "Agent":
+            String(localized: "Lets an agent on this Mac drive this VM through Nido Agent, a small app that runs inside it.")
         case "Rete":
             String(localized: "With the controlled network, every connection of the VM goes through Nido: only connections to the allowed domains get through; everything else is blocked, logged without its content and reported.")
         default: model.showsSSHUser
@@ -244,6 +269,13 @@ struct VMSettingsView: View {
     }
 
     // MARK: - Rete
+
+    @ViewBuilder private var agentSection: some View {
+        if let agent {
+            if let note = model.suspendedNote { suspendedNotice(note) }
+            AgentSettingsSection(model: agent)
+        }
+    }
 
     @ViewBuilder private var networkSection: some View {
         if let network {

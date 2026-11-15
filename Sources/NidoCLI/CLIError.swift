@@ -38,6 +38,57 @@ public enum CLIError: Error, Equatable, Sendable {
     case netAllowCancelled
     /// `nido net allow` on a list already holding `EgressPolicy.maxPatterns` domains.
     case tooManyDomains
+    /// `nido act` or `nido mcp` on a VM whose agent access is off (the value is the VM name).
+    case agentAccessOff(String)
+    /// `nido agent setup`: Nido's key is not authorized and there is no password to do it with.
+    case agentPasswordNeeded(String)
+    /// `nido agent setup`: the nido tool that answers ssh's password prompt is missing.
+    case agentAskpassMissing
+    /// `nido agent enable` on a Linux VM: Nido Agent is a macOS guest helper.
+    case agentNotForLinux
+    /// `nido agent setup`: the helper could not be opened because nobody is logged in to the guest
+    /// (the value is the VM name).
+    case guestLoginNeeded(String)
+    /// `nido agent setup`: the helper is not ready and the guest's SSH does not answer, so the VM
+    /// (name) is most likely at its login window (FileVault).
+    case agentLoginWindow(String)
+    /// `nido agent setup`: the running VM's owner serves no agent socket (the message says why).
+    case agentNotServed(String)
+    /// `nido act` with an action name that does not exist.
+    case unknownAgentAction(String)
+    /// `nido act` with a missing argument or an option it does not take; the value is the syntax.
+    case agentUsage(String)
+    /// `nido act` with a value that is not a number (the name of the argument).
+    case agentNotANumber(String)
+    /// `nido act` with an integer outside its range (name, lowest, highest).
+    case agentOutOfRange(String, Int, Int)
+    /// `nido act screenshot --output` onto a file that exists.
+    case outputExists(String)
+    /// `nido act screenshot --output` with an answer that names no file to copy.
+    case noScreenshotFile
+    /// `nido image macos --output` or `--yes` without `--download` (the value is the option).
+    case macImageOptionNeedsDownload(String)
+    /// `create --account` on a Mac older than macOS 27.
+    case accountNeedsHost27
+    /// `create --account` with an empty or blank full name.
+    case accountNameEmpty
+    /// `create --account` with an image older than macOS 27.
+    case accountNeedsImage27
+    /// `--password-stdin` or `--choose-password` without `--account`.
+    case passwordOptionNeedsAccount
+    /// `--password-stdin` together with `--choose-password`.
+    case passwordOptionsConflict
+    /// `--account`, `--password-stdin`, `--choose-password` or `--agent` without `--ipsw`.
+    case accountRequiresIPSW
+    case passwordsDontMatch
+    case passwordEmpty
+    case noTerminalForPassword
+    /// A password with a line break or longer than `GuestPassword.maxBytes`.
+    case passwordUnusable
+    /// `nido agent password` for a VM with no stored password.
+    case noStoredPassword(String)
+    /// `nido agent password` without the Mac owner's confirmation.
+    case passwordAuthenticationFailed
 }
 
 extension CLIError: LocalizedError {
@@ -83,6 +134,58 @@ extension CLIError: LocalizedError {
             L10n.string("not added: egress.json didn’t change")
         case .tooManyDomains:
             L10n.string("the list already has \(EgressPolicy.maxPatterns) domains, the maximum: remove some with nido net deny")
+        case .agentAccessOff(let vm):
+            L10n.string("Agent access is off for \(vm): turn it on with nido agent enable \(vm)")
+        case .agentPasswordNeeded(let vm):
+            L10n.string("Nido’s key isn’t authorized in \(vm) yet: run `nido agent setup \(vm)` in a terminal to enter the password of its account once")
+        case .agentAskpassMissing:
+            L10n.string("This Nido can’t pass a password to ssh (the nido tool is missing from the app)")
+        case .agentNotForLinux:
+            L10n.string("Agent access is for macOS VMs.")
+        case .guestLoginNeeded(let vm):
+            L10n.string("Log in to \(vm) in its window.")
+        case .agentLoginWindow(let vm):
+            L10n.string("\(vm) may be waiting at its login window (FileVault): log in through its window, then run nido agent setup again.")
+        case .agentNotServed(let message):
+            message
+        case .unknownAgentAction(let name):
+            L10n.string("unknown action “\(ConsoleSanitizer.echoable(name))”: use status, screenshot, click, drag, scroll, type, key or wait")
+        case .agentUsage(let syntax):
+            L10n.string("usage: nido act <vm> \(syntax)")
+        case .agentNotANumber(let name):
+            L10n.string("\(name) must be a number")
+        case .agentOutOfRange(let name, let low, let high):
+            L10n.string("\(name) must be a whole number from \(String(low)) to \(String(high))")
+        case .outputExists(let path):
+            L10n.string("\(ConsoleSanitizer.echoable(path)) already exists: nido doesn’t overwrite it")
+        case .noScreenshotFile:
+            L10n.string("the answer names no screenshot file to copy")
+        case .macImageOptionNeedsDownload(let option):
+            L10n.string("\(option) works only with --download")
+        case .accountNeedsHost27:
+            L10n.string("guest provisioning needs macOS 27 on this Mac")
+        case .accountNameEmpty:
+            L10n.string("--account needs the full name of the account")
+        case .accountNeedsImage27:
+            L10n.string("guest provisioning needs a macOS 27 or later image")
+        case .passwordOptionNeedsAccount:
+            L10n.string("--password-stdin and --choose-password need --account")
+        case .passwordOptionsConflict:
+            L10n.string("--password-stdin can’t be combined with --choose-password")
+        case .accountRequiresIPSW:
+            L10n.string("--account, --password-stdin, --choose-password and --agent work only with --ipsw")
+        case .passwordsDontMatch:
+            L10n.string("the passwords don’t match")
+        case .passwordEmpty:
+            L10n.string("the password can’t be empty")
+        case .noTerminalForPassword:
+            L10n.string("no terminal to ask the password: use --password-stdin")
+        case .passwordUnusable:
+            L10n.string("That password can’t be used: it has a line break or is longer than 1023 bytes.")
+        case .noStoredPassword(let vm):
+            L10n.string("No password is stored for \(vm): the account was not created by Nido, or its password was entered elsewhere.")
+        case .passwordAuthenticationFailed:
+            L10n.string("authentication failed: the password was not shown")
         }
     }
 }

@@ -37,6 +37,15 @@ public protocol ProcessRunner: Sendable {
         cancellation: ProcessCancellation?, onStdout: (@Sendable (Data) -> Void)?
     ) throws -> ProcessResult
 
+    /// Like the cancellable variant, with `environment` added to the child's minimal environment
+    /// (only `SystemProcessRunner` applies it; the default ignores it, which is meant for the
+    /// tests' runners, which record it by overriding this method).
+    func run(
+        executable: URL, arguments: [String], stdin: Data?, timeout: TimeInterval, maxOutput: Int,
+        cancellation: ProcessCancellation?, environment: [String: String],
+        onStdout: (@Sendable (Data) -> Void)?
+    ) throws -> ProcessResult
+
     /// Like the previous one, with the child's stdin read from `stdinFile` (from its current
     /// offset to its end) instead of a buffer in memory: for inputs too large to hold in RAM or to
     /// map (a file truncated under a mapping is a SIGBUS). `SystemProcessRunner` copies it in
@@ -98,6 +107,16 @@ extension ProcessRunner {
     }
 
     public func run(
+        executable: URL, arguments: [String], stdin: Data?, timeout: TimeInterval, maxOutput: Int,
+        cancellation: ProcessCancellation?, environment: [String: String],
+        onStdout: (@Sendable (Data) -> Void)?
+    ) throws -> ProcessResult {
+        try run(
+            executable: executable, arguments: arguments, stdin: stdin, timeout: timeout, maxOutput: maxOutput,
+            cancellation: cancellation, onStdout: onStdout)
+    }
+
+    public func run(
         executable: URL, arguments: [String], stdinFile: FileHandle, timeout: TimeInterval, maxOutput: Int,
         cancellation: ProcessCancellation?
     ) throws -> ProcessResult {
@@ -139,6 +158,16 @@ public struct SystemProcessRunner: ProcessRunner {
     }
 
     public func run(
+        executable: URL, arguments: [String], stdin: Data?, timeout: TimeInterval, maxOutput: Int,
+        cancellation: ProcessCancellation?, environment: [String: String],
+        onStdout: (@Sendable (Data) -> Void)?
+    ) throws -> ProcessResult {
+        try launch(
+            executable: executable, arguments: arguments, input: stdin.map(Input.data) ?? .none, timeout: timeout,
+            maxOutput: maxOutput, cancellation: cancellation, onStdout: onStdout, extraEnvironment: environment)
+    }
+
+    public func run(
         executable: URL, arguments: [String], stdinFile: FileHandle, timeout: TimeInterval, maxOutput: Int,
         cancellation: ProcessCancellation?
     ) throws -> ProcessResult {
@@ -156,7 +185,8 @@ public struct SystemProcessRunner: ProcessRunner {
 
     private func launch(
         executable: URL, arguments: [String], input: Input, timeout: TimeInterval, maxOutput: Int,
-        cancellation: ProcessCancellation?, onStdout: (@Sendable (Data) -> Void)?
+        cancellation: ProcessCancellation?, onStdout: (@Sendable (Data) -> Void)?,
+        extraEnvironment: [String: String] = [:]
     ) throws -> ProcessResult {
         let path = executable.path
         guard path.hasPrefix("/"), FileManager.default.isExecutableFile(atPath: path) else {
@@ -166,6 +196,7 @@ public struct SystemProcessRunner: ProcessRunner {
         process.executableURL = executable
         process.arguments = arguments
         process.environment = ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "LANG": "C"]
+            .merging(extraEnvironment) { base, _ in base }
         let inPipe = Pipe()
         let outPipe = Pipe()
         let errPipe = Pipe()

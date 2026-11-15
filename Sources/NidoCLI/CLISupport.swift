@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import Foundation
+import NidoAgentKit
 import NidoCore
 
 /// Testable logic behind the `nido` commands. The ArgumentParser layer stays thin.
@@ -239,6 +240,10 @@ public enum CLISupport {
             return error.errorDescription ?? L10n.string("unknown error")
         case let error as CLIError:
             return error.errorDescription ?? L10n.string("unknown error")
+        case let error as KeyMapError:
+            return error.description
+        case let error as AgentFailure:
+            return error.message
         case let error as POSIXError:
             return L10n.string("system error: \(String(cString: strerror(error.code.rawValue)))")
         default:

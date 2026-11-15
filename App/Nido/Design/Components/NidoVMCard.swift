@@ -17,6 +17,8 @@ struct NidoVMCard<Actions: View>: View {
     let state: State
     /// "AI bridge active" under the name (a running VM whose AI bridge is on).
     var bridgeActive = false
+    /// "Agent" under the name (an agent is using the running VM).
+    var agentActive = false
     /// Double click on the card's text (never on its buttons, whose clicks are their own).
     var onDoubleClick: (() -> Void)?
     @ViewBuilder let actions: () -> Actions
@@ -86,6 +88,7 @@ struct NidoVMCard<Actions: View>: View {
                     .foregroundStyle(Theme.Color.textSecondary)
                     .lineLimit(1)
                 if bridgeActive { NidoBridgePill() }
+                if agentActive { NidoAgentPill() }
                 if state == .runningTerminal {
                     // The longer label goes under the name, where it has the width of the card.
                     NidoStatusBadge(status: .running, label: "Running (Terminal)")

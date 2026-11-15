@@ -286,6 +286,9 @@ main() {
     sh scripts/fetch-gvproxy.sh
     say "swift test"
     swift test
+    # Nido Agent's own package (protocol, dispatcher, key map) is not part of the root one.
+    say "swift test (Nido Agent)"
+    swift test --package-path guest/macos/NidoAgent
     say "signed Release build ($sign_identity), feed '${feed_url:-none}'"
     NIDO_SIGN_IDENTITY="$sign_identity" NIDO_FEED_URL="$feed_url" bash scripts/build-app.sh
     local app="App/build/Build/Products/Release/Nido.app"

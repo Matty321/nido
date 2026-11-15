@@ -10,7 +10,7 @@ struct CreateCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "create",
         abstract: L10n.string("Create a Linux VM from a cloud image, or a macOS VM from a restore image (IPSW)."),
-        discussion: L10n.string("macOS: nido create <name> --ipsw <file> --ssh-key <key.pub> --user <name>. Installation takes 4 to 20 minutes, depending on the Mac and the disk; Ctrl-C cancels it and leaves nothing behind. Nido only reads the IPSW: it never downloads, changes or moves it.")
+        discussion: L10n.string("macOS: nido create <name> --ipsw <file> --ssh-key <key.pub> --user <name>. Installation takes 4 to 20 minutes, depending on the Mac and the disk; Ctrl-C cancels it and leaves nothing behind. Nido only reads the IPSW and never changes or moves it; to get one from Apple, run nido image macos --download.")
     )
 
     @Argument(help: ArgumentHelp(L10n.string("VM name.")))
@@ -22,11 +22,23 @@ struct CreateCommand: AsyncParsableCommand {
     @Option(name: .customLong("image-file"), help: ArgumentHelp(L10n.string("Local disk image, raw or qcow2 (not verified).")))
     var imageFile: String?
 
-    @Option(help: ArgumentHelp(L10n.string("A macOS restore image (.ipsw) you already downloaded: creates a macOS VM.")))
+    @Option(help: ArgumentHelp(L10n.string("A macOS restore image (.ipsw): creates a macOS VM. Get one from Apple with nido image macos --download.")))
     var ipsw: String?
 
     @Option(help: ArgumentHelp(L10n.string("With --ipsw: the short name of the account you’ll create in macOS Setup Assistant (used by nido ssh).")))
     var user: String?
+
+    @Option(help: ArgumentHelp(L10n.string("With --ipsw (macOS 27 or later): the full name of the account macOS creates by itself at the first start. Nido generates its password and keeps it in your Keychain.")))
+    var account: String?
+
+    @Flag(name: .customLong("password-stdin"), help: ArgumentHelp(L10n.string("With --account: read the account’s password from one line of standard input.")))
+    var passwordStdin = false
+
+    @Flag(name: .customLong("choose-password"), help: ArgumentHelp(L10n.string("With --account: type the account’s password twice instead of generating it.")))
+    var choosePassword = false
+
+    @Flag(help: ArgumentHelp(L10n.string("With --ipsw: turn agent access on from the creation.")))
+    var agent = false
 
     @Option(name: .customLong("from-template"), help: ArgumentHelp(L10n.string("Create the VM from a template (nido template save): an instant copy with a new identity; CPU, memory and disk come from the template.")))
     var fromTemplate: String?
@@ -58,6 +70,7 @@ struct CreateCommand: AsyncParsableCommand {
             try await createMac(ipsw: ipsw)
             return
         }
+        guard account == nil, !passwordStdin, !choosePassword, !agent else { throw CLIError.accountRequiresIPSW }
         if let fromTemplate {
             guard image == nil, imageFile == nil, cpus == nil, memory == nil, disk == nil,
                 !noPackages, !noGuestTools, user == nil
@@ -106,12 +119,18 @@ struct CreateCommand: AsyncParsableCommand {
         print(L10n.string("VM \(options.name.rawValue) created."))
     }
 
+    private func passwordSource() throws -> AccountPasswordSource {
+        if passwordStdin, choosePassword { throw CLIError.passwordOptionsConflict }
+        return passwordStdin ? .stdin : choosePassword ? .choose : .generate
+    }
+
     /// `--ipsw`: installs macOS with a progress line. SIGINT, SIGTERM and SIGHUP cancel the
     /// installation; the installer removes everything it created before this returns.
     private func createMac(ipsw: String) async throws {
         let options = try CLISupport.parseMacCreateOptions(
             name: name, ipsw: ipsw, image: image, imageFile: imageFile, sshKey: sshKey, user: user,
-            cpus: cpus, memory: memory, disk: disk, noPackages: noPackages, noGuestTools: noGuestTools)
+            cpus: cpus, memory: memory, disk: disk, noPackages: noPackages, noGuestTools: noGuestTools,
+            account: account, passwordSource: try passwordSource(), agent: agent)
         let paths = try CLISupport.preparedPaths()
         let installer = MacInstaller(paths: paths)
         // The signals are handled before the installation task exists: a Ctrl-C that comes while

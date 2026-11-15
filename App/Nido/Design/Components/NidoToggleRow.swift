@@ -10,23 +10,37 @@ struct NidoToggleRow: View {
     private let explanation: Text
     @Binding var isOn: Bool
     var isLocked = false
+    /// Accessibility identifier of the switch (UI tests); nil keeps the row without one.
+    var identifier: String?
 
-    init(title: LocalizedStringKey, explanation: LocalizedStringKey, isOn: Binding<Bool>, isLocked: Bool = false) {
-        self.init(title: Text(title), explanation: Text(explanation), isOn: isOn, isLocked: isLocked)
+    init(title: LocalizedStringKey, explanation: LocalizedStringKey, isOn: Binding<Bool>, isLocked: Bool = false,
+         identifier: String? = nil) {
+        self.init(title: Text(title), explanation: Text(explanation), isOn: isOn, isLocked: isLocked, identifier: identifier)
     }
 
-    init(verbatim title: String, explanation: String, isOn: Binding<Bool>, isLocked: Bool = false) {
-        self.init(title: Text(verbatim: title), explanation: Text(verbatim: explanation), isOn: isOn, isLocked: isLocked)
+    init(verbatim title: String, explanation: String, isOn: Binding<Bool>, isLocked: Bool = false,
+         identifier: String? = nil) {
+        self.init(title: Text(verbatim: title), explanation: Text(verbatim: explanation), isOn: isOn, isLocked: isLocked,
+                  identifier: identifier)
     }
 
-    private init(title: Text, explanation: Text, isOn: Binding<Bool>, isLocked: Bool) {
+    private init(title: Text, explanation: Text, isOn: Binding<Bool>, isLocked: Bool, identifier: String?) {
+        self.identifier = identifier
         self.title = title
         self.explanation = explanation
         self._isOn = isOn
         self.isLocked = isLocked
     }
 
-    var body: some View {
+    @ViewBuilder var body: some View {
+        if let identifier {
+            row.accessibilityIdentifier(identifier)
+        } else {
+            row
+        }
+    }
+
+    private var row: some View {
         HStack(spacing: Theme.Space.m) {
             VStack(alignment: .leading, spacing: Theme.Space.xs) {
                 title

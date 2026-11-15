@@ -103,6 +103,27 @@ final class VMSessionStore {
         return !model.isGone
     }
 
+    /// "Agent" for the library: the VM runs in this app and an agent is using it.
+    func isAgentActive(_ name: String) -> Bool {
+        guard let vmName = try? VMName(name) else { return false }
+        return models[vmName]?.agentActive ?? false
+    }
+
+    /// True while the VM's window sets Nido Agent up after a provisioned start (Settings › Agent
+    /// starts no second setup meanwhile).
+    func isSettingUpAgent(_ name: String) -> Bool {
+        guard let vmName = try? VMName(name) else { return false }
+        return models[vmName]?.isSettingUpAgent ?? false
+    }
+
+    /// Settings › Agent "Copy to the VM’s clipboard": `text` to the guest's clipboard through the
+    /// session of the VM running in this app (`VMWindowModel.copyToGuestClipboard`); `notRunning`
+    /// when no window of this app runs it (another Nido or `nido start` holds it).
+    func copyToGuestClipboard(_ name: String, text: String, clearAfter: Int) async -> AgentAnswer {
+        guard let vmName = try? VMName(name), let model = models[vmName] else { return .failure(.notRunning, "") }
+        return await model.copyToGuestClipboard(text, clearAfter: clearAfter)
+    }
+
     /// "Ponte attivo" for the library: the VM runs in this app with its AI bridge on.
     func isAIBridgeActive(_ name: String) -> Bool {
         guard let vmName = try? VMName(name) else { return false }

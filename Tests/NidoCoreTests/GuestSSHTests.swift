@@ -6,7 +6,8 @@ import Testing
 
 /// Records every call and answers with a scripted result.
 final class ScriptedRunner: ProcessRunner, @unchecked Sendable {
-    struct Call: Sendable { let executable: String; let arguments: [String]; let stdin: Data?; let timeout: TimeInterval }
+    struct Call: Sendable { let executable: String; let arguments: [String]; let stdin: Data?; let timeout: TimeInterval
+        var environment: [String: String] = [:] }
     private let state = Mutex<[Call]>([])
     private let responder: @Sendable (Call) -> ProcessResult
     init(_ responder: @escaping @Sendable (Call) -> ProcessResult) { self.responder = responder }
@@ -20,6 +21,18 @@ final class ScriptedRunner: ProcessRunner, @unchecked Sendable {
         executable: URL, arguments: [String], stdin: Data?, timeout: TimeInterval, maxOutput: Int
     ) throws -> ProcessResult {
         let call = Call(executable: executable.path, arguments: arguments, stdin: stdin, timeout: timeout)
+        state.withLock { $0.append(call) }
+        return responder(call)
+    }
+
+    func run(
+        executable: URL, arguments: [String], stdin: Data?, timeout: TimeInterval, maxOutput: Int,
+        cancellation: ProcessCancellation?, environment: [String: String],
+        onStdout: (@Sendable (Data) -> Void)?
+    ) throws -> ProcessResult {
+        let call = Call(
+            executable: executable.path, arguments: arguments, stdin: stdin, timeout: timeout,
+            environment: environment)
         state.withLock { $0.append(call) }
         return responder(call)
     }
@@ -343,5 +356,250 @@ struct GuestFixture {
         let fx = try GuestFixture(); defer { fx.cleanup() }
         let defaultKey = fx.keyDir.appendingPathComponent("id_ed25519.pub")
         #expect(try GuestSSH.adoptDefaultKey(bundle: fx.bundle, defaultKey: defaultKey) == fx.publicKeyPath)
+    }
+}
+
+// MARK: - Authorizing Nido's key with the guest password
+
+extension GuestSSHTests {
+    static let nidoKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOO97YvP4YWGQwUFq+UeOnyDKkD29RZ8VdmeuGgPzeS6"
+    static let askpass = URL(fileURLWithPath: "/Applications/Nido.app/Contents/Helpers/nido")
+
+    /// A macOS guest whose bundle holds Nido's key (`authorized_key.pub`).
+    private func macFixture() throws -> MacGuestFixture {
+        let fx = try MacGuestFixture(sshUser: "agente", withKey: false)
+        try Data((Self.nidoKey + " nido\n").utf8).write(to: fx.bundle.authorizedKeyURL)
+        return fx
+    }
+
+    /// `ssh` whose askpass socket answers the test process itself (the real peer check wants the
+    /// askpass child of an ssh started by this process).
+    static func trusting(_ ssh: GuestSSH) -> GuestSSH {
+        var ssh = ssh
+        ssh.askpassPeerCheck = { _ in true }
+        return ssh
+    }
+
+    @Test func authorizeAnswersOnlyTheAskpassOfItsSSH() async throws {
+        let fx = try macFixture(); defer { fx.cleanup() }
+        // The default check: a fetch from this test process (no child of an ssh) gets nothing,
+        // so a refused login is not reported as a wrong password.
+        let fetched = Mutex<Bool>(false)
+        let runner = ScriptedRunner { call in
+            let data = try? Askpass.fetch(socketPath: call.environment[Askpass.socketVariable] ?? "")
+            fetched.withLock { $0 = data != nil }
+            return result(255, err: "agente@192.168.64.9: Permission denied (keyboard-interactive).")
+        }
+        let error = await #expect(throws: GuestSSHError.self) {
+            try await fx.ssh(runner).authorizeNidoKey(password: try #require(GuestPassword("pw")), askpass: Self.askpass)
+        }
+        #expect(fetched.withLock { $0 } == false)
+        #expect(error == .passwordNotDelivered)
+    }
+
+    @Test func authorizeRefusesALinuxGuest() async throws {
+        let fx = try GuestFixture(); defer { fx.cleanup() }
+        let runner = ScriptedRunner { _ in result(0) }
+        let error = await #expect(throws: GuestSSHError.self) {
+            try await fx.ssh(runner).authorizeNidoKey(password: try #require(GuestPassword("pw")), askpass: Self.askpass)
+        }
+        #expect(error == .macGuestOnly)
+        #expect(error?.errorDescription == "la chiave di Nido si può autorizzare con una password solo in una VM macOS")
+        #expect(runner.calls.isEmpty)
+    }
+
+    @Test func authorizeKeepsTheKnownHostsError() async throws {
+        let fx = try macFixture(); defer { fx.cleanup() }
+        // A symlink in place of the bundle's known_hosts: refused as it is, not "unreachable".
+        let target = fx.root.appendingPathComponent("elsewhere")
+        try Data().write(to: target)
+        try FileManager.default.createSymbolicLink(at: fx.bundle.knownHostsURL, withDestinationURL: target)
+        let runner = ScriptedRunner { _ in result(0) }
+        do {
+            try await fx.ssh(runner).authorizeNidoKey(password: try #require(GuestPassword("pw")), askpass: Self.askpass)
+            Issue.record("expected an error")
+        } catch {
+            #expect(!(error is GuestSSHError), "\(error)")
+        }
+        #expect(runner.calls.isEmpty)
+    }
+
+    @Test func authorizeOtherSSHFailuresCarryStderrNotAKey() async throws {
+        let fx = try macFixture(); defer { fx.cleanup() }
+        let runner = ScriptedRunner { _ in
+            result(255, err: "Received disconnect from 192.168.64.9 port 22:2: Too many authentication failures\n")
+        }
+        let error = await #expect(throws: GuestSSHError.self) {
+            try await fx.ssh(runner).authorizeNidoKey(password: try #require(GuestPassword("pw")), askpass: Self.askpass)
+        }
+        #expect(error == .commandFailed(
+            code: 255, stderrTail: "Received disconnect from 192.168.64.9 port 22:2: Too many authentication failures"))
+    }
+
+    @Test func authorizeUsesAskpassNotArgv() async throws {
+        let fx = try macFixture(); defer { fx.cleanup() }
+        let password = try #require(GuestPassword("pässwörd-42"))
+        // What ssh's askpass child would read: the runner fetches it while "ssh" runs.
+        let fetched = Mutex<Data?>(nil)
+        let runner = ScriptedRunner { call in
+            if let path = call.environment[Askpass.socketVariable] {
+                fetched.withLock { $0 = try? Askpass.fetch(socketPath: path) }
+            }
+            return result(0)
+        }
+        try await Self.trusting(fx.ssh(runner)).authorizeNidoKey(password: password, askpass: Self.askpass)
+
+        let call = try #require(runner.calls.first)
+        #expect(runner.calls.count == 1)
+        #expect(call.executable == "/usr/bin/ssh")
+        #expect(call.timeout == 30)
+        #expect(call.arguments.contains("PubkeyAuthentication=no"))
+        #expect(call.arguments.contains("NumberOfPasswordPrompts=1"))
+        #expect(call.arguments.contains("BatchMode=no"))
+        #expect(call.arguments.contains("PreferredAuthentications=keyboard-interactive,password"))
+        #expect(!call.arguments.contains("BatchMode=yes"))
+        #expect(!call.arguments.contains("-i"))
+        #expect(call.arguments.contains("agente@192.168.64.9"))
+        #expect(call.arguments.last == (try GuestCommand.authorizeNidoKey.remoteCommand()))
+        // The password is on no command line and in no environment value.
+        #expect(!call.arguments.contains { $0.contains(password.value) })
+        #expect(!call.environment.values.contains { $0.contains(password.value) })
+        #expect(call.environment["SSH_ASKPASS"] == Self.askpass.path)
+        #expect(call.environment["SSH_ASKPASS_REQUIRE"] == "force")
+        #expect(call.environment[Askpass.modeVariable] == "1")
+        #expect(call.environment[Askpass.socketVariable]?.hasPrefix(Askpass.defaultDirectory.path + "/") == true)
+        #expect(call.environment["SSH_AUTH_SOCK"] == nil)
+        #expect(call.stdin == Data((Self.nidoKey + "\n").utf8))
+        // The askpass got the password once, and the socket is gone afterwards.
+        #expect(fetched.withLock { $0 } == Data(password.value.utf8))
+        let socket = try #require(call.environment[Askpass.socketVariable])
+        #expect(!FileManager.default.fileExists(atPath: socket))
+    }
+
+    @Test func authorizeRejectedPassword() async throws {
+        let fx = try macFixture(); defer { fx.cleanup() }
+        // ssh's askpass fetched the password, then the guest refused it.
+        let runner = ScriptedRunner { call in
+            _ = try? Askpass.fetch(socketPath: call.environment[Askpass.socketVariable] ?? "")
+            return result(255, err: "agente@192.168.64.9: Permission denied (keyboard-interactive).")
+        }
+        let error = await #expect(throws: GuestSSHError.self) {
+            try await Self.trusting(fx.ssh(runner)).authorizeNidoKey(password: try #require(GuestPassword("wrong")), askpass: Self.askpass)
+        }
+        #expect(error == .passwordRejected(user: "agente", vm: "mg"))
+        #expect(error?.errorDescription == "la password di agente in mg è stata rifiutata")
+    }
+
+    @Test func authorizeRefusedWithoutThePasswordIsNotAWrongPassword() async throws {
+        let fx = try macFixture(); defer { fx.cleanup() }
+        // The askpass never fetched (it failed, or the guest asked for no password).
+        let runner = ScriptedRunner { _ in result(255, err: "agente@192.168.64.9: Permission denied (publickey).") }
+        let error = await #expect(throws: GuestSSHError.self) {
+            try await fx.ssh(runner).authorizeNidoKey(password: try #require(GuestPassword("pw")), askpass: Self.askpass)
+        }
+        #expect(error == .passwordNotDelivered)
+        #expect(error?.errorDescription == "Nido non è riuscito a passare la password a ssh")
+    }
+
+    @Test func authorizeOtherFailuresKeepTheirMeaning() async throws {
+        let fx = try macFixture(); defer { fx.cleanup() }
+        let runner = ScriptedRunner { _ in result(255, err: "ssh: connect to host 192.168.64.9 port 22: Connection refused") }
+        let error = await #expect(throws: GuestSSHError.self) {
+            try await fx.ssh(runner).authorizeNidoKey(password: try #require(GuestPassword("pw")), askpass: Self.askpass)
+        }
+        #expect(error == .unreachable)
+    }
+
+    @Test func authorizeNeedsAValidNidoKey() async throws {
+        let fx = try MacGuestFixture(sshUser: "agente", withKey: false); defer { fx.cleanup() }
+        let runner = ScriptedRunner { _ in result(0) }
+        // No `authorized_key.pub`.
+        await #expect(throws: (any Error).self) {
+            try await fx.ssh(runner).authorizeNidoKey(password: try #require(GuestPassword("pw")), askpass: Self.askpass)
+        }
+        // Not a public key.
+        try Data("ssh-ed25519 not-base64!\n".utf8).write(to: fx.bundle.authorizedKeyURL)
+        await #expect(throws: (any Error).self) {
+            try await fx.ssh(runner).authorizeNidoKey(password: try #require(GuestPassword("pw")), askpass: Self.askpass)
+        }
+        #expect(runner.calls.isEmpty)
+    }
+
+    @Test func otherCommandsStayKeyOnly() async throws {
+        let fx = try macFixture(); defer { fx.cleanup() }
+        let runner = ScriptedRunner { _ in result(0) }
+        _ = try await fx.ssh(runner).run(.readMacLoginState, timeout: .seconds(5))
+        let call = try #require(runner.calls.first)
+        #expect(call.arguments.contains("BatchMode=yes"))
+        #expect(!call.arguments.contains("PubkeyAuthentication=no"))
+        #expect(!call.arguments.contains { $0.hasPrefix("NumberOfPasswordPrompts") })
+        #expect(call.environment["SSH_ASKPASS"] == nil)
+        #expect(call.environment[Askpass.socketVariable] == nil)
+    }
+
+    @Test func passwordOnceArguments() throws {
+        let id = UUID()
+        let knownHosts = URL(fileURLWithPath: "/tmp/kh")
+        let args = try SSHArguments.passwordOnce(
+            endpoint: SSHEndpoint(host: "192.168.64.9", port: 2222), vmID: id, knownHosts: knownHosts,
+            remoteCommand: "'true'", user: "agente")
+        let expected = [
+            "ssh", "-F", "/dev/null", "-o", "BatchMode=no", "-o", "PubkeyAuthentication=no",
+            "-o", "PreferredAuthentications=keyboard-interactive,password",
+            "-o", "NumberOfPasswordPrompts=1",
+            "-o", "KbdInteractiveAuthentication=yes", "-o", "PasswordAuthentication=yes",
+            "-o", "ConnectTimeout=5", "-o", "RemoteCommand=none", "-o", "RequestTTY=no",
+            "-o", "ControlMaster=no", "-o", "ControlPath=none",
+            "-o", "StrictHostKeyChecking=accept-new",
+            "-o", "HostKeyAlias=nido-\(id.uuidString.lowercased())",
+            "-o", "UserKnownHostsFile=\"/tmp/kh\"",
+            "-o", "GlobalKnownHostsFile=/dev/null", "-o", "ForwardAgent=no", "-o", "ForwardX11=no",
+            "-o", "ClearAllForwardings=yes", "-o", "Tunnel=no", "-o", "PermitRemoteOpen=none",
+            "-p", "2222", "agente@192.168.64.9", "--", "'true'",
+        ]
+        #expect(args == expected)
+        #expect(throws: (any Error).self) {
+            _ = try SSHArguments.passwordOnce(
+                endpoint: SSHEndpoint(host: "h", port: 22), vmID: id, knownHosts: knownHosts,
+                remoteCommand: "'true'", user: "-oProxyCommand=x")
+        }
+    }
+
+    @Test func authorizeScriptIsIdempotent() throws {
+        #expect(try GuestCommand.authorizeNidoKey.argv() == ["/bin/sh", "-c", GuestCommand.authorizeKeyScript])
+        let home = FileManager.default.temporaryDirectory
+            .appendingPathComponent("nido-auth-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+        let runner = SystemProcessRunner()
+        func run(_ input: String) throws -> ProcessResult {
+            try runner.run(
+                executable: URL(fileURLWithPath: "/bin/sh"), arguments: ["-c", GuestCommand.authorizeKeyScript],
+                stdin: Data(input.utf8), timeout: 10, maxOutput: 1 << 16, cancellation: nil,
+                environment: ["HOME": home.path], onStdout: nil)
+        }
+        for _ in 0..<2 {
+            let out = try run(Self.nidoKey + "\n")
+            #expect(out.status == 0)
+            #expect(out.stdout.isEmpty)
+            #expect(out.stderr.isEmpty)
+        }
+        let ssh = home.appendingPathComponent(".ssh")
+        let keys = ssh.appendingPathComponent("authorized_keys")
+        #expect(try String(contentsOf: keys, encoding: .utf8) == Self.nidoKey + "\n")
+        var info = stat()
+        #expect(lstat(ssh.path, &info) == 0 && info.st_mode & 0o7777 == 0o700)
+        #expect(lstat(keys.path, &info) == 0 && info.st_mode & 0o7777 == 0o600)
+
+        // An existing file without a final newline keeps its last line whole.
+        try Data("ssh-ed25519 AAAAother".utf8).write(to: keys)
+        #expect(try run(Self.nidoKey).status == 0)
+        #expect(try String(contentsOf: keys, encoding: .utf8) == "ssh-ed25519 AAAAother\n" + Self.nidoKey + "\n")
+        #expect(try run(Self.nidoKey + "\n").status == 0)
+        #expect(try String(contentsOf: keys, encoding: .utf8) == "ssh-ed25519 AAAAother\n" + Self.nidoKey + "\n")
+
+        // No key on stdin: a failure, nothing appended.
+        #expect(try run("").status != 0)
+        #expect(try String(contentsOf: keys, encoding: .utf8) == "ssh-ed25519 AAAAother\n" + Self.nidoKey + "\n")
     }
 }

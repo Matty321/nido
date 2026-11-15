@@ -104,7 +104,8 @@ public struct LiveRestoreImageLoader: MacRestoreImageLoading {
 }
 
 /// Checks a macOS restore image (IPSW) the user chose, before anything is created in the root.
-/// Nido only reads the file: it never downloads, modifies, moves or copies it.
+/// Nido only reads the file: it never modifies, moves or copies it. (Downloading one from Apple,
+/// on request, is `MacImageDownloader`; the result is checked here like any chosen file.)
 public enum MacRestoreImage {
     /// An IPSW is a ZIP archive: it starts with a local file header.
     private static let zipMagic: [UInt8] = [0x50, 0x4B, 0x03, 0x04]

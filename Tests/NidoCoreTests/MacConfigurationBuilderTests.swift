@@ -98,6 +98,19 @@ struct MacFixture {
         }
     }
 
+    @Test func macSocketDeviceOnlyWithAgentAccess() throws {
+        let f = try MacFixture()
+        defer { f.cleanup() }
+        let cache = f.tmp.appendingPathComponent("cache")
+        let off = try MacConfigurationBuilder.make(bundle: f.bundle, config: f.config, display: nil, imageCache: cache)
+        #expect(off.configuration.socketDevices.isEmpty)
+        var config = f.config
+        config.agentAccess = true
+        let on = try MacConfigurationBuilder.make(bundle: f.bundle, config: config, display: nil, imageCache: cache)
+        #expect(on.configuration.socketDevices.count == 1)
+        #expect(on.configuration.socketDevices.first is VZVirtioSocketDeviceConfiguration)
+    }
+
     @Test func builderMacDevices() throws {
         let f = try MacFixture()
         defer { f.cleanup() }

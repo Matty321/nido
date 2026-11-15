@@ -202,6 +202,82 @@ import Virtualization
     /// The network attachment is part of the saved machine: a state saved on Apple's NAT never
     /// resumes on the relay, nor the other way round. A VM that is not controlled keeps the hash
     /// it had before the field existed, so its saved state still resumes after the update.
+    @Test func agentAccessMissingIsOff() throws {
+        let config = try makeConfig()
+        let text = String(decoding: try config.encoded(), as: UTF8.self)
+        #expect(!text.contains("agentAccess"))
+        let decoded = try VMConfig.decode(try config.encoded())
+        #expect(decoded.agentAccess == nil)
+        #expect(decoded.schemaVersion == 5)
+        // The hash this machine had before agentAccess existed: a suspended VM still resumes.
+        #expect(decoded.stateHash() == "71e6bc2c83dedfddd322ccf78fcd58e9d1ff9a4a8da2198956ad5275e19471a9")
+    }
+
+    @Test func agentAccessRoundTrips() throws {
+        var config = try makeConfig()
+        config.agentAccess = true
+        let text = String(decoding: try config.encoded(), as: UTF8.self)
+        #expect(text.contains("\"agentAccess\" : true"))
+        let decoded = try VMConfig.decode(try config.encoded())
+        #expect(decoded.agentAccess == true)
+        #expect(decoded.schemaVersion == 5)
+    }
+
+    @Test func agentAccessChangesStateHashOnlyWhenOn() throws {
+        var config = try makeConfig()
+        let off = config.stateHash()
+        config.agentAccess = false
+        #expect(config.stateHash() == off)
+        config.agentAccess = true
+        #expect(config.stateHash() != off)
+    }
+
+    @Test func macProvisioningFieldsMissingAreNil() throws {
+        let config = try makeConfig()
+        let text = String(decoding: try config.encoded(), as: UTF8.self)
+        #expect(!text.contains("macAccountFullName"))
+        #expect(!text.contains("macProvisioningSent"))
+        let decoded = try VMConfig.decode(try config.encoded())
+        #expect(decoded.macAccountFullName == nil)
+        #expect(decoded.macProvisioningSent == nil)
+    }
+
+    @Test func macProvisioningFieldsRoundTrip() throws {
+        var config = try makeConfig()
+        config.macAccountFullName = "Agent Smith"
+        config.macProvisioningSent = true
+        let decoded = try VMConfig.decode(try config.encoded())
+        #expect(decoded.macAccountFullName == "Agent Smith")
+        #expect(decoded.macProvisioningSent == true)
+        #expect(decoded.schemaVersion == 5)
+    }
+
+    @Test func macProvisioningFieldsDoNotChangeStateHash() throws {
+        var config = try makeConfig()
+        let hash = config.stateHash()
+        config.macAccountFullName = "Agent Smith"
+        config.macProvisioningSent = true
+        #expect(config.stateHash() == hash)
+    }
+
+    /// The guest's keyboard layout (the app's "Type in VM"): additive, absent when unset, never
+    /// part of the saved state's hash, and a non-string in the file reads as unset.
+    @Test func guestKeyboardLayoutRoundTripsOutsideTheStateHash() throws {
+        var config = try makeConfig()
+        let hash = config.stateHash()
+        #expect(!String(decoding: try config.encoded(), as: UTF8.self).contains("guestKeyboardLayoutID"))
+        config.guestKeyboardLayoutID = "com.apple.keylayout.Italian-Pro"
+        #expect(config.stateHash() == hash)
+        let decoded = try VMConfig.decode(try config.encoded())
+        #expect(decoded.guestKeyboardLayoutID == "com.apple.keylayout.Italian-Pro")
+        #expect(decoded.schemaVersion == 5)
+
+        var object = try #require(try JSONSerialization.jsonObject(with: config.encoded()) as? [String: Any])
+        object["guestKeyboardLayoutID"] = 42
+        let odd = try VMConfig.decode(try JSONSerialization.data(withJSONObject: object))
+        #expect(odd.guestKeyboardLayoutID == nil)
+    }
+
     @Test func controlledNetworkIsPartOfTheStateHash() throws {
         var config = try makeConfig()
         config.controlledNetwork = false

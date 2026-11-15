@@ -3,6 +3,19 @@ import Darwin
 import Foundation
 import Virtualization
 
+/// The account macOS 27 creates by itself at the VM's first start (guest provisioning).
+public struct MacAccountRequest: Sendable, Equatable {
+    /// The account's full name; its short name is `MacVMRequest.sshUser`.
+    public var fullName: String
+    /// Saved in the Keychain under the new VM's id; never written to the bundle.
+    public var password: GuestPassword
+
+    public init(fullName: String, password: GuestPassword) {
+        self.fullName = fullName
+        self.password = password
+    }
+}
+
 /// Parameters for installing a macOS VM from an IPSW the user provides.
 public struct MacVMRequest: Sendable {
     public var name: VMName
@@ -17,10 +30,15 @@ public struct MacVMRequest: Sendable {
     public var publicKey: String
     /// Path of the `.pub` file `publicKey` was read from, recorded in the config for `nido ssh`.
     public var sshPublicKeyPath: String?
+    /// The account the guest creates at its first start; nil keeps Setup Assistant.
+    public var account: MacAccountRequest?
+    /// Agent access on from the creation (`VMConfig.agentAccess`).
+    public var agentAccess: Bool
 
     public init(
         name: VMName, ipsw: URL, cpuCount: Int, memoryBytes: UInt64, diskBytes: UInt64,
-        sshUser: String, publicKey: String, sshPublicKeyPath: String? = nil
+        sshUser: String, publicKey: String, sshPublicKeyPath: String? = nil,
+        account: MacAccountRequest? = nil, agentAccess: Bool = false
     ) {
         self.name = name
         self.ipsw = ipsw
@@ -30,6 +48,8 @@ public struct MacVMRequest: Sendable {
         self.sshUser = sshUser
         self.publicKey = publicKey
         self.sshPublicKeyPath = sshPublicKeyPath
+        self.account = account
+        self.agentAccess = agentAccess
     }
 }
 
@@ -47,10 +67,13 @@ public protocol MacOSInstalling: Sendable {
 
 /// Creates complete macOS VM bundles from an IPSW (see `docs/BUNDLE-FORMAT.md`).
 ///
-/// - Before any file is created in the root: the user name, the key and the resources are
-///   checked, the IPSW is inspected again (`MacRestoreImage.inspect`), the resources are checked
-///   against the image's minimums, the name must be free (ignoring case) and the volume must have
+/// - Before any file is created in the root: the user name, the account (what macOS would refuse
+///   at the first start, `MacFirstBoot.validate`), the key and the resources are checked, the
+///   IPSW is inspected again (`MacRestoreImage.inspect`), the resources are checked against the
+///   image's minimums, the name must be free (ignoring case) and the volume must have
 ///   `diskBytes` plus `SnapshotStore.spaceMargin` free.
+/// - The account's password is saved in the Keychain (under the new VM's id) before the
+///   installation runs, and deleted again on any failure.
 /// - The VM is built in `<root>/.creating-<uuid>/` (0700, invisible to the library, its `.lock`
 ///   held for the whole installation) and renamed to `<name>.nidovm` (`RENAME_EXCL`) only once
 ///   macOS is installed: until then no bundle exists. On any failure, and when the task is
@@ -68,6 +91,7 @@ public struct MacInstaller: Sendable {
         var hostVersion = ProcessInfo.processInfo.operatingSystemVersion
         var availableCapacity: @Sendable (URL) throws -> UInt64 = SnapshotStore.volumeAvailableCapacity
         var installer: any MacOSInstalling = LiveMacOSInstaller()
+        var passwords: any GuestPasswordStore = KeychainGuestPasswordStore()
     }
 
     /// Largest accepted disk: `diskBytes + SnapshotStore.spaceMargin` must still fit in an `off_t`.
@@ -97,6 +121,11 @@ public struct MacInstaller: Sendable {
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> VMBundle {
         try VMConfig.validateSSHUser(r.sshUser)
+        // An account macOS refuses at the first start would leave a VM that never starts: refused
+        // now, before the long installation.
+        if let account = r.account {
+            try MacFirstBoot.validate(fullName: account.fullName, username: r.sshUser, password: account.password)
+        }
         let key = try CloudInitSeed.validatePublicKey(r.publicKey)
         try ResourceLimits.validate(cpuCount: r.cpuCount, memoryBytes: r.memoryBytes)
         guard r.diskBytes > 0 else { throw NidoError.invalidResources(L10n.string("disk: size is zero")) }
@@ -130,12 +159,14 @@ public struct MacInstaller: Sendable {
             diskBytes: r.diskBytes, macAddress: VZMACAddress.randomLocallyAdministered().string,
             clipboardSharing: false, sshPublicKeyPath: r.sshPublicKeyPath, sshUser: r.sshUser,
             osVersion: info.version, minimumCPUCount: info.minimumCPUCount,
-            minimumMemoryBytes: info.minimumMemoryBytes, controlledNetwork: true)
+            minimumMemoryBytes: info.minimumMemoryBytes, controlledNetwork: true,
+            agentAccess: r.agentAccess ? true : nil, macAccountFullName: r.account?.fullName)
 
         try Task.checkCancellation()
         let staging = paths.root.appendingPathComponent(
             "\(Self.creatingPrefix)\(UUID().uuidString)", isDirectory: true)
         guard mkdir(staging.path, 0o700) == 0 else { throw posixError() }
+        var savedPassword = false
         do {
             let bundle = VMBundle(url: staging)
             let lock = try BundleLock.acquire(bundle, owner: owner)
@@ -153,6 +184,13 @@ public struct MacInstaller: Sendable {
             // Controlled with the macOS base list: activation, software update and time only.
             try EgressPolicyStore.save(EgressPolicy.macOSBase, bundle: bundle)
             try Task.checkCancellation()
+            // The password is in the Keychain before the long installation, keyed by the new id: a
+            // Keychain that refuses it ends the creation now, not after 20 minutes. Until the
+            // rename no VM has that id; any later failure removes it again (below).
+            if let account = r.account {
+                try environment.passwords.save(account.password, vm: config.id)
+                savedPassword = true
+            }
             // The image may have been moved or replaced since `inspect`: `VZMacOSInstaller` raises an
             // exception (not an error) for a URL that is not a file on disk.
             try Self.checkImageStillThere(r.ipsw)
@@ -173,6 +211,8 @@ public struct MacInstaller: Sendable {
             try SnapshotStore.syncDirectoryNow(staging)
             try checkNameIsFree(r.name)
             let destination = paths.bundleURL(for: r.name)
+            // The password was saved before the installation, so a VM that appears always has it
+            // (the first start reads it).
             guard renamex_np(staging.path, destination.path, UInt32(RENAME_EXCL)) == 0 else {
                 if errno == EEXIST { throw NidoError.alreadyExists(r.name.rawValue) }
                 throw posixError()
@@ -181,6 +221,7 @@ public struct MacInstaller: Sendable {
             try? SnapshotStore.syncDirectoryNow(paths.root)
             return VMBundle(url: destination)
         } catch {
+            if savedPassword { try? environment.passwords.delete(vm: config.id) }
             try? FileManager.default.removeItem(at: staging)
             throw error
         }

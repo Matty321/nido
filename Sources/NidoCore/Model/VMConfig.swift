@@ -105,6 +105,26 @@ public struct VMConfig: Codable, Sendable, Equatable {
     /// VM window suggests "Spegni" (`GuestBackgroundRequests.mayNeedQuieting`). Optional and
     /// additive, no schema bump. Clones and templates keep it (the guest's disk is copied).
     public var backgroundRequestsOff: Bool?
+    /// macOS: whether the VM has the virtio-socket device an agent drives it through (Nido Agent,
+    /// port 7710). Off by default: true is the user's explicit opt-in per VM. Optional and
+    /// additive, no schema bump. Part of `stateHash()` only when true (the device changes the
+    /// machine), so every existing VM keeps its hash and its saved state still resumes. Clones
+    /// start with it off (`VMCloner`); templates keep it.
+    public var agentAccess: Bool?
+    /// macOS: the keyboard layout of the guest, as the input source ID of the same layout on the
+    /// Mac (`com.apple.keylayout.Italian-Pro`): the app's "Type in VM" maps the characters of the
+    /// authorize command with it. Nil = the guest uses the Mac's current layout. The user's
+    /// choice in the Terminal Access panel. Optional and additive, no schema bump; not in
+    /// `stateHash()`. Clones and templates keep it (the guest's disk, and its layout, are copied).
+    public var guestKeyboardLayoutID: String?
+    /// macOS 27 guest: the full name asked at creation for the account Nido provisions (the
+    /// account name is `sshUser`; the password is in the Keychain, never here). Optional and
+    /// additive, no schema bump; not in `stateHash()`. Clones keep it.
+    public var macAccountFullName: String?
+    /// macOS: true once the provisioning (account and Setup Assistant answers) went to the guest;
+    /// it is sent at most once per VM. Optional and additive, no schema bump; not in
+    /// `stateHash()`. Clones keep it: their disk is already set up (or still is not).
+    public var macProvisioningSent: Bool?
 
     public init(
         schemaVersion: Int = VMConfig.currentSchemaVersion,
@@ -134,7 +154,11 @@ public struct VMConfig: Codable, Sendable, Equatable {
         minimumMemoryBytes: UInt64? = nil,
         controlledNetwork: Bool? = false,
         distribution: LinuxDistribution? = nil,
-        backgroundRequestsOff: Bool? = nil
+        backgroundRequestsOff: Bool? = nil,
+        agentAccess: Bool? = nil,
+        guestKeyboardLayoutID: String? = nil,
+        macAccountFullName: String? = nil,
+        macProvisioningSent: Bool? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.id = id
@@ -164,6 +188,10 @@ public struct VMConfig: Codable, Sendable, Equatable {
         self.controlledNetwork = controlledNetwork
         self.distributionID = distribution?.rawValue
         self.backgroundRequestsOff = backgroundRequestsOff
+        self.agentAccess = agentAccess
+        self.guestKeyboardLayoutID = guestKeyboardLayoutID
+        self.macAccountFullName = macAccountFullName
+        self.macProvisioningSent = macProvisioningSent
     }
 
     /// The distribution of a Linux VM (Debian 13 when none is recorded); nil for macOS and for
@@ -181,7 +209,8 @@ public struct VMConfig: Codable, Sendable, Equatable {
         case aiBridge, pendingProvisioning, sshUser, osVersion, sshSucceeded
         case minimumCPUCount, minimumMemoryBytes, controlledNetwork
         case distributionID = "distribution"
-        case backgroundRequestsOff
+        case backgroundRequestsOff, agentAccess, guestKeyboardLayoutID
+        case macAccountFullName, macProvisioningSent
     }
 
     /// Fields missing from the file (older schemas) take their defaults; a missing
@@ -217,6 +246,10 @@ public struct VMConfig: Codable, Sendable, Equatable {
         // A value of a newer build is kept as is; a non-string never fails the decoding.
         distributionID = (try? c.decodeIfPresent(String.self, forKey: .distributionID)) ?? nil
         backgroundRequestsOff = (try? c.decodeIfPresent(Bool.self, forKey: .backgroundRequestsOff)) ?? nil
+        agentAccess = (try? c.decodeIfPresent(Bool.self, forKey: .agentAccess)) ?? nil
+        guestKeyboardLayoutID = (try? c.decodeIfPresent(String.self, forKey: .guestKeyboardLayoutID)) ?? nil
+        macAccountFullName = (try? c.decodeIfPresent(String.self, forKey: .macAccountFullName)) ?? nil
+        macProvisioningSent = (try? c.decodeIfPresent(Bool.self, forKey: .macProvisioningSent)) ?? nil
     }
 
     /// Accepts a guest account name for `sshUser`: `^[a-z_][a-z0-9_-]{0,31}$` (ASCII only), so it
@@ -237,7 +270,7 @@ public struct VMConfig: Codable, Sendable, Equatable {
     /// on: CPU count, memory, MAC address, shared folders, Rosetta and (M3d) the controlled
     /// network, encoded as JSON with sorted keys. A saved state is restored only while this is
     /// unchanged. `controlledNetwork` enters only when true, so a VM on Apple's NAT keeps the hash
-    /// it had before M3d and its saved state still resumes; a state saved on NAT never resumes on
+    /// it had before M3d and its saved state still resumes (`agentAccess` likewise: only when true); a state saved on NAT never resumes on
     /// the relay, nor the other way round. A controlled VM also records the relay's uplink
     /// (`gvproxy` since 0.6): a state saved by 0.5.x behind vmnet never resumes behind gvproxy,
     /// it is discarded with `SuspendedState.configChangedWarning` and the VM starts from cold.
@@ -252,6 +285,8 @@ public struct VMConfig: Codable, Sendable, Equatable {
             let controlledNetwork: Bool?
             /// The relay's uplink, only for a controlled VM (nil before 0.6, vmnet).
             let controlledNetworkUplink: String?
+            /// Omitted (nil) unless true: the virtio-socket device exists only then.
+            let agentAccess: Bool?
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
@@ -259,7 +294,8 @@ public struct VMConfig: Codable, Sendable, Equatable {
             cpuCount: cpuCount, memoryBytes: memoryBytes, macAddress: macAddress,
             sharedFolders: sharedFolders, rosetta: rosetta,
             controlledNetwork: controlledNetwork == true ? true : nil,
-            controlledNetworkUplink: controlledNetwork == true ? "gvproxy" : nil)
+            controlledNetworkUplink: controlledNetwork == true ? "gvproxy" : nil,
+            agentAccess: agentAccess == true ? true : nil)
         let data: Data
         do {
             data = try encoder.encode(shape)

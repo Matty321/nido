@@ -73,6 +73,8 @@ final class AppEnvironment {
     let ipswFile: URL?
     /// Checks IPSWs and installs macOS VMs (`LiveMacVMInstaller`; DEBUG `-NidoFakeMacInstaller`).
     let macInstaller: any MacVMInstalling
+    /// "Download from Apple" in the wizard (`LiveMacImageDownloader`; DEBUG `-NidoFakeMacInstaller`).
+    let macImageDownloader: any MacImageDownloading
     /// The macOS installations: they outlive the wizard; the library and quitting see them.
     let macInstalls = MacInstallStore()
     /// The VM windows' models: one per VM run (or shown) by this app.
@@ -81,6 +83,11 @@ final class AppEnvironment {
     let aiBridge: AIBridgeServices
     /// Watches every VM's network log and notifies its blocks (M3d).
     let egress: EgressMonitor
+    /// The Keychain's account passwords of the macOS VMs (a memory store in the debug fakes: the
+    /// UI tests never touch the real Keychain).
+    let guestPasswords: any GuestPasswordStore
+    /// Confirms the owner (Touch ID) before a password is shown.
+    let ownerAuthenticator: any OwnerAuthenticator
     /// Each VM's tint (Settings › General › Color), shared by the library and every window.
     let tints: VMTintStore
     /// The RAM warning before a start and in the wizard (off with the DEBUG fakes).
@@ -214,6 +221,11 @@ final class AppEnvironment {
             if isDebug, arguments.contains(Self.fakeMacInstallerFlag) { macInstaller = DebugFakeMacInstaller() }
         #endif
         self.macInstaller = macInstaller
+        var macImageDownloader: any MacImageDownloading = LiveMacImageDownloader(cacheRoot: cacheRoot)
+        #if DEBUG
+            if isDebug, arguments.contains(Self.fakeMacInstallerFlag) { macImageDownloader = DebugFakeMacImageDownloader() }
+        #endif
+        self.macImageDownloader = macImageDownloader
         self.aiBridge = aiBridge
         // DEBUG fakes (UI and screenshot tests): no RAM warning, whatever this Mac runs.
         let checksHeadroom = factory == nil && !usesFixtures
@@ -225,6 +237,7 @@ final class AppEnvironment {
         self.sessions = sessions
         var poster: (any EgressNotificationPosting)?
         var authenticator: any OwnerAuthenticator = LocalOwnerAuthenticator()
+        var guestPasswords: any GuestPasswordStore = KeychainGuestPasswordStore()
         var egressDefaults = UserDefaults.standard
         var tintDefaults = UserDefaults.standard
         #if DEBUG
@@ -233,6 +246,8 @@ final class AppEnvironment {
                 let suite = "io.gitlab.pichierri.Nido.debug-egress"
                 egressDefaults = UserDefaults(suiteName: suite) ?? .standard
                 egressDefaults.removePersistentDomain(forName: suite)
+                // Never the real Keychain: a throwaway store of account passwords.
+                guestPasswords = MemoryGuestPasswordStore()
                 // Its VMs' tints too: the UI tests' app has the user's bundle identifier.
                 let tintSuite = "io.gitlab.pichierri.Nido.debug-tints"
                 tintDefaults = UserDefaults(suiteName: tintSuite) ?? .standard
@@ -249,6 +264,8 @@ final class AppEnvironment {
                 poster = DebugNotificationPoster(allowed: true)
             }
         #endif
+        self.guestPasswords = guestPasswords
+        ownerAuthenticator = authenticator
         if let poster {
             egress = EgressMonitor(paths: paths, poster: poster, authenticator: authenticator, defaults: egressDefaults)
         } else {

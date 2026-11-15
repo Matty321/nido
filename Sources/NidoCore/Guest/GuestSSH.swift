@@ -29,6 +29,18 @@ public enum GuestCommand: Equatable, Sendable {
     /// and on Ubuntu snapd, motd-news, Ubuntu Pro, apt news, pollinate and the release check.
     /// A constant script, idempotent, only when the user asks for it.
     case quietBackground(ubuntu: Bool)
+    /// Installs `NidoAgent.app` in `~/Applications` of a macOS guest's user (a tar archive of the
+    /// app goes in on stdin): a constant script, see `MacAgentInstaller.installScript`.
+    case installMacAgent
+    /// Opens the installed `NidoAgent.app` without bringing it to the front (needs a logged-in
+    /// session of that user in the guest).
+    case openMacAgent
+    /// Reads FileVault's state and the automatic login user of a macOS guest (two lines, no sudo).
+    case readMacLoginState
+    /// Adds Nido's key (one line on stdin) to `~/.ssh/authorized_keys` of a macOS guest's user:
+    /// a constant script, idempotent, see `authorizeKeyScript`. The only command run with the
+    /// account's password (`GuestSSH.authorizeNidoKey`); every other one needs a key.
+    case authorizeNidoKey
 
     public enum OllamaAction: Equatable, Sendable {
         case install, verify, start, stop, restart, update
@@ -75,6 +87,28 @@ public enum GuestCommand: Equatable, Sendable {
 
     static let provisionTool = ["sudo", "-n", "/opt/nido-guest-tools/bin/nido-provision"]
 
+    /// `authorizeNidoKey`: reads one key line from stdin, makes `~/.ssh` (0700) and
+    /// `~/.ssh/authorized_keys` (0600) with a 077 umask, and appends the key only when no line
+    /// is exactly it (`grep -qxF`), after a newline when the file does not end with one. Prints
+    /// nothing; any failure (no key, a `grep` error, a write) exits non-zero.
+    static let authorizeKeyScript = #"""
+        umask 077
+        set -eu
+        key=
+        IFS= read -r key || [ -n "$key" ]
+        [ -n "$key" ]
+        dir="$HOME/.ssh"
+        file="$dir/authorized_keys"
+        mkdir -p "$dir"
+        chmod 700 "$dir"
+        [ -e "$file" ] || : > "$file"
+        chmod 600 "$file"
+        if [ -s "$file" ] && [ -n "$(tail -c 1 "$file")" ]; then printf '\n' >> "$file"; fi
+        if grep -qxF -- "$key" "$file"; then exit 0; else status=$?; fi
+        [ "$status" -eq 1 ]
+        printf '%s\n' "$key" >> "$file"
+        """#
+
     /// The remote argv, element by element. Every element is a constant or a validated identifier.
     func argv() throws(GuestSSHError) -> [String] {
         switch self {
@@ -94,6 +128,14 @@ public enum GuestCommand: Equatable, Sendable {
             return ["sudo", "-n", "/bin/sh", "-c", GuestPanicSettings.applyScript]
         case .quietBackground(let ubuntu):
             return ["sudo", "-n", "/bin/sh", "-c", GuestBackgroundRequests.applyScript(ubuntu: ubuntu)]
+        case .installMacAgent:
+            return ["/bin/sh", "-c", MacAgentInstaller.installScript]
+        case .openMacAgent:
+            return ["/bin/sh", "-c", MacAgentInstaller.openScript]
+        case .readMacLoginState:
+            return ["/bin/sh", "-c", MacAgentInstaller.loginStateScript]
+        case .authorizeNidoKey:
+            return ["/bin/sh", "-c", Self.authorizeKeyScript]
         case .chat:
             return [
                 "curl", "-sN", "--noproxy", "*", "--max-time", "900", "--data-binary", "@-",
@@ -158,6 +200,13 @@ public enum GuestSSHError: Error, Equatable, Sendable {
     case launchFailed(String)
     /// The caller's task was cancelled: the ssh process was stopped.
     case cancelled
+    /// The guest refused the account password of `user` in the VM `vm` (`authorizeNidoKey` only).
+    case passwordRejected(user: String, vm: String)
+    /// ssh's login was refused before the askpass handed it the password (`authorizeNidoKey`
+    /// only): the askpass failed, or the guest asked for no password at all.
+    case passwordNotDelivered
+    /// A password login (`authorizeNidoKey`) was asked for a VM that is not a macOS guest.
+    case macGuestOnly
 }
 
 extension GuestSSHError: LocalizedError {
@@ -183,6 +232,12 @@ extension GuestSSHError: LocalizedError {
             return L10n.string("invalid name: \(GuestSSH.sanitize(name, limit: 60))")
         case .cancelled:
             return L10n.string("operation canceled")
+        case .passwordRejected(let user, let vm):
+            return L10n.string("the password for \(user) in \(vm) was refused")
+        case .passwordNotDelivered:
+            return L10n.string("Nido couldn’t pass the password to ssh")
+        case .macGuestOnly:
+            return L10n.string("Nido’s key can be authorized with a password only in a macOS VM")
         }
     }
 }
@@ -197,9 +252,15 @@ public struct GuestSSH: Sendable {
     private let config: VMConfig
     private let runner: ProcessRunner
     private let resolveSSH: @Sendable (VMBundle) throws -> SSHEndpoint
+    private let callerEnvironment: [String: String]
+    /// Which process may fetch the password from `authorizeNidoKey`'s askpass socket: the
+    /// askpass child of the ssh this process starts. Tests replace it (their fetch comes from the
+    /// test process itself).
+    var askpassPeerCheck: @Sendable (pid_t) -> Bool = AskpassServer.isAskpassOfOurSSH
 
     public init(
         bundle: VMBundle, config: VMConfig, runner: ProcessRunner,
+        environment: [String: String] = ProcessInfo.processInfo.environment,
         resolveSSH: @escaping @Sendable (VMBundle) throws -> SSHEndpoint = { bundle in
             try VMControl.resolveSSH(bundle: bundle, leasesURL: DHCPLeases.defaultURL)
         }
@@ -208,6 +269,21 @@ public struct GuestSSH: Sendable {
         self.config = config
         self.runner = runner
         self.resolveSSH = resolveSSH
+        self.callerEnvironment = environment
+    }
+
+    /// `SSH_AUTH_SOCK` for the ssh child of a macOS guest, as `nido ssh` inherits it (the runner's
+    /// environment is minimal, so without it a key held only by an agent is out of reach): only
+    /// when it is an absolute path to a socket owned by the current user. Linux guests get none.
+    static func agentEnvironment(
+        guest: GuestOS, environment: [String: String], uid: uid_t = getuid()
+    ) -> [String: String] {
+        guard guest == .macos, let path = environment["SSH_AUTH_SOCK"], path.hasPrefix("/"),
+            !path.unicodeScalars.contains(where: { $0.value < 0x20 || $0.value == 0x7F })
+        else { return [:] }
+        var info = stat()
+        guard lstat(path, &info) == 0, (info.st_mode & S_IFMT) == S_IFSOCK, info.st_uid == uid else { return [:] }
+        return ["SSH_AUTH_SOCK": path]
     }
 
     /// The private key: the public key path without `.pub`.
@@ -215,12 +291,17 @@ public struct GuestSSH: Sendable {
         publicKeyPath.hasSuffix(".pub") && publicKeyPath.count > 4 ? String(publicKeyPath.dropLast(4)) : nil
     }
 
-    /// The argv of the ssh process for `command` (testable without running anything).
-    func argv(for command: GuestCommand, endpoint: SSHEndpoint, identity: String) throws(GuestSSHError) -> [String] {
+    /// The argv of the ssh process for `command` (testable without running anything). `identity`
+    /// is nil only for a macOS guest reached with the user's default keys or agent, as `nido ssh`
+    /// does; `user` is the guest account (`nido` on Linux).
+    func argv(
+        for command: GuestCommand, endpoint: SSHEndpoint, identity: String?, user: String = "nido"
+    ) throws(GuestSSHError) -> [String] {
         let remote = try command.remoteCommand()
         do {
             return try SSHArguments.background(
-                identity: identity, endpoint: endpoint, vmID: config.id, knownHosts: bundle.knownHostsURL, remoteCommand: remote)
+                identity: identity, endpoint: endpoint, vmID: config.id, knownHosts: bundle.knownHostsURL,
+                remoteCommand: remote, user: user)
         } catch {
             throw .unreachable
         }
@@ -228,17 +309,32 @@ public struct GuestSSH: Sendable {
 
     /// The ssh argv (without the executable) and the private key path for `command`.
     private func prepare(_ command: GuestCommand) throws(GuestSSHError) -> (arguments: [String], identity: String) {
-        guard let publicPath = config.sshPublicKeyPath else { throw .keyNotConfigured }
-        guard let identity = Self.privateKeyPath(publicKeyPath: publicPath) else {
-            throw .keyUnavailable(publicPath)
+        let chosen: String?
+        let user: String
+        if config.guest == .macos {
+            // As `nido ssh` does for a macOS guest: the account given at creation, the private key
+            // beside the recorded public key, else the public key itself (ssh then signs with the
+            // agent's matching key), else ssh's default keys. Never a reason to refuse.
+            user = config.sshUser ?? "nido"
+            do { try VMConfig.validateSSHUser(user) } catch { throw .invalidIdentifier(user) }
+            chosen = SSHArguments.interactiveIdentity(publicKeyPath: config.sshPublicKeyPath)
+        } else {
+            user = "nido"
+            guard let publicPath = config.sshPublicKeyPath else { throw .keyNotConfigured }
+            guard let identity = Self.privateKeyPath(publicKeyPath: publicPath) else {
+                throw .keyUnavailable(publicPath)
+            }
+            var info = stat()
+            guard lstat(identity, &info) == 0 else { throw .keyUnavailable(identity) }
+            chosen = identity
         }
-        var info = stat()
-        guard lstat(identity, &info) == 0 else { throw .keyUnavailable(identity) }
+        // What an error message names when ssh refuses the key.
+        let shown = chosen ?? config.sshPublicKeyPath ?? L10n.string("default key")
 
         let endpoint: SSHEndpoint
         do { endpoint = try resolveSSH(bundle) } catch { throw .unreachable }
         do { try VMControl.prepareKnownHosts(bundle: bundle) } catch { throw .unreachable }
-        return (Array(try argv(for: command, endpoint: endpoint, identity: identity).dropFirst()), identity)
+        return (Array(try argv(for: command, endpoint: endpoint, identity: chosen, user: user).dropFirst()), shown)
     }
 
     private static func seconds(_ duration: Duration) -> Double {
@@ -252,10 +348,11 @@ public struct GuestSSH: Sendable {
     public func run(
         _ command: GuestCommand, stdin: Data? = nil, timeout: Duration
     ) async throws(GuestSSHError) -> GuestCommandResult {
-        try await execute(command, timeout: timeout) { runner, arguments, seconds, cancellation in
+        let environment = Self.agentEnvironment(guest: config.guest, environment: callerEnvironment)
+        return try await execute(command, timeout: timeout) { runner, arguments, seconds, cancellation in
             try runner.run(
                 executable: Self.ssh, arguments: arguments, stdin: stdin, timeout: seconds, maxOutput: 1 << 20,
-                cancellation: cancellation, onStdout: nil)
+                cancellation: cancellation, environment: environment, onStdout: nil)
         }
     }
 
@@ -278,6 +375,16 @@ public struct GuestSSH: Sendable {
         invoke: @escaping @Sendable (ProcessRunner, [String], TimeInterval, ProcessCancellation) throws -> ProcessResult
     ) async throws(GuestSSHError) -> GuestCommandResult {
         let (arguments, identity) = try prepare(command)
+        let result = try await launch(arguments: arguments, timeout: timeout, invoke: invoke)
+        return try Self.interpret(result, identity: identity)
+    }
+
+    /// Runs `invoke` on a thread of its own and returns its result: `.cancelled` when the calling
+    /// task was cancelled (ssh is then stopped), `.launchFailed` when ssh could not be started.
+    private func launch(
+        arguments: [String], timeout: Duration,
+        invoke: @escaping @Sendable (ProcessRunner, [String], TimeInterval, ProcessCancellation) throws -> ProcessResult
+    ) async throws(GuestSSHError) -> ProcessResult {
         let seconds = Self.seconds(timeout)
         let runner = runner
         let cancellation = ProcessCancellation()
@@ -296,7 +403,70 @@ public struct GuestSSH: Sendable {
             throw .launchFailed(String(describing: error))
         }
         if cancellation.isCancelled { throw .cancelled }
-        return try Self.interpret(result, identity: identity)
+        return result
+    }
+
+    /// Adds Nido's key (the bundle's `authorized_key.pub`, validated again) to the macOS guest
+    /// account's `authorized_keys`, logging in once with the account's `password`: the one SSH
+    /// use of a password, for when the key is not authorized yet. The password reaches ssh only
+    /// through a one-shot `AskpassServer` answered by `askpass` (`Askpass.executable()`, the
+    /// `nido` binary in askpass mode): ssh's environment holds the socket path, never the
+    /// password, and ssh's stdin carries the key. No key and no agent are offered.
+    ///
+    /// Throws `.macGuestOnly` for a Linux VM, `.passwordRejected` when the guest refuses the
+    /// password, `.passwordNotDelivered` when ssh was refused before its askpass got it,
+    /// `.commandFailed` with ssh's stderr for any other ssh failure (never `.keyUnavailable`: no
+    /// key is used), `.hostKeyChanged`, `.unreachable`, `.timeout` and `.cancelled` as `run` does,
+    /// `NidoError.invalidPublicKey` when the bundle has no valid key, and the errors of the
+    /// `known_hosts` file, the ssh arguments and the askpass socket as they are.
+    public func authorizeNidoKey(password: GuestPassword, askpass: URL) async throws {
+        guard config.guest == .macos else { throw GuestSSHError.macGuestOnly }
+        guard askpass.isFileURL, askpass.path.hasPrefix("/") else { throw GuestSSHError.passwordNotDelivered }
+        guard let stored = try bundle.readAuthorizedKey() else { throw NidoError.invalidPublicKey }
+        let key = try CloudInitSeed.validatePublicKey(stored)
+        let user = config.sshUser ?? "nido"
+        do { try VMConfig.validateSSHUser(user) } catch { throw GuestSSHError.invalidIdentifier(user) }
+        let remote = try GuestCommand.authorizeNidoKey.remoteCommand()
+
+        let endpoint: SSHEndpoint
+        do { endpoint = try resolveSSH(bundle) } catch { throw GuestSSHError.unreachable }
+        try VMControl.prepareKnownHosts(bundle: bundle)
+        let arguments = Array(try SSHArguments.passwordOnce(
+            endpoint: endpoint, vmID: config.id, knownHosts: bundle.knownHostsURL, remoteCommand: remote,
+            user: user).dropFirst())
+
+        let server = try AskpassServer(
+            password: password, directory: Askpass.defaultDirectory, peerCheck: askpassPeerCheck)
+        defer { server.close() }
+        // Added to the runner's minimal environment: no `SSH_AUTH_SOCK`, and the password only
+        // behind the socket.
+        let environment = [
+            "SSH_ASKPASS": askpass.path, "SSH_ASKPASS_REQUIRE": "force",
+            Askpass.modeVariable: "1", Askpass.socketVariable: server.socketPath,
+        ]
+        let stdin = Data((key + "\n").utf8)
+        let result = try await launch(arguments: arguments, timeout: .seconds(30)) {
+            runner, arguments, seconds, cancellation in
+            try runner.run(
+                executable: Self.ssh, arguments: arguments, stdin: stdin, timeout: seconds, maxOutput: 1 << 16,
+                cancellation: cancellation, environment: environment, onStdout: nil)
+        }
+        if !result.timedOut, result.status == 255,
+            String(decoding: result.stderr, as: UTF8.self).contains("Permission denied")
+        {
+            // Refused after the askpass handed the password over: a wrong password. Refused
+            // without it: ssh never got the password, which says nothing about it.
+            guard server.answered else { throw GuestSSHError.passwordNotDelivered }
+            throw GuestSSHError.passwordRejected(user: user, vm: config.name.rawValue)
+        }
+        do {
+            _ = try Self.interpret(result, identity: "")
+        } catch .keyUnavailable {
+            // `interpret` reads some ssh failures as a refused key; no key is used here.
+            let stderr = String(decoding: result.stderr, as: UTF8.self)
+            throw GuestSSHError.commandFailed(
+                code: result.status, stderrTail: Self.sanitize(stderr, limit: Self.maxStderrTail))
+        }
     }
 
     /// Runs `command` and yields its stdout as it arrives (at most `maxOutput` bytes). The stream
@@ -307,6 +477,7 @@ public struct GuestSSH: Sendable {
     ) -> AsyncThrowingStream<Data, Error> {
         let seconds = Self.seconds(timeout)
         let runner = runner
+        let environment = Self.agentEnvironment(guest: config.guest, environment: callerEnvironment)
         let cancellation = ProcessCancellation()
         return AsyncThrowingStream { continuation in
             continuation.onTermination = { _ in cancellation.cancel() }
@@ -320,7 +491,7 @@ public struct GuestSSH: Sendable {
                     try runner.run(
                         executable: Self.ssh, arguments: prepared.arguments, stdin: stdin,
                         timeout: seconds, maxOutput: maxOutput, cancellation: cancellation,
-                        onStdout: { continuation.yield($0) })
+                        environment: environment, onStdout: { continuation.yield($0) })
                 }
                 switch outcome {
                 case .failure(let error):

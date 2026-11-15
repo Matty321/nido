@@ -9,7 +9,7 @@ struct StartCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "start",
         abstract: L10n.string("Start a VM in the foreground (Ctrl-C stops it); a suspended VM resumes."),
-        discussion: L10n.string("A macOS VM starts without a window: use it with nido ssh once you’ve completed Setup Assistant in Nido.")
+        discussion: L10n.string("A macOS VM starts without a window. One created with its account (macOS 27) logs in by itself at the first start and, with agent access on, Nido sets up Nido Agent in it; otherwise complete Setup Assistant in Nido first. Then use it with nido ssh.")
     )
 
     @Argument(help: ArgumentHelp(L10n.string("VM name.")))
@@ -86,6 +86,18 @@ struct StartCommand: AsyncParsableCommand {
             Terminal.error(L10n.string("Stop requested while resuming: the VM \(shown) wasn’t resumed and its saved state was discarded."))
         }
 
+        // The owner serves the agent socket (macOS VM with agent access on); a failure, also of
+        // reading config.json, is a warning.
+        let agentServer = AgentHost.readConfig(bundle, onWarning: { Terminal.error($0) }).flatMap { config in
+            AgentHost.startIfEnabled(session: session, bundle: bundle, config: config) { Terminal.error($0) }
+        }
+        defer { agentServer?.stop() }
+
+        // A start that sent the guest its account: say so, and with agent access on set Nido Agent
+        // up in a child task (waiting for Remote Login, up to 10 minutes) while the VM runs on.
+        let setupTask = Self.followProvisionedStart(session: session, bundle: bundle, vm: shown)
+        defer { setupTask?.cancel() }
+
         let final: VMRunState = await withCheckedContinuation { continuation in
             if Self.isFinal(session.state) {
                 continuation.resume(returning: session.state)
@@ -97,6 +109,7 @@ struct StartCommand: AsyncParsableCommand {
                 continuation.resume(returning: state)
             }
         }
+        agentServer?.stop()
         // The machine is gone: the relay delivers its last events (stderr lines, egress.log)
         // before the process exits, waited for off the main actor.
         if let relay = session.egressRelay {
@@ -117,6 +130,44 @@ struct StartCommand: AsyncParsableCommand {
         // Decided by the suspend's own result: the VM reports stopped before the suspend returns.
         let suspended = await stopper.suspendOutcome()
         Terminal.error(suspended ? L10n.string("VM \(shown) suspended.") : L10n.string("VM \(shown) stopped."))
+    }
+
+    /// After a start that sent provisioning (`VMSession.sentProvisioning`): the follow-up line and,
+    /// with agent access on, the setup task (nil otherwise). It never blocks the VM; an error is one line.
+    @MainActor
+    private static func followProvisionedStart(session: VMSession, bundle: VMBundle, vm: String) -> Task<Void, Never>? {
+        let config = try? bundle.readConfig()
+        switch CLISupport.provisionedStartFollowUp(
+            sentProvisioning: session.sentProvisioning, agentAccess: config?.agentAccess)
+        {
+        case .none:
+            return nil
+        case .loggedIn:
+            print(L10n.string("\(vm) was set up with its account: it logs in by itself."))
+            return nil
+        case .setUpAgent:
+            guard let config else { return nil }
+            print(L10n.string("Setting up Nido Agent in \(vm)…"))
+            return Task {
+                do {
+                    let setup = try MacAgentSetup.live(
+                        bundle: bundle, config: config, surface: .cli, describe: { CLISupport.message(for: $0) },
+                        waitForRemoteLogin: .seconds(600))
+                    _ = try await setup.run { event in
+                        switch event {
+                        case .error(let line): Terminal.error(line)
+                        default: print(event.line(vm: vm))
+                        }
+                    }
+                } catch is CancellationError {
+                    return
+                } catch let error as MacAgentSetupError {
+                    Terminal.error(AgentSupport.cliError(error).localizedDescription)
+                } catch {
+                    Terminal.error(CLISupport.message(for: error))
+                }
+            }
+        }
     }
 
     private static func isFinal(_ state: VMRunState) -> Bool {

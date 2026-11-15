@@ -4,7 +4,7 @@ import SwiftUI
 import Virtualization
 
 /// The screen of a macOS guest (S07 macOS): a `GuestDisplayView` on the session's machine.
-/// The guest's resolution follows the window (`automaticallyReconfiguresDisplay`); system keys
+/// The guest's resolution follows the window (`automaticallyReconfiguresDisplay`) unless it is held fixed for an agent; system keys
 /// (⌘Tab, ⌘Space…) go to the guest only in full screen. A reopened window makes a new view on the
 /// same machine (the session lives in `VMSessionStore`, not in the window).
 struct MacDisplayView: NSViewRepresentable {
@@ -12,10 +12,12 @@ struct MacDisplayView: NSViewRepresentable {
     let isFullScreen: Bool
     /// Hands the view to the window, for "Digita nella VM".
     let controller: MacDisplayController
+    /// Whether the guest's resolution follows the window. Off while the VM has agent access, so a
+    /// resize cannot change the screen the agent's coordinates refer to.
+    let reconfiguresDisplay: Bool
 
     func makeNSView(context: Context) -> GuestDisplayView {
         let view = GuestDisplayView()
-        view.automaticallyReconfiguresDisplay = true
         configure(view)
         return view
     }
@@ -31,6 +33,9 @@ struct MacDisplayView: NSViewRepresentable {
 
     private func configure(_ view: GuestDisplayView) {
         if view.virtualMachine !== machine { view.virtualMachine = machine }
+        if view.automaticallyReconfiguresDisplay != reconfiguresDisplay {
+            view.automaticallyReconfiguresDisplay = reconfiguresDisplay
+        }
         if view.capturesSystemKeys != isFullScreen { view.capturesSystemKeys = isFullScreen }
         controller.view = view
     }

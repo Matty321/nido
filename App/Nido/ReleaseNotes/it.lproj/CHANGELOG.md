@@ -2,6 +2,30 @@
 
 Le versioni di Nido, dalla più recente. L'app mostra la sezione della versione installata al primo avvio dopo un aggiornamento (menu Aiuto › Novità di Nido per rivederla).
 
+## [0.9.0] – 2026-11-15
+
+### Un Mac per gli agenti
+- **Un agente AI può usare una VM macOS separata mentre tu continui a usare il tuo Mac.** Prima Claude Code, poi qualsiasi client MCP: `nido mcp <vm>` avvia un server MCP (stato, screenshot, clic, trascinamento, scorrimento, testo, tasti, attesa), `nido act <vm> …` fa le stesse azioni dalla shell con output JSON, e `nido skill install` installa la skill che insegna all'agente a guardare, agire e controllare.
+- **Il tuo Mac resta tuo.** Nido Agent, una piccola app firmata dentro la VM, cattura lo schermo e invia gli input lì dentro con un canale privato: puntatore, tastiera e appunti del tuo Mac non vengono mai toccati. Il canale è raggiungibile solo dal tuo utente sul tuo Mac, e solo per la VM indicata.
+- **Spento per impostazione predefinita, per ogni VM**: lo attivi in **Impostazioni › Agent** o con `nido agent enable <vm>`, poi installi Nido Agent con **Installa Nido Agent** o `nido agent setup <vm>` e consenti Registrazione schermo e Accessibilità nella VM. Mentre un agente lavora, un banner appare nella finestra della VM e un segno nella libreria; la dimensione dello schermo della VM resta fissa finché l'accesso dell'agente è attivo.
+- **Con FileVault nella VM**, un agente può lavorare solo dopo che accedi a ogni avvio. Nido lo spiega e non cambia mai FileVault.
+
+### macOS 27: una VM pronta senza l'assistente iniziale
+- **Su un Mac con macOS 27, con un'immagine macOS 27, la creazione guidata di una VM crea l'account per te** (come `nido create --ipsw … --account "Nome Cognome"`, con `--agent` per l'accesso dell'agente). Il primo avvio salta l'assistente iniziale, accede da solo e attiva Login remoto. Con l'accesso dell'agente attivo, Nido installa anche Nido Agent: resta solo il passaggio dei due permessi.
+- **La password dell'account è generata per impostazione predefinita (o la scegli tu) e resta nel Portachiavi del tuo Mac**, un elemento per VM, eliminato con la VM. La vedi in **Impostazioni › Agent** dopo Touch ID, o con `nido agent password <vm>`; **Copia negli appunti della VM** la tiene lì per 60 secondi, così la incolli nella VM. Nido la usa una sola volta per autorizzare la sua chiave. Su Mac o immagini meno recenti, chiede la password una volta, quando serve.
+
+### Scarica macOS da Apple
+- **`nido image macos` mostra la versione di macOS che Apple offre per questo Mac e la sua dimensione**; con `--download` la scarica. Il download riprende se si interrompe, viene controllato prima dell'uso e arriva solo dai server di Apple. La creazione guidata ha **Scarica da Apple**, con una conferma prima. Nido non va mai online da solo.
+
+### Accesso da terminale
+- **Digita nella VM segue la tastiera della VM**: scegli la **Tastiera della VM** per ogni VM, e i comandi arrivano intatti anche se il Mac e la VM usano layout diversi.
+
+### Nido Agent 1.0.3
+- È la versione inclusa nell'app. Aggiornala da **Impostazioni › Agent** della VM.
+
+### Correzioni
+- **Le righe di avanzamento di `nido agent setup` compaiono man mano**, anche in una pipe o in un file.
+
 ## [0.8.1] – 2026-11-14
 
 ### Lingue

@@ -6,8 +6,8 @@ import SwiftUI
 
 /// "Accesso da terminale" of a macOS VM (S07 macOS, ScreensMac.swift `macVMWindow`): the steps
 /// to reach the guest with `nido ssh` once Setup Assistant is done. Opens by itself while the VM
-/// runs until `nido ssh` reached the guest once (`VMConfig.sshSucceeded`, recorded by the CLI);
-/// always from the bar.
+/// runs until Nido's key reached the guest once (`VMConfig.sshSucceeded`, recorded by `nido ssh`
+/// and by the agent setup), except while the window's first-run setup works; always from the bar.
 @MainActor
 @Observable
 final class TerminalAccessModel {
@@ -30,11 +30,20 @@ final class TerminalAccessModel {
     private(set) var typingMessage: String?
     /// Why the last "Digita nella VM" did not type (localized).
     private(set) var typingError: String?
+    /// The guest's keyboard layout (`VMConfig.guestKeyboardLayoutID`): nil = same as this Mac.
+    private(set) var guestLayoutID: String?
+    /// What the guest's layout is chosen from (this Mac's installed layouts, enabled ones first),
+    /// read once each time the panel is shown.
+    private(set) var layoutChoices: [KeyboardLayoutChoice] = []
+    /// Where the layouts come from: this Mac's, fixed tables in the tests.
+    @ObservationIgnored var layouts: any KeyboardLayouts = SystemKeyboardLayouts()
 
     /// Chiudi hides the panel until the window appears again.
     @ObservationIgnored private var dismissed = false
     /// `nido ssh` reached the guest once: the panel no longer opens by itself.
     @ObservationIgnored private var sshSucceeded = false
+    /// The panel is open because it opened by itself (not from the bar).
+    @ObservationIgnored private var shownByItself = false
     @ObservationIgnored private let paths: NidoPaths
 
     init(name: VMName, paths: NidoPaths) {
@@ -46,7 +55,7 @@ final class TerminalAccessModel {
 
     var title: String { String(localized: "Terminal Access") }
     var intro: String {
-        String(localized: "To use \(name.rawValue) with nido ssh, once, after Setup Assistant. Nido never asks for or saves passwords.")
+        String(localized: "To use \(name.rawValue) with nido ssh, once, after Setup Assistant. These steps need no password.")
     }
     var steps: [Step] {
         [Step(number: 1, title: String(localized: "Complete Setup Assistant"),
@@ -68,8 +77,11 @@ final class TerminalAccessModel {
     /// The limits of typing physical keys, under the command (Caps Lock on in the guest would invert
     /// the key's letters).
     var layoutNote: String {
-        String(localized: "Nido uses this Mac’s keyboard layout: if the VM’s is different, type the command yourself. Keep Caps Lock off in the VM.")
+        String(localized: "Nido types with the layout chosen in Guest keyboard: it must be the one the VM uses. Keep Caps Lock off in the VM.")
     }
+    /// The label of the guest's layout menu, and its first entry (nil: this Mac's current layout).
+    var guestKeyboardLabel: String { String(localized: "Guest keyboard") }
+    var sameAsThisMac: String { String(localized: "Same as this Mac") }
     var canType: Bool { publicKey != nil && !isTyping }
 
     // MARK: - Showing
@@ -80,6 +92,7 @@ final class TerminalAccessModel {
         let config = try? bundle.readConfig()
         sshUser = config?.sshUser ?? "nido"
         sshSucceeded = config?.sshSucceeded == true
+        guestLayoutID = config?.guestKeyboardLayoutID
         // `PrivateFile` (no symlink, this user's regular file), at most 16 KiB, opened
         // non-blocking: as bounded as the config read just above.
         let text: String?
@@ -105,7 +118,19 @@ final class TerminalAccessModel {
     /// or the user closed it in this window.
     func autoShow() {
         reload()
-        if !sshSucceeded, !dismissed { isShown = true }
+        if !sshSucceeded, !dismissed, !isShown {
+            layoutChoices = layouts.available()
+            isShown = true
+            shownByItself = true
+        }
+    }
+
+    /// The window's first-run setup started (it authorizes Nido's key itself): a panel that opened
+    /// by itself closes; one opened from the bar stays.
+    func withdrawAutoShow() {
+        guard isShown, shownByItself else { return }
+        isShown = false
+        shownByItself = false
     }
 
     /// The window appeared again: a Chiudi of the previous window no longer counts.
@@ -117,27 +142,67 @@ final class TerminalAccessModel {
     /// "Accesso da terminale" in the bar.
     func show() {
         reload()
+        if !isShown { layoutChoices = layouts.available() }
         isShown = true
+        shownByItself = false
     }
 
     /// Chiudi.
     func dismiss() {
         isShown = false
+        shownByItself = false
         dismissed = true
     }
 
     /// The VM stopped: the panel goes with its screen.
     func vmStopped() {
         isShown = false
+        shownByItself = false
         isTyping = false
     }
 
     // MARK: - Digita nella VM
 
+    /// The user chose the guest's layout (nil: same as this Mac): kept in the VM's config, so
+    /// the next window (and a clone) types with it too.
+    func chooseGuestLayout(_ id: String?) {
+        guard id != guestLayoutID else { return }
+        let bundle = VMBundle(url: paths.bundleURL(for: name))
+        do {
+            _ = try bundle.updateConfig { $0.guestKeyboardLayoutID = id }
+            guestLayoutID = id
+            typingMessage = nil
+            typingError = nil
+        } catch {
+            typingError = String(localized: "Can’t save the guest keyboard: \(error.localizedDescription)")
+        }
+    }
+
     /// This Mac's keyboard layout could not be read: nothing is typed.
     func reportLayoutUnavailable() {
         typingMessage = nil
         typingError = String(localized: "This Mac’s keyboard layout can’t be read: type the command yourself in the VM.")
+    }
+
+    /// Types the authorize command into the guest through `sink`, with the layout chosen for the
+    /// guest (`guestLayoutID`), or this Mac's current one when none is. Nothing is sent when that
+    /// layout is not on this Mac or cannot be read.
+    func typeCommand(into sink: any KeystrokeSink) async {
+        guard !isTyping else { return }
+        if let id = guestLayoutID {
+            guard let layout = layouts.layout(id: id) else {
+                typingMessage = nil
+                typingError = String(localized: "The keyboard layout chosen for the VM isn’t on this Mac: choose another in Guest keyboard.")
+                return
+            }
+            await typeCommand(into: sink, layout: layout)
+        } else {
+            guard let layout = layouts.current() else {
+                reportLayoutUnavailable()
+                return
+            }
+            await typeCommand(into: sink, layout: layout)
+        }
     }
 
     /// Types the authorize command into the guest through `sink`, with keys from `layout`.
@@ -235,6 +300,7 @@ struct TerminalAccessPanel: View {
     }
 
     @ViewBuilder private var authorizeBlock: some View {
+        guestKeyboardPicker
         NidoCommandBlock(
             command: model.authorizeCommand,
             actionLabel: model.isTyping ? String(localized: "Typing…") : String(localized: "Type in VM"),
@@ -250,6 +316,35 @@ struct TerminalAccessPanel: View {
         } else {
             caption(model.layoutNote)
         }
+    }
+
+    /// "Guest keyboard": the layout the guest uses, from this Mac's: the enabled ones, then the
+    /// others installed (a saved one this Mac no longer has is still shown, by its ID).
+    private var guestKeyboardPicker: some View {
+        Picker(selection: Binding(
+            get: { model.guestLayoutID ?? "" },
+            set: { model.chooseGuestLayout($0.isEmpty ? nil : $0) }
+        )) {
+            Text(verbatim: model.sameAsThisMac).tag("")
+            Divider()
+            ForEach(model.layoutChoices.filter(\.enabled)) { choice in
+                Text(verbatim: choice.name).tag(choice.id)
+            }
+            if model.layoutChoices.contains(where: \.enabled) { Divider() }
+            ForEach(model.layoutChoices.filter { !$0.enabled }) { choice in
+                Text(verbatim: choice.name).tag(choice.id)
+            }
+            if let id = model.guestLayoutID, !model.layoutChoices.contains(where: { $0.id == id }) {
+                Text(verbatim: id).tag(id)
+            }
+        } label: {
+            Text(verbatim: model.guestKeyboardLabel)
+                .font(.nido(Theme.TypeSize.caption))
+                .foregroundStyle(Theme.Color.textSecondary)
+        }
+        .pickerStyle(.menu)
+        .disabled(model.isTyping)
+        .accessibilityIdentifier("terminal-access-guest-keyboard")
     }
 
     private func status(_ text: String, color: Color, identifier: String) -> some View {

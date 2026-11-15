@@ -44,4 +44,63 @@ import Testing
         #expect(CLISupport.imageResetMessage(image, removed: 0) == "debian-13: nessuna build o firma accettata da dimenticare.")
         #expect(CLISupport.imageResetMessage(image, removed: 2).hasPrefix("debian-13: dimenticate la build e la firma"))
     }
+
+    // MARK: nido image macos
+
+    private let offer = MacImageOffer(
+        build: "26B131", version: "27.2",
+        url: URL(string: "https://updates.cdn-apple.com/UniversalMac_27.2_26B131_Restore.ipsw")!)
+
+    @Test func macOfferLineAndQuestion() {
+        #expect(CLISupport.macImageOfferLine(offer, size: nil) == "macOS 27.2 (26B131) — dimensione sconosciuta, da Apple")
+        #expect(CLISupport.macImageOfferLine(offer, size: 18 << 30) == "macOS 27.2 (26B131) — 18 GiB, da Apple")
+        #expect(CLISupport.macImageOfferLine(offer, size: 27_487_790_694) == "macOS 27.2 (26B131) — 25,6 GiB, da Apple")
+        #expect(CLISupport.macImageDownloadQuestion(offer, size: 27_487_790_694) == "Scaricare macOS 27.2 (25,6 GiB) da Apple? [s/N] ")
+        #expect(CLISupport.macImageDownloadQuestion(offer, size: 18 << 30) == "Scaricare macOS 27.2 (18 GiB) da Apple? [s/N] ")
+        #expect(CLISupport.macImageDownloadQuestion(offer, size: nil) == "Scaricare macOS 27.2 (dimensione sconosciuta) da Apple? [s/N] ")
+    }
+
+    @Test func macStateLineSaysWhatTheCacheHolds() {
+        #expect(CLISupport.macImageStateLine(path: "/c/a.ipsw", complete: false, partial: 0) == nil)
+        #expect(CLISupport.macImageStateLine(path: "/c/a.ipsw", complete: true, partial: 0) == "Già scaricata: /c/a.ipsw")
+        #expect(CLISupport.macImageStateLine(path: "/c/a.ipsw", complete: false, partial: 3 << 30)
+            == "Download parziale: 3 GiB già in /c/a.ipsw; nido image macos --download lo riprende.")
+    }
+
+    @Test func macDownloadedLinesQuoteAPathWithSpaces() {
+        #expect(CLISupport.macImageDownloadedLines(path: "/c/a.ipsw")[1] == "Usalo con: nido create <name> --ipsw /c/a.ipsw")
+        #expect(CLISupport.macImageDownloadedLines(path: "/My Mac/a'b.ipsw")[1]
+            == "Usalo con: nido create <name> --ipsw '/My Mac/a'\\''b.ipsw'")
+        #expect(CLISupport.macImagePausedMessage() == "Download in pausa: esegui lo stesso comando per riprenderlo.")
+    }
+
+    @Test func macOptionsNeedDownload() throws {
+        try CLISupport.validateMacImageOptions(download: false, hasOutput: false, yes: false)
+        try CLISupport.validateMacImageOptions(download: true, hasOutput: true, yes: true)
+        #expect(throws: CLIError.macImageOptionNeedsDownload("--output")) {
+            try CLISupport.validateMacImageOptions(download: false, hasOutput: true, yes: false)
+        }
+        #expect(throws: CLIError.macImageOptionNeedsDownload("--yes")) {
+            try CLISupport.validateMacImageOptions(download: false, hasOutput: false, yes: true)
+        }
+        #expect(CLIError.macImageOptionNeedsDownload("--output").errorDescription == "--output funziona solo con --download")
+    }
+
+    @Test func macFailureSaysResumeOnlyWhenAPartialFileIsThere() {
+        let error = NidoError.insufficientSpace(needed: 2 << 30, available: 1 << 30)
+        // Out of space before the first byte: no partial file, nothing to resume.
+        #expect(CLISupport.macImageFailureLines(error: error, partial: 0) == nil)
+        // A write error midway (or a lost connection) left bytes: same command resumes them.
+        for error: any Error in [POSIXError(.ENOSPC), URLError(.badServerResponse), NidoError.hostNotAllowed("evil.com")] {
+            let lines = CLISupport.macImageFailureLines(error: error, partial: 300 << 10)
+            #expect(lines?.count == 2)
+            #expect(lines?.first == "Errore: \(CLISupport.message(for: error))")
+            #expect(lines?.last == "Download in pausa: esegui lo stesso comando per riprenderlo.")
+        }
+    }
+
+    @Test func macOtherCacheFileIsOneLine() {
+        #expect(CLISupport.macImageOtherFileLine(path: "/c/macos/.old.ipsw.part", bytes: 3 << 30)
+            == "Anche nella cache di macOS: /c/macos/.old.ipsw.part (3 GiB)")
+    }
 }

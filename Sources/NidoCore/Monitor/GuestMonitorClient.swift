@@ -168,7 +168,7 @@ public struct GuestMonitorClient: Sendable {
 
 /// Runs `work`, giving up with `MonitorError.timeout` after `limit`. The result of work that is
 /// not cancellable (e.g. a pending `connect`) is dropped when it finally arrives.
-private enum Deadline {
+enum Deadline {
     static func run<T: Sendable>(
         _ limit: Duration, _ work: @escaping @Sendable () async throws -> T
     ) async throws -> T {

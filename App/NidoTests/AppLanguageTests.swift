@@ -158,8 +158,8 @@ struct AppLanguageTests {
 
     /// Wizard/, Library/ and Snapshots/: every key with today's Italian (model text included).
     static let wizardLibrarySnapshotsCopy: KeyValuePairs<String, String> = [
-        "from an IPSW file": "da file IPSW",
-        "macOS installs from an IPSW file you download from Apple’s developer site, betas included: Nido only reads it. Installing takes 4 to 20 minutes, depending on the Mac and the disk; you complete macOS Setup Assistant in the VM’s window.": "macOS si installa da un file IPSW che scarichi tu dal sito sviluppatori di Apple, anche beta: Nido lo legge soltanto. L'installazione dura da 4 a 20 minuti, secondo il Mac e il disco; l'assistente iniziale di macOS lo completi tu nella finestra della VM.",
+        "from an IPSW file or from Apple": "da file IPSW o da Apple",
+        "macOS installs from an IPSW file, betas included: one you choose, or one Nido downloads from Apple when you ask. Installing takes 4 to 20 minutes, depending on the Mac and the disk; you complete macOS Setup Assistant in the VM’s window.": "macOS si installa da un file IPSW, anche beta: uno che scegli tu, o uno che Nido scarica da Apple quando glielo chiedi. L'installazione dura da 4 a 20 minuti, secondo il Mac e il disco; l'assistente iniziale di macOS lo completi tu nella finestra della VM.",
         "Official Ubuntu Server cloud image from cloud-images.ubuntu.com, verified with SHA-256 before use. Windows is coming in a future version.": "Immagine cloud ufficiale di Ubuntu Server da cloud-images.ubuntu.com, verificata con SHA-256 prima dell'uso. Windows arriverà nelle prossime versioni.",
         "Official Debian cloud image from cloud.debian.org, verified with SHA-512 before use. Windows is coming in a future version.": "Immagine cloud ufficiale di Debian da cloud.debian.org, verificata con SHA-512 prima dell'uso. Windows arriverà nelle prossime versioni.",
         "Monitor, Guest Tools, Ollama, AI bridge and VM templates are Linux-only for now.": "Monitor, Guest Tools, Ollama, ponte AI e modelli di VM sono per ora solo per Linux.",
@@ -176,8 +176,8 @@ struct AppLanguageTests {
         "Change…": "Cambia…",
         "Checking the image": "Controllo dell'immagine",
         "Nido reads the IPSW and checks that this Mac can install it: usually a few seconds.": "Nido legge l'IPSW e verifica che questo Mac possa installarlo: di solito pochi secondi.",
-        "Download the IPSW from Apple’s developer site; a beta works too.": "Scarica l'IPSW dal sito sviluppatori di Apple, anche una beta.",
-        "Nido only reads it: it doesn’t download, copy, move or change it.": "Nido lo legge soltanto: non lo scarica, non lo copia, non lo sposta e non lo modifica.",
+        "Choose an IPSW file, or download macOS from Apple; a beta works too.": "Scegli un file IPSW o scarica macOS da Apple, anche una beta.",
+        "Nido downloads macOS from Apple only when you ask. It never copies, moves or changes a file you choose.": "Nido scarica macOS da Apple solo quando glielo chiedi. Non copia, non sposta e non modifica mai un file che scegli.",
         "Choose the macOS IPSW file": "Scegli il file IPSW di macOS",
         "Choose": "Scegli",
         "Memory": "Memoria",
@@ -186,7 +186,8 @@ struct AppLanguageTests {
         "macOS user name": "Nome utente in macOS",
         "The short name of the account you’ll create in Setup Assistant. Only nido ssh uses it, and you can change it later.": "Il nome breve dell'account che creerai nell'assistente iniziale. Serve solo a nido ssh e si può cambiare dopo.",
         "name": "nome",
-        "Nido never asks for or saves passwords.": "Nido non chiede né salva password.",
+        "Nido keeps no password unless you later let it authorize its key with the account password (Settings › Agent).":
+            "Nido non conserva password, a meno che in seguito tu non gli faccia autorizzare la sua chiave con la password dell’account (Impostazioni › Agente).",
         "After Setup Assistant, turn on Remote Login in macOS: the Terminal Access panel in the VM’s window guides you.": "Dopo l'assistente iniziale attiva Login remoto in macOS: il pannello Accesso da terminale della finestra della VM ti guida.",
         "Essential packages": "Pacchetti essenziali",
         "curl, git, python3, openssh-server, jq and other basic tools. No full system upgrade.": "curl, git, python3, openssh-server, jq e altri strumenti di base. Nessun aggiornamento completo del sistema.",
@@ -207,7 +208,7 @@ struct AppLanguageTests {
         "From Template": "Da modello",
         "Can’t limit the choice to .ipsw files on this Mac.": "Impossibile limitare la scelta ai file .ipsw su questo Mac.",
         "Choose a macOS %lld IPSW (a %lld.x beta works too). Nido hasn’t created any files.": "Scegli un IPSW di macOS %lld (anche una beta %lld.x). Nido non ha creato alcun file.",
-        "Choose the macOS .ipsw file downloaded from Apple’s developer site. Nido hasn’t created any files.": "Scegli il file .ipsw di macOS scaricato dal sito sviluppatori di Apple. Nido non ha creato alcun file.",
+        "Choose the macOS .ipsw file downloaded from Apple’s developer site, or Download from Apple. Nido hasn’t created any files.": "Scegli il file .ipsw di macOS scaricato dal sito sviluppatori di Apple, oppure Scarica da Apple. Nido non ha creato alcun file.",
         "No file chosen": "Nessun file scelto",
         "This Mac": "Questo Mac",
         "Compatible": "Compatibile",
@@ -237,7 +238,7 @@ struct AppLanguageTests {
         "Check your choices: Nido copies %@ to %@ and starts it.": "Controlla le scelte: Nido copia %@ in %@ e la avvia.",
         "Check your choices: Nido creates %@ and starts it as soon as it’s ready.": "Controlla le scelte: Nido crea %@ e la avvia appena è pronta.",
         "Choose the system of the new virtual machine.": "Scegli il sistema della nuova macchina virtuale.",
-        "Choose the macOS IPSW file you downloaded: Nido checks that this Mac can install it.": "Scegli il file IPSW di macOS che hai scaricato: Nido controlla che questo Mac possa installarlo.",
+        "Choose a macOS IPSW file or download it from Apple: Nido checks that this Mac can install it.": "Scegli un file IPSW di macOS o scaricalo da Apple: Nido controlla che questo Mac possa installarlo.",
         "Sign in to %@ from Terminal with nido ssh and your key, no password.": "Accedi a %@ da terminale con nido ssh e la tua chiave, senza password.",
         "Nido is installing macOS %@ on %@. You can close the wizard: the progress stays in the library.": "Nido installa macOS %@ in %@. Puoi chiudere la procedura: l'avanzamento resta nella libreria.",
         "Check your choices: Nido installs macOS on %@ and starts it for Setup Assistant.": "Controlla le scelte: Nido installa macOS in %@ e la avvia per l'assistente iniziale.",
@@ -592,14 +593,14 @@ struct AppLanguageTests {
         "Stop and Quit": "Arresta ed esci",
         "The VM’s public key isn’t a one-line OpenSSH key: Nido doesn’t type it.":
             "La chiave pubblica della VM non è una chiave OpenSSH su una riga: Nido non la digita.",
-        "The character %@ can’t be typed with this Mac’s keyboard: type the command yourself in the VM.":
-            "Il carattere %@ non si può digitare con la tastiera di questo Mac: scrivi il comando a mano nella VM.",
+        "The character %@ can’t be typed with the keyboard chosen for this VM: type the command yourself in the VM.":
+            "Il carattere %@ non si può digitare con la tastiera scelta per questa VM: scrivi il comando a mano nella VM.",
         "The VM’s screen isn’t shown: start the VM and try again. If typing had begun, the command may be only partly typed: clear the line in the VM’s Terminal before you try again.":
             "Lo schermo della VM non è visibile: avvia la VM e riprova. Se avevi cominciato a digitare, il comando potrebbe essere scritto solo in parte: cancella la riga nel Terminale della VM prima di riprovare.",
         "The VM is no longer running: the command may be only partly typed. Clear the line in the VM’s Terminal before you try again.":
             "La VM non è più in esecuzione: il comando potrebbe essere scritto solo in parte. Cancella la riga nel Terminale della VM prima di riprovare.",
-        "To use %@ with nido ssh, once, after Setup Assistant. Nido never asks for or saves passwords.":
-            "Per usare %@ con nido ssh, una volta sola dopo l'assistente iniziale. Nido non chiede né salva password.",
+        "To use %@ with nido ssh, once, after Setup Assistant. These steps need no password.":
+            "Per usare %@ con nido ssh, una volta sola dopo l'assistente iniziale. Questi passaggi non richiedono password.",
         "Complete Setup Assistant": "Completa l'assistente iniziale",
         "Create the account %@: it’s the name nido ssh uses. You can change it in the VM’s settings.":
             "Crea l'account %@: è il nome che usa nido ssh. Puoi cambiarlo nelle impostazioni della VM.",
@@ -614,8 +615,13 @@ struct AppLanguageTests {
         "<key>": "<chiave>",
         "The panel opens automatically until nido ssh has worked once; after that, open it with Terminal Access in the toolbar.":
             "Il pannello si apre da solo finché nido ssh non è riuscito almeno una volta; poi dalla barra, Accesso da terminale.",
-        "Nido uses this Mac’s keyboard layout: if the VM’s is different, type the command yourself. Keep Caps Lock off in the VM.":
-            "Nido usa la disposizione della tastiera di questo Mac: se nella VM è diversa, digita il comando a mano. Tieni spento Blocco maiuscole nella VM.",
+        "Nido types with the layout chosen in Guest keyboard: it must be the one the VM uses. Keep Caps Lock off in the VM.":
+            "Nido digita con la disposizione scelta in Tastiera della VM: deve essere quella che usa la VM. Tieni spento Blocco maiuscole nella VM.",
+        "Guest keyboard": "Tastiera della VM",
+        "Same as this Mac": "Come questo Mac",
+        "The keyboard layout chosen for the VM isn’t on this Mac: choose another in Guest keyboard.":
+            "La disposizione di tastiera scelta per la VM non c'è su questo Mac: scegline un'altra in Tastiera della VM.",
+        "Can’t save the guest keyboard: %@": "Impossibile salvare la tastiera della VM: %@",
         "The VM’s public key (authorized_key.pub) can’t be read safely: type the command yourself with your key.":
             "La chiave pubblica della VM (authorized_key.pub) non si può leggere in sicurezza: scrivi il comando a mano con la tua chiave.",
         "The VM’s public key (authorized_key.pub) isn’t in its folder: type the command yourself with your key.":

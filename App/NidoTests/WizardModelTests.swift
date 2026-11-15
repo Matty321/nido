@@ -1134,6 +1134,108 @@ final class FakeMacInstaller: MacVMInstalling {
     }
 }
 
+/// The wizard's "Download from Apple": `latestOffer` answers `offer` (or throws `offerError`);
+/// `download` records the offer and waits until the test ends it (`finish`), or until it is
+/// cancelled (then it throws `CancellationError`, leaving its partial file: `partial` stays).
+final class FakeMacImageDownloader: MacImageDownloading {
+    private struct State {
+        var offerCalls = 0
+        var offerError: NidoError?
+        var downloads: [MacImageOffer] = []
+        var progress: (@Sendable (DownloadProgress) -> Void)?
+        var continuation: CheckedContinuation<URL, any Error>?
+        var cancelled = false
+        var partial: Int64 = 0
+        var size: UInt64? = 27_487_790_694
+        var sizeCalls = 0
+        var partialCalls = 0
+        var version = "26.6"
+    }
+
+    var offer: MacImageOffer { makeOffer(version: state.withLock { $0.version }) }
+
+    private func makeOffer(version: String) -> MacImageOffer {
+        MacImageOffer(
+            build: "25G62", version: version,
+            url: URL(string: "https://updates.cdn-apple.com/UniversalMac_26.6_25G62_Restore.ipsw")!)
+    }
+    private let state = Mutex(State())
+
+    var offerCalls: Int { state.withLock { $0.offerCalls } }
+    var downloads: [MacImageOffer] { state.withLock { $0.downloads } }
+    var isDownloading: Bool { state.withLock { $0.continuation != nil } }
+    var wasCancelled: Bool { state.withLock { $0.cancelled } }
+
+    var sizeCalls: Int { state.withLock { $0.sizeCalls } }
+    var partialCalls: Int { state.withLock { $0.partialCalls } }
+    /// What the HEAD request finds (nil: it fails or the server says nothing).
+    func answerSize(_ size: UInt64?) { state.withLock { $0.size = size } }
+    /// The version Apple offers ("99.0": newer than any host).
+    func offerVersion(_ version: String) { state.withLock { $0.version = version } }
+    func refuseOffer(with error: NidoError) { state.withLock { $0.offerError = error } }
+    func leavePartial(_ bytes: Int64) { state.withLock { $0.partial = bytes } }
+
+    func latestOffer() async throws -> MacImageOffer {
+        let version = state.withLock { $0.version }
+        return try state.withLock { s in
+            s.offerCalls += 1
+            if let error = s.offerError { throw error }
+            return makeOffer(version: version)
+        }
+    }
+
+    func size(of offer: MacImageOffer) async -> UInt64? {
+        state.withLock { s in
+            s.sizeCalls += 1
+            return s.size
+        }
+    }
+
+    func partialBytes(for offer: MacImageOffer) -> Int64 {
+        state.withLock { s in
+            s.partialCalls += 1
+            return s.partial
+        }
+    }
+
+    func download(_ offer: MacImageOffer, progress: @escaping @Sendable (DownloadProgress) -> Void) async throws -> URL {
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (c: CheckedContinuation<URL, any Error>) in
+                state.withLock { s in
+                    s.downloads.append(offer)
+                    s.progress = progress
+                    if s.cancelled { c.resume(throwing: CancellationError()) } else { s.continuation = c }
+                }
+            }
+        } onCancel: {
+            state.withLock { s in
+                s.cancelled = true
+                if let c = s.continuation {
+                    s.continuation = nil
+                    c.resume(throwing: CancellationError())
+                }
+            }
+        }
+    }
+
+    func report(_ received: UInt64, of total: UInt64) {
+        state.withLock { $0.progress }?(DownloadProgress(receivedBytes: received, expectedBytes: total))
+    }
+
+    /// Ends the running download with the file, or with `error`.
+    func finish(_ url: URL? = nil, error: (any Error)? = nil) {
+        let c = state.withLock { s -> CheckedContinuation<URL, any Error>? in
+            defer { s.continuation = nil }
+            return s.continuation
+        }
+        if let error { c?.resume(throwing: error) } else if let url { c?.resume(returning: url) }
+    }
+
+    func waitUntilDownloading() async {
+        for _ in 0..<400 where !isDownloading { try? await Task.sleep(for: .milliseconds(5)) }
+    }
+}
+
 enum MacInstallFixtures {
     static let info = MacImageInfo(
         buildVersion: "25G62", version: "26.6", minimumCPUCount: 2, minimumMemoryBytes: 4 << 30,
@@ -1168,14 +1270,15 @@ final class MacWizardTests {
 
     func makeModel(installer: FakeMacInstaller = FakeMacInstaller(), store: MacInstallStore = MacInstallStore(),
                    physicalMemory: UInt64 = 32 << 30, hostCores: Int = 8,
-                   sshUser: String = "agente") throws -> WizardModel {
+                   sshUser: String = "agente", downloader: FakeMacImageDownloader? = nil,
+                   hostMajor: Int = 27) throws -> WizardModel {
         let key = tmp.appendingPathComponent("id_ed25519.pub")
         try Data(validPublicKey.utf8).write(to: key)
         let local = tmp.appendingPathComponent("base.raw")
         return WizardModel(
             registry: FakeRegistry(), images: .localFile(local), creator: FakeCreator(), defaultKeyURL: key,
             physicalMemory: physicalMemory, hostCores: hostCores, macInstaller: installer, installs: store,
-            defaultSSHUser: sshUser)
+            macImageDownloader: downloader, defaultSSHUser: sshUser, hostMajor: hostMajor)
     }
 
     /// Sistema (macOS) → Immagine macOS → Risorse → Accesso → Riepilogo, with the IPSW checked.
@@ -1370,12 +1473,181 @@ final class MacWizardTests {
     }
 
     /// The model drives a whole installation to its end.
-    func runToSummary(_ model: WizardModel) async throws {
+    func runToSummary(_ model: WizardModel, fullName: String = "") async throws {
+        try await runToAccess(model)
+        model.accountFullName = fullName
+        await model.next()
+        #expect(model.step == .summary)
+    }
+
+    /// Up to the access step (the account's full name still empty).
+    func runToAccess(_ model: WizardModel) async throws {
         model.selectSystem(.macos)
         await model.next()
         await model.chooseIPSW(try ipsw())
-        await model.next(); await model.next(); await model.next()
+        await model.next(); await model.next()
+        #expect(model.step == .access)
+    }
+
+    // MARK: Account step (macOS 27 guests)
+
+    private func info27() -> MacImageInfo {
+        MacImageInfo(buildVersion: "27A1", version: "27.0", minimumCPUCount: 2, minimumMemoryBytes: 4 << 30,
+                     hardwareModel: Data([1, 2, 3]))
+    }
+
+    @Test func accountOfferedOnlyFor27() async throws {
+        for (host, image, expected) in [(26, "26.6", false), (27, "26.6", false), (26, "27.0", false), (27, "27.0", true)] {
+            let installer = FakeMacInstaller()
+            installer.answer(MacImageInfo(buildVersion: "x", version: image, minimumCPUCount: 2,
+                                          minimumMemoryBytes: 4 << 30, hardwareModel: Data([1])))
+            let model = try makeModel(installer: installer, hostMajor: host)
+            try await runToAccess(model)
+            #expect(model.offersAccount == expected, "host \(host) image \(image)")
+        }
+    }
+
+    @Test func accountNeedsFullNameAndMatchingPasswords() async throws {
+        let installer = FakeMacInstaller()
+        installer.answer(info27())
+        let model = try makeModel(installer: installer)
+        try await runToAccess(model)
+        #expect(model.offersAccount)
+        // Generated password by default: only the full name is missing.
+        #expect(!model.generatedPassword.isEmpty)
+        #expect(!model.choosesOwnPassword)
+        #expect(model.accountError != nil)
+        #expect(!model.isNextEnabled, "Avanti is blocked without a full name")
+        model.accountFullName = "Agente Nido"
+        #expect(model.accountError == nil)
+        #expect(model.isNextEnabled)
+
+        model.choosesOwnPassword = true
+        #expect(model.accountError != nil, "empty own password")
+        model.accountPassword = "una password"
+        model.accountPasswordAgain = "un'altra"
+        #expect(model.accountError != nil, "mismatch")
+        model.accountPasswordAgain = "una password"
+        #expect(model.accountError == nil)
+        // A password GuestPassword refuses (a newline) is an error, not dropped.
+        model.accountPassword = "a\nb"
+        model.accountPasswordAgain = "a\nb"
+        #expect(model.accountError != nil)
+        #expect(!model.isNextEnabled)
+    }
+
+    /// What macOS would refuse at the first start (a password under four characters) blocks the
+    /// step: a VM with such an account would never start.
+    @Test(.enabled(if: MacFirstBoot.canValidate, "needs macOS 27 Virtualization"))
+    func accountMacOSWouldRefuseIsAnError() async throws {
+        let installer = FakeMacInstaller()
+        installer.answer(info27())
+        let model = try makeModel(installer: installer)
+        try await runToAccess(model)
+        model.sshUser = "agente"
+        model.accountFullName = "Agente Nido"
+        model.choosesOwnPassword = true
+        model.accountPassword = "abc"
+        model.accountPasswordAgain = "abc"
+        #expect(model.accountError != nil)
+        #expect(!model.isNextEnabled)
+        model.accountPassword = "abcd"
+        model.accountPasswordAgain = "abcd"
+        #expect(model.accountError == nil)
+        #expect(model.isNextEnabled)
+    }
+
+    @Test func noAccountWhenDeclined() async throws {
+        let installer = FakeMacInstaller()
+        installer.answer(info27())
+        let model = try makeModel(installer: installer)
+        try await runToAccess(model)
+        model.createsAccount = false
+        #expect(model.accountError == nil)
+        await model.next()
         #expect(model.step == .summary)
+        let run = Task { await model.next() }
+        await installer.waitUntilInstalling()
+        let request = try #require(installer.requests.first)
+        #expect(request.account == nil)
+        run.cancel()
+    }
+
+    @Test func requestCarriesAccountAndAgent() async throws {
+        let installer = FakeMacInstaller()
+        installer.answer(info27())
+        let model = try makeModel(installer: installer)
+        try await runToSummary(model, fullName: "Agente Nido")
+        model.agentAccess = true
+        let generated = model.generatedPassword
+        let run = Task { await model.next() }
+        await installer.waitUntilInstalling()
+        let request = try #require(installer.requests.first)
+        #expect(request.account?.fullName == "Agente Nido")
+        #expect(request.account?.password.value == generated)
+        #expect(request.agentAccess)
+        run.cancel()
+    }
+
+    @Test func ownPasswordReachesRequestAndFieldsClear() async throws {
+        let installer = FakeMacInstaller()
+        installer.answer(info27())
+        let model = try makeModel(installer: installer)
+        try await runToAccess(model)
+        model.accountFullName = "Agente Nido"
+        model.choosesOwnPassword = true
+        model.accountPassword = "una password"
+        model.accountPasswordAgain = "una password"
+        await model.next()
+        #expect(model.step == .summary)
+        let run = Task { await model.next() }
+        await installer.waitUntilInstalling()
+        let request = try #require(installer.requests.first)
+        #expect(request.account?.password.value == "una password")
+        #expect(model.accountPassword.isEmpty)
+        #expect(model.accountPasswordAgain.isEmpty)
+        #expect(!model.generatedPassword.isEmpty, "kept until the VM exists")
+        run.cancel()
+    }
+
+    @Test func agentAccessWithoutAccount() async throws {
+        let installer = FakeMacInstaller()
+        installer.answer(info27())
+        let model = try makeModel(installer: installer)
+        try await runToAccess(model)
+        model.createsAccount = false
+        model.agentAccess = true
+        await model.next()
+        let run = Task { await model.next() }
+        await installer.waitUntilInstalling()
+        let request = try #require(installer.requests.first)
+        #expect(request.account == nil)
+        #expect(request.agentAccess)
+        run.cancel()
+    }
+
+    @Test func failedInstallKeepsTheSeenPassword() async throws {
+        let installer = FakeMacInstaller()
+        installer.answer(info27())
+        let model = try makeModel(installer: installer)
+        try await runToSummary(model, fullName: "Agente Nido")
+        let shown = model.generatedPassword
+        let run = Task { await model.next() }
+        await installer.waitUntilInstalling()
+        _ = model.installationFailed(NidoError.invalidResources("x"))
+        #expect(model.generatedPassword == shown)
+        #expect(model.accountError == nil)
+        run.cancel()
+    }
+
+    @Test func regenerateChangesPassword() async throws {
+        let installer = FakeMacInstaller()
+        installer.answer(info27())
+        let model = try makeModel(installer: installer)
+        try await runToAccess(model)
+        let first = model.generatedPassword
+        model.regeneratePassword()
+        #expect(model.generatedPassword != first)
     }
 
     /// Crea e installa: the installation lives in the store (it outlives the wizard), with its
@@ -1772,5 +2044,242 @@ final class MacWizardTests {
             return
         }
         #expect(WizardModel.Fixture(rawValue: "library-mac-installing") == .libraryMacInstalling)
+    }
+}
+
+// MARK: - Download from Apple
+
+extension MacWizardTests {
+    /// The image page of a macOS wizard with a fake downloader, nothing asked of Apple yet.
+    func downloadPage(_ downloader: FakeMacImageDownloader, installer: FakeMacInstaller = FakeMacInstaller()) async throws -> WizardModel {
+        let model = try makeModel(installer: installer, downloader: downloader)
+        await model.load()
+        model.selectSystem(.macos)
+        await model.next()
+        #expect(model.step == .download)
+        return model
+    }
+
+    /// Nothing goes online before the button: choosing macOS, the image page and a picked file
+    /// never ask Apple.
+    @Test func noNetworkUntilTheButton() async throws {
+        let downloader = FakeMacImageDownloader()
+        let model = try await downloadPage(downloader)
+        #expect(model.canDownloadMacFromApple)
+        #expect(model.macDownload == .idle)
+        await model.chooseIPSW(try ipsw())
+        #expect(downloader.offerCalls == 0)
+        #expect(downloader.downloads.isEmpty)
+    }
+
+    /// The click asks for the offer once and shows the confirmation (with what resumes).
+    @Test func buttonFetchesTheOfferOnceAndConfirms() async throws {
+        let downloader = FakeMacImageDownloader()
+        let model = try await downloadPage(downloader)
+        await model.downloadMacFromApple()
+        #expect(downloader.offerCalls == 1)
+        #expect(model.confirmingMacOffer == downloader.offer)
+        #expect(model.macDownloadQuestion == "Scaricare macOS 26.6 da Apple?")
+        #expect(model.macDownloadMessage.contains("25,6 GiB"), "\(model.macDownloadMessage)")
+        #expect(downloader.sizeCalls == 1)
+        // A second click while the question is shown asks nothing more.
+        await model.downloadMacFromApple()
+        #expect(downloader.offerCalls == 1)
+        #expect(downloader.downloads.isEmpty)
+    }
+
+    @Test func confirmationSaysWhenAPartialFileResumes() async throws {
+        let downloader = FakeMacImageDownloader()
+        downloader.answerSize(25 << 30)
+        downloader.leavePartial(3 << 30)
+        let model = try await downloadPage(downloader)
+        await model.downloadMacFromApple()
+        #expect(model.macDownloadMessage.contains("3 GiB"), "\(model.macDownloadMessage)")
+        // Read again and again (a redraw): the cache is not looked at again.
+        for _ in 0..<5 { _ = model.macDownloadMessage }
+        #expect(downloader.partialCalls == 1)
+    }
+
+    /// The HEAD request fails: the sheet says the size is unknown, no figure invented.
+    @Test func unknownSizeIsSaidHonestly() async throws {
+        let downloader = FakeMacImageDownloader()
+        downloader.answerSize(nil)
+        let model = try await downloadPage(downloader)
+        await model.downloadMacFromApple()
+        #expect(model.macOfferSize == nil)
+        #expect(model.macDownloadMessage.hasPrefix("La dimensione non è nota"), "\(model.macDownloadMessage)")
+        #expect(!model.macDownloadMessage.contains("GB"))
+    }
+
+    @Test func decliningDownloadsNothing() async throws {
+        let downloader = FakeMacImageDownloader()
+        let model = try await downloadPage(downloader)
+        await model.downloadMacFromApple()
+        model.declineMacDownload()
+        #expect(model.macDownload == .idle)
+        #expect(downloader.downloads.isEmpty)
+        #expect(model.ipswURL == nil)
+        // The button works again.
+        await model.downloadMacFromApple()
+        #expect(downloader.offerCalls == 2)
+    }
+
+    /// Accepting downloads (progress is shown), then the file is chosen and inspected like a
+    /// picked one.
+    @Test func acceptingDownloadsAndChoosesTheFile() async throws {
+        let downloader = FakeMacImageDownloader()
+        let installer = FakeMacInstaller()
+        let model = try await downloadPage(downloader, installer: installer)
+        await model.downloadMacFromApple()
+        let file = try ipsw()
+        let running = Task { await model.confirmMacDownload() }
+        await downloader.waitUntilDownloading()
+        #expect(model.isDownloadingMac)
+        #expect(downloader.downloads == [downloader.offer])
+        downloader.report(1 << 30, of: 4 << 30)
+        await eventually { model.macProgress?.receivedBytes == 1 << 30 }
+        #expect(model.macDownloadFraction == 0.25)
+        #expect(model.macDownloadTitle == "Download di macOS 26.6")
+        #expect(model.macDownloadDetail.contains("updates.cdn-apple.com"))
+        #expect(model.macDownloadDetail.contains("1 GiB di 4 GiB"), "\(model.macDownloadDetail)")
+        #expect(!model.isNextEnabled, "Avanti aspetta la fine del download")
+        downloader.finish(file)
+        await running.value
+        #expect(model.macDownload == .idle)
+        #expect(model.ipswURL == file)
+        #expect(installer.inspected == [file])
+        #expect(model.macImage == MacInstallFixtures.info)
+        #expect(model.isNextEnabled)
+    }
+
+    @Test func aFailedOfferOrDownloadIsShown() async throws {
+        let downloader = FakeMacImageDownloader()
+        downloader.refuseOffer(with: .downloadFailed("Apple non risponde"))
+        let model = try await downloadPage(downloader)
+        await model.downloadMacFromApple()
+        #expect(model.macDownload == .idle)
+        #expect(model.macDownloadError == "Download fallito: Apple non risponde.")
+
+        let second = FakeMacImageDownloader()
+        second.leavePartial(1 << 30)
+        let other = try await downloadPage(second)
+        await other.downloadMacFromApple()
+        let running = Task { await other.confirmMacDownload() }
+        await second.waitUntilDownloading()
+        second.finish(error: NidoError.insufficientSpace(needed: 20 << 30, available: 1 << 30))
+        await running.value
+        #expect(other.macDownload == .idle)
+        #expect(other.macDownloadError != nil)
+        #expect(other.macDownloadErrorDetail != nil, "Il file parziale resta: si riprende")
+        #expect(other.ipswURL == nil)
+    }
+
+    /// An offer for a newer macOS than this Mac's, or over the size cap, is refused before the
+    /// confirmation: nothing is downloaded and then deleted.
+    @Test func newerMajorOrOversizeOfferIsRefusedBeforeTheQuestion() async throws {
+        let newer = FakeMacImageDownloader()
+        newer.offerVersion("99.0")
+        let model = try await downloadPage(newer)
+        await model.downloadMacFromApple()
+        #expect(model.macDownload == .idle)
+        #expect(model.confirmingMacOffer == nil)
+        #expect(model.macDownloadError != nil)
+        #expect(model.macDownloadErrorDetail != nil, "Dice quale macOS scegliere")
+        #expect(newer.downloads.isEmpty)
+
+        let huge = FakeMacImageDownloader()
+        huge.answerSize((40 << 30) + 1)
+        let other = try await downloadPage(huge)
+        await other.downloadMacFromApple()
+        #expect(other.confirmingMacOffer == nil)
+        #expect(other.macDownloadError != nil)
+        #expect(huge.downloads.isEmpty)
+    }
+
+    /// A failed download does not hide an image already chosen, nor block Avanti.
+    @Test func failedDownloadKeepsAnAlreadyChosenImage() async throws {
+        let downloader = FakeMacImageDownloader()
+        let model = try await downloadPage(downloader)
+        await model.chooseIPSW(try ipsw())
+        #expect(model.macImage != nil)
+        await model.downloadMacFromApple()
+        let running = Task { await model.confirmMacDownload() }
+        await downloader.waitUntilDownloading()
+        downloader.finish(error: URLError(.networkConnectionLost))
+        await running.value
+        #expect(model.macDownloadError != nil)
+        #expect(model.macImageError == nil)
+        #expect(model.macImage != nil)
+        #expect(model.nextBlocker == nil)
+        #expect(model.isNextEnabled)
+    }
+
+    /// Every byte received: the panel says it is checking, and a Cancel then pauses nothing; the
+    /// checked image is chosen.
+    @Test func cancelDuringTheFinalCheckIsNotAPause() async throws {
+        let downloader = FakeMacImageDownloader()
+        let model = try await downloadPage(downloader)
+        await model.downloadMacFromApple()
+        let file = try ipsw()
+        let running = Task { await model.confirmMacDownload() }
+        await downloader.waitUntilDownloading()
+        downloader.report(4 << 30, of: 4 << 30)
+        await eventually { model.macChecking }
+        #expect(model.isDownloadingMac)
+        model.cancelMacDownload()
+        #expect(!downloader.wasCancelled)
+        downloader.finish(file)
+        await running.value
+        #expect(model.macDownloadNotice == nil)
+        #expect(!model.macChecking)
+        #expect(model.ipswURL == file)
+        #expect(model.macImage != nil)
+    }
+
+    /// Annulla on the progress panel: the download stops, the partial file stays, the note says it resumes.
+    @Test func cancelKeepsThePartialAndSaysSo() async throws {
+        let downloader = FakeMacImageDownloader()
+        let model = try await downloadPage(downloader)
+        await model.downloadMacFromApple()
+        let running = Task { await model.confirmMacDownload() }
+        await downloader.waitUntilDownloading()
+        model.cancelMacDownload()
+        await running.value
+        #expect(downloader.wasCancelled)
+        #expect(model.macDownload == .idle)
+        #expect(model.macDownloadNotice?.hasPrefix("Download in pausa") == true, "\(model.macDownloadNotice ?? "")")
+        #expect(model.ipswURL == nil)
+    }
+
+    /// Closing the wizard cancels the download: no orphan task, nothing chosen afterwards.
+    @Test func closingTheWizardCancelsTheDownload() async throws {
+        let downloader = FakeMacImageDownloader()
+        let model = try await downloadPage(downloader)
+        var closed = false
+        model.onClose = { closed = true }
+        await model.downloadMacFromApple()
+        let running = Task { await model.confirmMacDownload() }
+        await downloader.waitUntilDownloading()
+        model.cancel()
+        await model.waitForCleanup()
+        await running.value
+        #expect(closed)
+        #expect(downloader.wasCancelled)
+        #expect(model.macDownload == .idle)
+        #expect(model.ipswURL == nil)
+    }
+
+    /// Indietro from the image page cancels a running download too.
+    @Test func goingBackCancelsTheDownload() async throws {
+        let downloader = FakeMacImageDownloader()
+        let model = try await downloadPage(downloader)
+        await model.downloadMacFromApple()
+        let running = Task { await model.confirmMacDownload() }
+        await downloader.waitUntilDownloading()
+        model.back()
+        await running.value
+        #expect(downloader.wasCancelled)
+        #expect(model.step == .system)
+        #expect(model.macDownload == .idle)
     }
 }

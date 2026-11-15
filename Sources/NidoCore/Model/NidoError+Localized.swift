@@ -110,6 +110,14 @@ extension NidoError: LocalizedError {
             L10n.string("the VM \(name) is running: stop it before cloning it", language: language)
         case .seedUnreadable(let path):
             L10n.string("can’t read the VM’s cloud-init configuration (\(path))", language: language)
+        case .skillForeignFile(let path):
+            L10n.string("\(path) exists and nido did not write it: use --force to overwrite it", language: language)
+        case .skillTargetIsLink(let path):
+            L10n.string("\(path) is a link: nido doesn’t follow it and doesn’t replace it", language: language)
+        case .macAgentUnavailable:
+            L10n.string("Nido Agent isn’t in this Nido build", language: language)
+        case .agentSocketInUse(let path):
+            L10n.string("another running VM already serves the agent socket \(path)", language: language)
         case .isTemplate(let name):
             L10n.string("\(name) is a template: use nido create --from-template or nido template edit", language: language)
         case .notATemplate(let name):

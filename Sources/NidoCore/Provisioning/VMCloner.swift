@@ -51,6 +51,7 @@ public struct VMCloner: Sendable {
     private let paths: NidoPaths
     private let runner: ProcessRunner
     private let environment: Environment
+    private let passwords: any GuestPasswordStore
 
     /// What the cloner asks the system, replaceable in the tests.
     struct Environment: Sendable {
@@ -61,13 +62,19 @@ public struct VMCloner: Sendable {
         var faultInjection: (@Sendable (CloneStep) throws -> Void)?
     }
 
-    public init(paths: NidoPaths, runner: ProcessRunner) {
-        self.init(paths: paths, runner: runner, environment: Environment())
+    public init(
+        paths: NidoPaths, runner: ProcessRunner, passwords: any GuestPasswordStore = KeychainGuestPasswordStore()
+    ) {
+        self.init(paths: paths, runner: runner, passwords: passwords, environment: Environment())
     }
 
-    init(paths: NidoPaths, runner: ProcessRunner, environment: Environment) {
+    init(
+        paths: NidoPaths, runner: ProcessRunner, passwords: any GuestPasswordStore = KeychainGuestPasswordStore(),
+        environment: Environment
+    ) {
         self.paths = paths
         self.runner = runner
+        self.passwords = passwords
         self.environment = environment
     }
 
@@ -202,6 +209,7 @@ public struct VMCloner: Sendable {
         let temporary = paths.root.appendingPathComponent(
             ".\(target.rawValue)\(Self.cloningInfix)\(UUID().uuidString)", isDirectory: true)
         guard mkdir(temporary.path, 0o700) == 0 else { throw posixError() }
+        var copiedPasswordFor: UUID?
         do {
             let clone = VMBundle(url: temporary)
             try MachineFileCopy.flushAndClone(bundle.diskURL, to: clone.diskURL, forceCopy: environment.forceCopy)
@@ -233,6 +241,8 @@ public struct VMCloner: Sendable {
             config.suspendedConfigHash = nil
             config.sharedFolders = []
             config.aiBridge = nil
+            // Agent access is a per-VM opt-in: a clone does not inherit it.
+            config.agentAccess = nil
             config.pendingProvisioning = nil
             config.isTemplate = false
             config.sshPublicKeyPath = keyPath
@@ -261,6 +271,14 @@ public struct VMCloner: Sendable {
             try SnapshotStore.syncDirectoryNow(temporary)
             try fault(.readyToRename)
             try checkNameIsFree(target)
+            // The guest account's password follows the disk (macOS full name and "provisioning
+            // sent" are kept in the config): the clone's own Keychain item, removed again if the
+            // clone does not complete.
+            // Only a macOS guest has such an account: Linux never touches the Keychain.
+            if sourceConfig.guest == .macos, let password = try passwords.read(vm: sourceConfig.id) {
+                try passwords.save(password, vm: config.id)
+                copiedPasswordFor = config.id
+            }
             let destination = paths.bundleURL(for: target)
             guard renamex_np(temporary.path, destination.path, UInt32(RENAME_EXCL)) == 0 else {
                 if errno == EEXIST { throw NidoError.alreadyExists(target.rawValue) }
@@ -271,6 +289,7 @@ public struct VMCloner: Sendable {
             return (VMBundle(url: destination), guest)
         } catch {
             try? FileManager.default.removeItem(at: temporary)
+            if let copiedPasswordFor { try? passwords.delete(vm: copiedPasswordFor) }
             throw error
         }
     }

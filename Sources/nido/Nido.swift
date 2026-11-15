@@ -17,12 +17,27 @@ struct Nido: AsyncParsableCommand {
             CreateCommand.self, ListCommand.self, StartCommand.self, StopCommand.self,
             IPCommand.self, SSHCommand.self, DeleteCommand.self, ShareCommand.self, RosettaCommand.self,
             SnapshotCommand.self, CloneCommand.self, TemplateCommand.self, NetCommand.self, ImageCommand.self,
+            ActCommand.self, AgentCommand.self, MCPCommand.self, SkillCommand.self,
         ]
     )
 
     /// Parsing errors, help and explicit exit codes are handled by ArgumentParser (in English);
     /// every other error is printed once, in the UI language, as `Error: <msg>`.
     static func main() async {
+        // stdout is line-buffered also into a pipe or a file (C's default there is a full buffer):
+        // progress lines such as `nido agent setup`'s appear as they are printed, not at exit.
+        // It stays the first statement: C allows `setvbuf` only before any output on the stream.
+        // No automated test guards it (no command prints on stdout and then waits without a
+        // running VM); checked by hand with `nido agent setup <vm> > file` on a real guest.
+        setvbuf(stdout, nil, _IOLBF, 0)
+        // ssh's askpass for `GuestSSH.authorizeNidoKey` (`NIDO_ASKPASS=1`): print the password
+        // fetched from the one-shot socket and exit, before any argument parsing (argv[1] is
+        // ssh's prompt) and without logging anything.
+        if let code = Askpass.answer(
+            environment: ProcessInfo.processInfo.environment, write: { try Askpass.writeAll($0) })
+        {
+            Foundation.exit(code)
+        }
         let command: any ParsableCommand
         do {
             command = try parseAsRoot()

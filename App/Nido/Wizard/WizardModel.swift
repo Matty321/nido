@@ -112,8 +112,45 @@ final class WizardModel: Identifiable {
     private(set) var macImageError: String?
     private(set) var macImageErrorDetail: String?
     private(set) var isInspectingImage = false
+    /// "Download from Apple" (macOS image page): nothing goes online until the button is pressed.
+    enum MacDownload: Equatable, Sendable {
+        case idle
+        /// Asking Apple which image it offers this Mac.
+        case askingApple
+        /// The offer is shown in the confirmation sheet.
+        case confirming(MacImageOffer)
+        case downloading(MacImageOffer)
+    }
+
+    private(set) var macDownload: MacDownload = .idle
+    /// Bytes received of the image from Apple.
+    private(set) var macProgress: DownloadProgress?
+    /// An interrupted download's note (the partial file is kept, the next one resumes it).
+    private(set) var macDownloadNotice: String?
+    /// Why asking Apple or the download failed, apart from `macImageError` (the chosen file's):
+    /// a failed download never hides an image already chosen.
+    private(set) var macDownloadError: String?
+    private(set) var macDownloadErrorDetail: String?
+    /// Every byte has arrived: the file is being checked, and a Cancel no longer pauses anything.
+    private(set) var macChecking = false
+    /// What the confirmation shows about the offer, read once when the offer arrives (the size
+    /// from Apple, nil when unknown; the bytes of an interrupted download already in the cache).
+    private(set) var macOfferSize: UInt64?
+    private(set) var macOfferPartial: Int64 = 0
     /// The account the user creates in Setup Assistant: `nido ssh` logs in as it.
     var sshUser: String
+    /// The account step (macOS 27 guests create it at the first start). By default Nido generates
+    /// the password; "Choose my own password" shows two fields instead.
+    var accountFullName = ""
+    var accountPassword = ""
+    var accountPasswordAgain = ""
+    var createsAccount = true
+    var choosesOwnPassword = false
+    /// "Let an agent use this Mac (Nido Agent)" from the creation.
+    var agentAccess = false
+    private(set) var generatedPassword = GuestPassword.generate().value
+    /// The host's major macOS version: the account step needs 27 (injected by the tests).
+    private let hostMajor: Int
     /// The running installation (it lives in `installs`), nil before Crea e installa.
     private(set) var installation: MacInstallation?
     /// Annulla during the installation asks first ("Annullare l'installazione di …?").
@@ -160,6 +197,12 @@ final class WizardModel: Identifiable {
     private let checkHeadroom: (@Sendable (UInt64) async -> MemoryHeadroom?)?
     private let macInstaller: (any MacVMInstalling)?
     private let installs: MacInstallStore?
+    private let macImageDownloader: (any MacImageDownloading)?
+    /// The running offer request or download: Cancel and closing the wizard cancel it.
+    private var macDownloadTask: Task<Void, Never>?
+    /// Updates and results of an older offer or download are ignored.
+    private var macDownloadAttempt = 0
+    private var macRate = ProgressRate(window: WizardModel.speedWindow)
     /// Checks of an older IPSW are ignored.
     private var inspectAttempt = 0
     /// The name last suggested by the wizard: a system change replaces it, a typed one stays.
@@ -187,10 +230,14 @@ final class WizardModel: Identifiable {
          hostCores: Int = ProcessInfo.processInfo.activeProcessorCount,
          checkHeadroom: (@Sendable (UInt64) async -> MemoryHeadroom?)? = nil,
          macInstaller: (any MacVMInstalling)? = nil, installs: MacInstallStore? = nil,
-         defaultSSHUser: String = WizardModel.defaultSSHUser(), presetIPSW: URL? = nil) {
+         macImageDownloader: (any MacImageDownloading)? = nil,
+         defaultSSHUser: String = WizardModel.defaultSSHUser(), presetIPSW: URL? = nil,
+         hostMajor: Int = ProcessInfo.processInfo.operatingSystemVersion.majorVersion) {
+        self.hostMajor = hostMajor
         self.physicalMemory = physicalMemory
         self.macInstaller = macInstaller
         self.installs = installs
+        self.macImageDownloader = macImageDownloader
         self.sshUser = defaultSSHUser
         self.presetIPSW = presetIPSW
         self.hostCores = hostCores
@@ -326,6 +373,9 @@ final class WizardModel: Identifiable {
         inspectAttempt += 1
         let attempt = inspectAttempt
         ipswURL = url
+        macDownloadError = nil
+        macDownloadErrorDetail = nil
+        macDownloadNotice = nil
         ipswBytes = Self.fileSize(url)
         macImage = nil
         macImageError = nil
@@ -350,11 +400,246 @@ final class WizardModel: Identifiable {
         }
     }
 
+    /// "Download from Apple": asks Apple which image it offers this Mac (the first and only online
+    /// call until the user confirms) and shows the confirmation. Returns when the answer is in.
+    func downloadMacFromApple() async {
+        guard let macImageDownloader, isMac, step == .download, macDownload == .idle, !isClosed,
+              phase != .installing, !isInspectingImage else { return }
+        macDownloadAttempt += 1
+        let attempt = macDownloadAttempt
+        macDownload = .askingApple
+        macImageError = nil
+        macImageErrorDetail = nil
+        macDownloadNotice = nil
+        macDownloadError = nil
+        macDownloadErrorDetail = nil
+        let task = Task { @MainActor in
+            do {
+                let offer = try await macImageDownloader.latestOffer()
+                let size = await macImageDownloader.size(of: offer)
+                // An image for a newer macOS than this Mac's (or over the cap) is refused now,
+                // before anything is downloaded and then deleted.
+                try MacImageDownloader.checkOffer(offer, size: size)
+                let partial = macImageDownloader.partialBytes(for: offer)
+                try Task.checkCancellation()
+                guard attempt == macDownloadAttempt else { return }
+                macOfferSize = size
+                macOfferPartial = partial
+                macDownload = .confirming(offer)
+            } catch is CancellationError {
+                if attempt == macDownloadAttempt { macDownload = .idle }
+            } catch {
+                guard attempt == macDownloadAttempt else { return }
+                macDownload = .idle
+                showMacDownloadError(error)
+            }
+        }
+        macDownloadTask = task
+        await task.value
+    }
+
+    /// A failed offer or download, shown beside whatever image is already chosen.
+    private func showMacDownloadError(_ error: any Error, keptPartial: Bool = false) {
+        macDownloadError = Self.sentence(error)
+        if case NidoError.restoreImageUnsupported(_, _?) = error {
+            macDownloadErrorDetail = Self.imageErrorDetail(error)
+        } else if keptPartial {
+            macDownloadErrorDetail = String(localized: "The part already downloaded is kept: Download from Apple again to resume.")
+        } else {
+            macDownloadErrorDetail = nil
+        }
+    }
+
+    /// The confirmation was declined: nothing is downloaded.
+    func declineMacDownload() {
+        guard case .confirming = macDownload else { return }
+        macDownload = .idle
+    }
+
+    /// The confirmation was accepted: downloads the image (resuming a partial file) and, once it
+    /// is checked, chooses it like a file picked by hand. Returns when the download ends.
+    func confirmMacDownload() async {
+        guard let macImageDownloader, case .confirming(let offer) = macDownload, !isClosed else { return }
+        macDownloadAttempt += 1
+        let attempt = macDownloadAttempt
+        macDownload = .downloading(offer)
+        macProgress = nil
+        macChecking = false
+        macDownloadError = nil
+        macDownloadErrorDetail = nil
+        macDownloadNotice = nil
+        macRate.reset()
+        let task = Task { @MainActor in
+            do {
+                let url = try await macImageDownloader.download(offer) { [weak self] value in
+                    Task { @MainActor in self?.receiveMac(value, attempt: attempt) }
+                }
+                // The file is complete and checked: a Cancel that arrived while it was checked is
+                // not a pause, the image is chosen.
+                guard attempt == macDownloadAttempt, !isClosed else { return }
+                macDownload = .idle
+                macProgress = nil
+                macChecking = false
+                await chooseIPSW(url)
+            } catch where error is CancellationError || Task.isCancelled {
+                guard attempt == macDownloadAttempt else { return }
+                macDownload = .idle
+                macProgress = nil
+                macChecking = false
+                macDownloadNotice = String(localized: "Download paused: the part already downloaded is kept. Download from Apple again to resume.")
+            } catch {
+                guard attempt == macDownloadAttempt else { return }
+                macDownload = .idle
+                macProgress = nil
+                macChecking = false
+                showMacDownloadError(error, keptPartial: macImageDownloader.partialBytes(for: offer) > 0)
+            }
+        }
+        macDownloadTask = task
+        await task.value
+    }
+
+    /// Cancel on the progress panel (or on the question): the download stops, its partial file stays.
+    func cancelMacDownload() {
+        switch macDownload {
+        case .askingApple:
+            macDownloadAttempt += 1
+            macDownloadTask?.cancel()
+            macDownload = .idle
+        case .downloading:
+            // Every byte is there: only the check is left, nothing to pause.
+            guard !macChecking else { return }
+            macDownloadTask?.cancel()
+        case .idle, .confirming:
+            break
+        }
+    }
+
+    /// Leaving the image page or closing the wizard: whatever runs stops, with no message.
+    private func abandonMacDownload() {
+        guard macDownload != .idle else { return }
+        macDownloadAttempt += 1
+        macDownloadTask?.cancel()
+        macDownload = .idle
+        macProgress = nil
+        macChecking = false
+    }
+
+    /// A progress update of download `attempt`: a smaller count than the one shown is ignored.
+    func receiveMac(_ value: DownloadProgress, attempt: Int, at time: ContinuousClock.Instant = .now) {
+        guard attempt == macDownloadAttempt, case .downloading = macDownload else { return }
+        if let current = macProgress, value.receivedBytes < current.receivedBytes { return }
+        macProgress = value
+        if let total = value.expectedBytes, value.receivedBytes >= total { macChecking = true }
+        macRate.record(Double(value.receivedBytes), at: time)
+    }
+
+    /// "Download from Apple" is offered: nothing runs and no installation is going on.
+    var canDownloadMacFromApple: Bool {
+        macImageDownloader != nil && isMac && macDownload == .idle && !isInspectingImage && phase != .installing
+    }
+
+    /// The offer the confirmation sheet asks about.
+    var confirmingMacOffer: MacImageOffer? {
+        if case .confirming(let offer) = macDownload { offer } else { nil }
+    }
+
+    var isDownloadingMac: Bool {
+        if case .downloading = macDownload { true } else { false }
+    }
+
+    var macDownloadQuestion: String {
+        let version = confirmingMacOffer?.version ?? ""
+        return String(localized: "Download macOS \(version) from Apple?", comment: "Question of the confirmation sheet; %@ is a version.")
+    }
+
+    var macDownloadMessage: String {
+        var note = macOfferSize.map { String(localized: "The file is \(ByteSize.text($0)).", comment: "%@ is the size of the image.") }
+            ?? String(localized: "The size is unknown until the download starts.")
+        if macOfferPartial > 0 {
+            note += " " + String(localized: "\(ByteSize.text(macOfferPartial)) are already downloaded: the download resumes.", comment: "An amount of bytes.")
+        }
+        return note + " " + String(localized: "Nido goes online only because you asked. The image comes from Apple’s servers; if the download is interrupted you can resume it, and Nido checks that macOS accepts the file before using it.")
+    }
+
+    var macDownloadTitle: String {
+        guard case .downloading(let offer) = macDownload else { return "" }
+        return String(localized: "Downloading macOS \(offer.version)", comment: "%@ is a version.")
+    }
+
+    var macDownloadDetail: String {
+        guard case .downloading(let offer) = macDownload else { return "" }
+        let received = ByteSize.text(macProgress?.receivedBytes ?? 0)
+        let amount = macProgress?.expectedBytes.map {
+            String(localized: "\(received) of \(ByteSize.text($0))",
+                   comment: "Downloaded so far of the total: 0.4 GiB of 1.2 GiB.")
+        } ?? received
+        var parts = [offer.url.host() ?? offer.url.absoluteString, amount]
+        if let remaining = macRemainingTime { parts.append(Self.remainingText(remaining)) }
+        return parts.joined(separator: " · ")
+    }
+
+    /// Time left of the download from Apple at the average speed of the last `speedWindow`.
+    var macRemainingTime: Duration? {
+        guard isDownloadingMac, let macProgress, let total = macProgress.expectedBytes else { return nil }
+        let left = Double(total > macProgress.receivedBytes ? total - macProgress.receivedBytes : 0)
+        return macRate.remaining(left: left, now: now())
+    }
+
+    var macDownloadFraction: Double? {
+        guard isDownloadingMac, let macProgress, let total = macProgress.expectedBytes, total > 0 else { return nil }
+        return min(1, Double(macProgress.receivedBytes) / Double(total))
+    }
+
     /// The open panel could not be limited to `.ipsw` files: it is not shown at all.
     func ipswPanelUnavailable() {
         guard ipswURL == nil else { return }
         macImageError = String(localized: "Can’t limit the choice to .ipsw files on this Mac.")
         macImageErrorDetail = nil
+    }
+
+    /// The guest creates its account by itself: host and image are macOS 27 or later.
+    var offersAccount: Bool {
+        guard system == .macos, hostMajor >= 27, let major = MacFirstBoot.guestMajor(macImage?.version) else { return false }
+        return major >= 27
+    }
+
+    func regeneratePassword() { generatedPassword = GuestPassword.generate().value }
+
+    /// Why the account step cannot go on, nil when it is fine or not wanted.
+    /// Last, what macOS would refuse at the first start (`MacFirstBoot.validate`): such an
+    /// account would leave a VM that never starts. The short name is checked by `sshUserError`.
+    var accountError: String? {
+        guard offersAccount, createsAccount else { return nil }
+        let fullName = accountFullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if fullName.isEmpty {
+            return String(localized: "Enter a full name")
+        }
+        if choosesOwnPassword {
+            if accountPassword.isEmpty { return String(localized: "Enter a password") }
+            if accountPassword != accountPasswordAgain { return String(localized: "The passwords don’t match") }
+            if GuestPassword(accountPassword) == nil {
+                return String(localized: "This password can’t be used: it must be shorter than 1,024 bytes and have no line breaks.")
+            }
+        }
+        guard sshUserError == nil,
+            let password = GuestPassword(choosesOwnPassword ? accountPassword : generatedPassword)
+        else { return nil }
+        do {
+            try MacFirstBoot.validate(fullName: fullName, username: sshUser, password: password)
+        } catch {
+            return error.localizedDescription
+        }
+        return nil
+    }
+
+    /// The account of the request: nil when not offered, declined or not valid.
+    private func accountRequest() -> MacAccountRequest? {
+        guard offersAccount, createsAccount, accountError == nil else { return nil }
+        let typed = choosesOwnPassword ? accountPassword : generatedPassword
+        guard let password = GuestPassword(typed) else { return nil }
+        return MacAccountRequest(
+            fullName: accountFullName.trimmingCharacters(in: .whitespacesAndNewlines), password: password)
     }
 
     /// What to do about a refused IPSW.
@@ -365,7 +650,7 @@ final class WizardModel: Identifiable {
             return String(localized: "Choose a macOS \(hostMajor) IPSW (a \(hostMajor).x beta works too). Nido hasn’t created any files.",
                           comment: "Both numbers are this Mac's major macOS version (26). [not a count]")
         }
-        return String(localized: "Choose the macOS .ipsw file downloaded from Apple’s developer site. Nido hasn’t created any files.")
+        return String(localized: "Choose the macOS .ipsw file downloaded from Apple’s developer site, or Download from Apple. Nido hasn’t created any files.")
     }
 
     /// "~/Downloads/UniversalMac_26.6_Restore.ipsw · 17.4 GiB", or "No file chosen".
@@ -472,9 +757,19 @@ final class WizardModel: Identifiable {
             guard let diskBytes else { throw NidoError.invalidResources(Self.diskTooLarge) }
             // Read again: the file may have changed since it was chosen.
             let key = try VMControl.readPublicKey(at: publicKeyURL)
+            if !choosesOwnPassword, generatedPassword.isEmpty { regeneratePassword() }
+            let wantsAccount = offersAccount && createsAccount
+            let account = accountRequest()
+            // A wanted account that cannot be built is refused, never dropped.
+            if wantsAccount, account == nil { throw NidoError.invalidResources(accountError ?? "") }
             let request = MacVMRequest(
                 name: vmName, ipsw: ipswURL, cpuCount: cpuCount, memoryBytes: memoryBytes, diskBytes: diskBytes,
-                sshUser: sshUser, publicKey: key, sshPublicKeyPath: publicKeyURL.path)
+                sshUser: sshUser, publicKey: key, sshPublicKeyPath: publicKeyURL.path,
+                account: account, agentAccess: offersAccount && agentAccess)
+            accountPassword = ""
+            accountPasswordAgain = ""
+            // The generated password stays until the VM exists: a failed or cancelled install
+            // goes back to the summary, and a retry must use the one the user saw.
             phase = .installing
             isPresented = true
             installation = installs.start(request, version: macImage.version, installer: macInstaller, wizard: self)
@@ -486,6 +781,7 @@ final class WizardModel: Identifiable {
     /// The installation ended with the VM in the library: it opens for Setup Assistant.
     func installationFinished(_ job: MacInstallation) {
         installation = nil
+        generatedPassword = ""
         existingNames.insert(job.name.rawValue.lowercased())
         phase = .done(job.name)
         onCreated(job.name)
@@ -719,7 +1015,7 @@ final class WizardModel: Identifiable {
     private var macSubtitle: String {
         switch step {
         case .system: String(localized: "Choose the system of the new virtual machine.")
-        case .download: String(localized: "Choose the macOS IPSW file you downloaded: Nido checks that this Mac can install it.")
+        case .download: String(localized: "Choose a macOS IPSW file or download it from Apple: Nido checks that this Mac can install it.")
         case .resources: resourcesSubtitle
         case .access:
             String(localized: "Sign in to \(name) from Terminal with nido ssh and your key, no password.",
@@ -805,17 +1101,18 @@ final class WizardModel: Identifiable {
         case .resources:
             return resourcesBlocker
         case .access:
-            return keyBlocker ?? sshUserError
+            return keyBlocker ?? sshUserError ?? accountError
         case .summary:
             if phase == .installing { return nil }
-            return nameError ?? imageBlocker ?? resourcesBlocker ?? keyBlocker ?? sshUserError
+            return nameError ?? imageBlocker ?? resourcesBlocker ?? keyBlocker ?? sshUserError ?? accountError
         }
     }
 
     private var imageBlocker: String? {
+        if macDownload != .idle { return String(localized: "The image is being downloaded from Apple.") }
         if isInspectingImage { return String(localized: "The image is still being checked.") }
         guard macImage == nil else { return nil }
-        return macImageError ?? String(localized: "Choose a macOS IPSW file.")
+        return macImageError ?? macDownloadError ?? String(localized: "Choose a macOS IPSW file.")
     }
 
     private var templateBlocker: String? {
@@ -1325,6 +1622,7 @@ final class WizardModel: Identifiable {
         case .system:
             break
         case .download where isMac:
+            abandonMacDownload()
             // A check still running is ignored when it ends.
             if isInspectingImage {
                 inspectAttempt += 1
@@ -1370,12 +1668,15 @@ final class WizardModel: Identifiable {
         isClosed = true
         attempt += 1
         activeTask?.cancel()
+        // A download from Apple stops too; its partial file stays for the next time.
+        abandonMacDownload()
         onClose()
     }
 
     /// Waits for a cancelled download to finish its cleanup.
     func waitForCleanup() async {
         await activeTask?.value
+        await macDownloadTask?.value
     }
 
     private func run(_ work: @escaping @MainActor () async -> Void) async {

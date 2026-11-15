@@ -78,17 +78,47 @@ public enum SSHArguments {
     /// (`RequestTTY`) or share a master connection (`ControlMaster`, `ControlPath`). The config is
     /// still read (no `-F /dev/null`), so `IdentityAgent` and the like keep working. Forwards
     /// are always cleared (`forwardsOff`): no background command needs one.
+    ///
+    /// `user` is `nido` on Linux and the account given at creation on macOS (`VMConfig.sshUser`,
+    /// validated again). `identity` is nil only for a macOS guest reached with the user's default
+    /// keys or agent, as `nido ssh` does when it finds no key: no `-i`, no `IdentitiesOnly`.
     public static func background(
-        identity: String, endpoint: SSHEndpoint, vmID: UUID, knownHosts: URL, remoteCommand: String
+        identity: String?, endpoint: SSHEndpoint, vmID: UUID, knownHosts: URL, remoteCommand: String,
+        user: String = "nido"
     ) throws -> [String] {
-        // ssh expands `%` tokens in the identity path.
-        guard !identity.contains("%") else { throw NidoError.unsafePath(identity) }
-        return ["ssh", "-i", identity, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes",
+        try VMConfig.validateSSHUser(user)
+        return ["ssh"] + (try identityOptions(identity)) + ["-o", "BatchMode=yes",
          "-o", "ConnectTimeout=5", "-o", "RemoteCommand=none", "-o", "RequestTTY=no",
          "-o", "ControlMaster=no", "-o", "ControlPath=none"]
             + (try commonOptions(vmID: vmID, knownHosts: knownHosts))
             + forwardsOff
-            + portOption(endpoint) + ["nido@\(endpoint.host)", "--", remoteCommand]
+            + portOption(endpoint) + ["\(user)@\(endpoint.host)", "--", remoteCommand]
+    }
+
+    /// `argv` (including `argv[0]`) for the one command run with the guest account's password
+    /// (`GuestCommand.authorizeNidoKey`): the same host key pinning, forwards off and overrides
+    /// of the user's config as `background`, but no key at all (`PubkeyAuthentication=no`, no
+    /// `-i`), password prompts allowed (`BatchMode=no`, answered by `SSH_ASKPASS`) and at most
+    /// one (`NumberOfPasswordPrompts=1`): a wrong password fails at once instead of asking again.
+    ///
+    /// Unlike every other SSH use, the user's and the system's ssh config are not read at all
+    /// (`-F /dev/null`): nothing there (`ProxyCommand`, `ProxyJump`, `Match exec`,
+    /// `LocalCommand`, `KbdInteractiveDevices`…) can touch the login that carries the password.
+    /// Everything this login needs is on the command line, keyboard-interactive and password
+    /// authentication included.
+    public static func passwordOnce(
+        endpoint: SSHEndpoint, vmID: UUID, knownHosts: URL, remoteCommand: String, user: String
+    ) throws -> [String] {
+        try VMConfig.validateSSHUser(user)
+        return ["ssh", "-F", "/dev/null", "-o", "BatchMode=no", "-o", "PubkeyAuthentication=no",
+         "-o", "PreferredAuthentications=keyboard-interactive,password",
+         "-o", "NumberOfPasswordPrompts=1",
+         "-o", "KbdInteractiveAuthentication=yes", "-o", "PasswordAuthentication=yes",
+         "-o", "ConnectTimeout=5", "-o", "RemoteCommand=none", "-o", "RequestTTY=no",
+         "-o", "ControlMaster=no", "-o", "ControlPath=none"]
+            + (try commonOptions(vmID: vmID, knownHosts: knownHosts))
+            + forwardsOff
+            + portOption(endpoint) + ["\(user)@\(endpoint.host)", "--", remoteCommand]
     }
 
     private static func commonOptions(vmID: UUID, knownHosts: URL) throws -> [String] {

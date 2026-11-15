@@ -100,6 +100,8 @@ final class LibraryModel {
     var isSnapshotting: @MainActor (String) -> Bool
     /// "Ponte AI attivo": the VM runs in this app with its AI bridge attached and on.
     var isBridgeActive: @MainActor (String) -> Bool
+    /// "Agent": an agent is using the VM that runs in this app (`VMWindowModel.agentActive`).
+    var liveAgentActive: @MainActor (String) -> Bool
     /// "Mostra" on an installing card: the wizard of that installation comes back. Set by the view.
     var showInstallation: @MainActor (MacInstallation) -> Void = { _ in }
     /// The macOS installations of this app: a card each while they run (M3b).
@@ -138,6 +140,7 @@ final class LibraryModel {
         appRunsMachine: @escaping @MainActor (String) -> Bool = { _ in false },
         isSnapshotting: @escaping @MainActor (String) -> Bool = { _ in false },
         isBridgeActive: @escaping @MainActor (String) -> Bool = { _ in false },
+        liveAgentActive: @escaping @MainActor (String) -> Bool = { _ in false },
         measureTemplate: (@Sendable (String) -> UInt64?)? = nil,
         installs: MacInstallStore? = nil
     ) {
@@ -145,6 +148,7 @@ final class LibraryModel {
         self.registry = registry
         self.templates = templates
         self.isBridgeActive = isBridgeActive
+        self.liveAgentActive = liveAgentActive
         self.measureTemplate = measureTemplate
         self.control = control
         self.cloner = cloner
@@ -277,6 +281,11 @@ final class LibraryModel {
     /// "Ponte AI attivo" under the name of a running card.
     func showsBridgePill(for vm: VMSummary) -> Bool {
         cardState(for: vm) == .running && isBridgeActive(vm.name)
+    }
+
+    /// "Agent" under the name of a running card while an agent uses the VM.
+    func showsAgentMark(for vm: VMSummary) -> Bool {
+        cardState(for: vm) == .running && liveAgentActive(vm.name)
     }
 
     /// "4 CPUs · 8 GiB of memory · 64 GiB disk".

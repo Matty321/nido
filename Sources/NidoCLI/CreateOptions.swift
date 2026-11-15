@@ -30,6 +30,10 @@ public struct MacCreateOptions: Sendable, Equatable {
     public var cpuCount: Int?
     public var memoryBytes: UInt64?
     public var diskBytes: UInt64
+    /// The account macOS 27 creates at the first start (`create --account`); nil without it.
+    public var account: MacAccountRequest?
+    /// `create --agent`: agent access on from the creation.
+    public var agentAccess: Bool = false
 }
 
 /// One row of `nido list`.

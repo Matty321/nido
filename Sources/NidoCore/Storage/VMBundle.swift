@@ -56,6 +56,8 @@ public struct VMBundle: Sendable {
     public var suspendResultURL: URL { url.appendingPathComponent(".suspend-result") }
     /// `snapshots/<uuid>/`, see `SnapshotStore`.
     public var snapshotsURL: URL { url.appendingPathComponent("snapshots", isDirectory: true) }
+    /// `agent-shots/`: the last screenshots an agent took of a macOS guest, see `AgentShots`.
+    public var agentShotsURL: URL { url.appendingPathComponent("agent-shots", isDirectory: true) }
 
     private static let suffix = ".nidovm"
 

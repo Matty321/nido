@@ -55,6 +55,45 @@ import Testing
         }
     }
 
+    @Test(arguments: [
+        "https://updates.cdn-apple.com/2026FallFCS/x/UniversalMac_27.2.1_26B131_Restore.ipsw",
+        "https://swcdn.apple.com/content/downloads/x/UniversalMac.ipsw",
+        "https://apple.com/x",
+        "HTTPS://Updates.CDN-Apple.COM:443/x",
+        "https://a.b.apple.com/x",
+    ])
+    func appleDownloadAcceptsApplesHosts(_ raw: String) throws {
+        try DownloadPolicy.validateAppleDownload(try #require(URL(string: raw)))
+    }
+
+    @Test(arguments: [
+        "http://updates.cdn-apple.com/x",
+        "https://evilapple.com/x",
+        "https://evilcdn-apple.com/x",
+        "https://apple.com.evil.net/x",
+        "https://updates.cdn-apple.com.evil/x",
+        "https://cdn-apple.com.evil/x",
+        "https://cdn-apple.com/x",
+        "https://user:pw@updates.cdn-apple.com/x",
+        "https://user@updates.cdn-apple.com/x",
+        "https://updates.cdn-apple.com@evil.example/x",
+        "https://updates.cdn-apple.com:8443/x",
+        "https://updates.cdn-apple.com./x",
+        "https://.apple.com/x",
+        "https://a..apple.com/x",
+        "ftp://updates.cdn-apple.com/x",
+        "file:///etc/passwd",
+        "https://updates_cdn.apple.com/x",
+        "https://xn--pple-43d.com.apple.com%00/x",
+        "https://upd%41tes.apple.com/x",
+    ])
+    func appleDownloadRefusesEverythingElse(_ raw: String) throws {
+        let url = try #require(URL(string: raw))
+        #expect(throws: NidoError.hostNotAllowed(url.absoluteString)) {
+            try DownloadPolicy.validateAppleDownload(url)
+        }
+    }
+
     @Test func catalogLookup() {
         #expect(CloudImageCatalog.image(id: "debian-13") == CloudImageCatalog.debian13)
         #expect(CloudImageCatalog.image(id: "nope") == nil)

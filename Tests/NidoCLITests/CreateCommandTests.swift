@@ -44,6 +44,7 @@ private struct Env {
 }
 
 private struct FakeLoader: MacRestoreImageLoading {
+    var major = 26
     var minimumCPUCount = 2
     var minimumMemoryBytes: UInt64 = 4 << 30
 
@@ -55,7 +56,7 @@ private struct FakeLoader: MacRestoreImageLoading {
         let model = (try? PropertyListSerialization.data(fromPropertyList: plist, format: .binary, options: 0)) ?? Data()
         return LoadedMacRestoreImage(
             buildVersion: "25B78",
-            operatingSystemVersion: OperatingSystemVersion(majorVersion: 26, minorVersion: 1, patchVersion: 0),
+            operatingSystemVersion: OperatingSystemVersion(majorVersion: major, minorVersion: 1, patchVersion: 0),
             isSupported: true,
             configuration: .init(
                 hardwareModelSupported: true, hardwareModel: model,
@@ -129,6 +130,143 @@ private final class Sink: Sendable {
                 cpus: 2, memory: nil, disk: "20G", user: "mattia")
         }
         #expect(CLIError.ipswConflict.errorDescription?.contains("--ipsw") == true)
+    }
+
+    // MARK: - create --account
+
+    private func parseAccount(
+        account: String? = "Mattia Pichierri", source: AccountPasswordSource = .generate, agent: Bool = false,
+        hostMajor: Int = 27, lines: [String] = [], typed: [String?] = [], stdinIsTerminal: Bool = false
+    ) throws -> MacCreateOptions {
+        let remainingLines = Mutex(lines)
+        let remainingTyped = Mutex(typed)
+        return try CLISupport.parseMacCreateOptions(
+            name: "mac", ipsw: "/x/a.ipsw", image: nil, imageFile: nil, sshKey: "/k.pub", user: "mattia",
+            cpus: nil, memory: nil, disk: nil, noPackages: false, noGuestTools: false,
+            account: account, passwordSource: source, agent: agent, hostMajor: hostMajor,
+            readStdinLine: { remainingLines.withLock { $0.isEmpty ? nil : $0.removeFirst() } },
+            askPassword: { _ in remainingTyped.withLock { $0.isEmpty ? nil : $0.removeFirst() } },
+            stdinIsTerminal: stdinIsTerminal)
+    }
+
+    /// The wizard refuses an empty full name: so does the CLI; spaces around it are dropped.
+    @Test func accountNeedsAFullName() throws {
+        #expect(throws: CLIError.accountNameEmpty) { _ = try parseAccount(account: "") }
+        #expect(throws: CLIError.accountNameEmpty) { _ = try parseAccount(account: "  \t ") }
+        #expect(try parseAccount(account: "  Mattia  ").account?.fullName == "Mattia")
+        #expect(CLIError.accountNameEmpty.errorDescription == L10n.string("--account needs the full name of the account"))
+    }
+
+    /// `--password-stdin` from a terminal reads without echo (`readpassphrase`), never a visible line.
+    @Test func passwordStdinOnATerminalDoesNotEcho() throws {
+        let options = try parseAccount(source: .stdin, lines: ["visible"], typed: ["hidden"], stdinIsTerminal: true)
+        #expect(options.account?.password.value == "hidden")
+        #expect(throws: CLIError.noTerminalForPassword) {
+            _ = try parseAccount(source: .stdin, lines: ["visible"], typed: [], stdinIsTerminal: true)
+        }
+    }
+
+    @Test func accountNeedsHost27() {
+        #expect(throws: CLIError.accountNeedsHost27) { _ = try parseAccount(hostMajor: 26) }
+        #expect(CLIError.accountNeedsHost27.errorDescription == "il provisioning del guest richiede macOS 27 su questo Mac")
+    }
+
+    @Test func accountGeneratesPasswordByDefault() throws {
+        let options = try parseAccount(agent: true)
+        let account = try #require(options.account)
+        #expect(account.fullName == "Mattia Pichierri" && options.agentAccess)
+        #expect(account.password.value.count == 23 && account.password.value.split(separator: "-").count == 4)
+        #expect(try parseAccount().account?.password != account.password)
+        let none = try parseAccount(account: nil)
+        #expect(none.account == nil && !none.agentAccess)
+    }
+
+    @Test func passwordStdinReadsOneLine() throws {
+        let options = try parseAccount(source: .stdin, lines: ["hunter two", "ignored"])
+        #expect(options.account?.password.value == "hunter two")
+        #expect(throws: CLIError.passwordEmpty) { _ = try parseAccount(source: .stdin, lines: [""]) }
+        #expect(throws: CLIError.passwordEmpty) { _ = try parseAccount(source: .stdin, lines: []) }
+    }
+
+    @Test func choosePasswordAsksTwice() throws {
+        #expect(try parseAccount(source: .choose, typed: ["s3cret", "s3cret"]).account?.password.value == "s3cret")
+        #expect(throws: CLIError.passwordsDontMatch) { _ = try parseAccount(source: .choose, typed: ["a", "b"]) }
+        #expect(throws: CLIError.passwordEmpty) { _ = try parseAccount(source: .choose, typed: ["", ""]) }
+        #expect(throws: CLIError.noTerminalForPassword) { _ = try parseAccount(source: .choose, typed: []) }
+    }
+
+    @Test func passwordOptionsNeedAccount() {
+        #expect(throws: CLIError.passwordOptionNeedsAccount) { _ = try parseAccount(account: nil, source: .stdin) }
+        #expect(throws: CLIError.passwordOptionNeedsAccount) { _ = try parseAccount(account: nil, source: .choose) }
+    }
+
+    @Test func accountWithGuest26IsRefused() async throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let options = try CLISupport.parseMacCreateOptions(
+            name: "mac", ipsw: env.ipsw.path, image: nil, imageFile: nil, sshKey: env.key.path, user: "mattia",
+            cpus: nil, memory: nil, disk: "1G", noPackages: false, noGuestTools: false,
+            account: "Mattia", hostMajor: 27)
+        let installer = MacInstaller(
+            paths: env.paths,
+            environment: .init(
+                loader: FakeLoader(), availableCapacity: { _ in UInt64.max / 2 }, installer: FakeOSInstaller()))
+        await #expect(throws: CLIError.accountNeedsImage27) {
+            _ = try await CLISupport.createMac(
+                options, paths: env.paths, installer: installer, loader: FakeLoader(major: 26),
+                line: ProgressLine { _ in })
+        }
+        // Refused before anything is created.
+        #expect(!FileManager.default.fileExists(atPath: env.paths.root.path))
+    }
+
+    @Test func createMacWithAccountSaysWhereThePasswordIs() async throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let options = try CLISupport.parseMacCreateOptions(
+            name: "mac", ipsw: env.ipsw.path, image: nil, imageFile: nil, sshKey: env.key.path, user: "mattia",
+            cpus: nil, memory: nil, disk: "1G", noPackages: false, noGuestTools: false,
+            account: "Mattia", agent: true, hostMajor: 27)
+        var environment = MacInstaller.Environment()
+        environment.loader = FakeLoader(major: 27)
+        environment.availableCapacity = { _ in UInt64.max / 2 }
+        environment.installer = FakeOSInstaller()
+        environment.passwords = MemoryGuestPasswordStore()
+        let message = try await CLISupport.createMac(
+            options, paths: env.paths, installer: MacInstaller(paths: env.paths, environment: environment),
+            loader: FakeLoader(major: 27), line: ProgressLine { _ in })
+        #expect(message.contains("La password di mattia è nel portachiavi del tuo Mac: `nido agent password mac` la mostra."))
+        let config = try VMBundle.open(try VMName("mac"), paths: env.paths).readConfig()
+        #expect(config.macAccountFullName == "Mattia" && config.agentAccess == true)
+    }
+
+    // MARK: - agent password
+
+    private struct FakeOwner: OwnerAuthenticator {
+        var ok: Bool
+        func authenticate(reason: String) async -> Bool { ok }
+    }
+
+    @Test func agentPasswordNeedsOwnerAndStoredPassword() async throws {
+        let config = try macConfig("mac")
+        let store = MemoryGuestPasswordStore()
+        await #expect(throws: CLIError.noStoredPassword("mac")) {
+            _ = try await AgentSupport.storedPassword(config: config, store: store, owner: FakeOwner(ok: true))
+        }
+        try store.save(try #require(GuestPassword("abc-def")), vm: config.id)
+        await #expect(throws: CLIError.passwordAuthenticationFailed) {
+            _ = try await AgentSupport.storedPassword(config: config, store: store, owner: FakeOwner(ok: false))
+        }
+        #expect(try await AgentSupport.storedPassword(config: config, store: store, owner: FakeOwner(ok: true)) == "abc-def")
+    }
+
+    // MARK: - start after a provisioned boot
+
+    @Test func provisionedStartFollowUp() {
+        #expect(CLISupport.provisionedStartFollowUp(sentProvisioning: false, agentAccess: true) == .none)
+        #expect(CLISupport.provisionedStartFollowUp(sentProvisioning: true, agentAccess: true) == .setUpAgent)
+        #expect(CLISupport.provisionedStartFollowUp(sentProvisioning: true, agentAccess: nil) == .loggedIn)
+        #expect(CLISupport.provisionedStartFollowUp(sentProvisioning: true, agentAccess: false) == .loggedIn)
     }
 
     @Test func macResourcesDefaultsLimitsAndMinimums() {

@@ -135,6 +135,20 @@ private let validKey = "ssh-ed25519 \(keyBody)"
         }
     }
 
+    @Test func deleteRemovesTheGuestPassword() throws {
+        let tmp = try makeTemp(); defer { try? FileManager.default.removeItem(at: tmp) }
+        let paths = NidoPaths(root: tmp)
+        let config = try makeConfig("idle")
+        _ = try VMBundle.create(config: config, paths: paths)
+        let passwords = MemoryGuestPasswordStore()
+        let other = UUID()
+        try passwords.save(try #require(GuestPassword("s3cret")), vm: config.id)
+        try passwords.save(try #require(GuestPassword("other")), vm: other)
+        try VMControl.deleteVM(try VMName("idle"), paths: paths, owner: .cli, passwords: passwords)
+        #expect(try passwords.read(vm: config.id) == nil)
+        #expect(try passwords.read(vm: other) != nil)
+    }
+
     @Test func deleteRemovesStoppedVM() throws {
         let tmp = try makeTemp(); defer { try? FileManager.default.removeItem(at: tmp) }
         let paths = NidoPaths(root: tmp)

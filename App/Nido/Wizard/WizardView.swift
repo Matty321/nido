@@ -7,6 +7,7 @@ import UniformTypeIdentifiers
 /// The creation wizard (S02–S06), Debian, Ubuntu Server or macOS, shown as a sheet over the library.
 struct WizardView: View {
     @Bindable var model: WizardModel
+    @State private var showsPassword = false
 
     var body: some View {
         NidoWizardStep(
@@ -29,6 +30,14 @@ struct WizardView: View {
             }
         }
         .task { await model.load() }
+        .sheet(isPresented: Binding(get: { model.confirmingMacOffer != nil },
+                                    set: { if !$0 { model.declineMacDownload() } })) {
+            NidoConfirmSheet(
+                verbatim: model.macDownloadQuestion, message: model.macDownloadMessage,
+                actionLabel: String(localized: "Download"),
+                onCancel: { model.declineMacDownload() },
+                onConfirm: { Task { await model.confirmMacDownload() } })
+        }
         .sheet(isPresented: $model.isConfirmingCancel) {
             NidoConfirmSheet(
                 verbatim: model.cancelQuestion,
@@ -70,12 +79,14 @@ struct WizardView: View {
                             model.selectDistribution(model.distribution.isUbuntu ? model.distribution : .ubuntu2604)
                         }
                     }
-                    // Choosing macOS opens the IPSW panel at once (F01 macOS: 6 clicks).
+                    // Choosing macOS goes to the image page with Next: Choose… or Download from
+                    // Apple, nothing goes online before that button. (DEBUG `-NidoIPSWFile` takes
+                    // its file at once.)
                     tile(glyph: "M", name: "macOS",
-                         detail: String(localized: "from an IPSW file", comment: "Detail under the macOS tile of the wizard."),
+                         detail: String(localized: "from an IPSW file or from Apple", comment: "Detail under the macOS tile of the wizard."),
                          isSelected: model.isMac) {
                         model.selectSystem(.macos)
-                        if model.ipswURL == nil { chooseIPSW() }
+                        if model.ipswURL == nil, model.presetIPSW != nil { chooseIPSW() }
                     }
                     NidoOSTile(glyph: "W", name: "Windows 11", detail: "Coming soon", state: .disabled)
                 }
@@ -103,7 +114,7 @@ struct WizardView: View {
     /// Where the chosen system comes from, under the tiles.
     private var systemNote: Text {
         if model.isMac {
-            Text("macOS installs from an IPSW file you download from Apple’s developer site, betas included: Nido only reads it. Installing takes 4 to 20 minutes, depending on the Mac and the disk; you complete macOS Setup Assistant in the VM’s window.")
+            Text("macOS installs from an IPSW file, betas included: one you choose, or one Nido downloads from Apple when you ask. Installing takes 4 to 20 minutes, depending on the Mac and the disk; you complete macOS Setup Assistant in the VM’s window.")
         } else if model.distribution.isUbuntu {
             Text("Official Ubuntu Server cloud image from cloud-images.ubuntu.com, verified with SHA-256 before use. Windows is coming in a future version.")
         } else {
@@ -222,20 +233,57 @@ struct WizardView: View {
         NidoPickerRow(label: "IPSW file", path: model.ipswSummary,
                       buttonLabel: model.ipswURL == nil ? LocalizedStringKey("Choose…") : LocalizedStringKey("Change…"),
                       onChoose: chooseIPSW)
-        if model.isInspectingImage {
+            .disabled(model.macDownload != .idle)
+        NidoInfoRow(label: "From Apple", note: "Nido asks Apple which macOS this Mac supports when you press the button, and downloads it only after you confirm.") {
+            NidoButton("Download from Apple") { Task { await model.downloadMacFromApple() } }
+                .disabled(!model.canDownloadMacFromApple)
+                .accessibilityIdentifier("ipsw-download-apple")
+        }
+        if model.macDownload == .askingApple {
+            NidoProgressPanel(title: "Asking Apple", detail: "Which macOS image does Apple offer this Mac?", showsBar: false)
+            HStack {
+                Spacer(minLength: 0)
+                NidoButton("Cancel") { model.cancelMacDownload() }
+            }
+        } else if model.isDownloadingMac, model.macChecking {
+            // Every byte is there: only the check is left, nothing to cancel.
             NidoProgressPanel(title: "Checking the image",
                               detail: "Nido reads the IPSW and checks that this Mac can install it: usually a few seconds.",
                               showsBar: false)
-        } else if let error = model.macImageError {
-            NidoNotice(kind: .error, verbatim: error, detail: model.macImageErrorDetail, identifier: "ipsw-error")
-        } else if model.macImage != nil {
-            ForEach(model.ipswRows, id: \.self) { row in
-                NidoInfoRow(verbatim: row.label, row.value, note: row.note)
+        } else if model.isDownloadingMac {
+            // Redrawn every second: the time left goes away on a stall, without new progress.
+            TimelineView(.periodic(from: .now, by: 1)) { _ in
+                NidoProgressPanel(verbatim: model.macDownloadTitle, detail: model.macDownloadDetail,
+                                  fraction: model.macDownloadFraction)
+            }
+            HStack {
+                Spacer(minLength: 0)
+                NidoButton("Cancel Download") { model.cancelMacDownload() }
+                    .accessibilityIdentifier("ipsw-download-cancel")
             }
         } else {
-            NidoNotice(kind: .info, title: "Download the IPSW from Apple’s developer site; a beta works too.",
-                       detail: "Nido only reads it: it doesn’t download, copy, move or change it.",
-                       identifier: "ipsw-hint")
+            // A failed download or a pause sits beside the rows of an image already chosen.
+            if let error = model.macDownloadError {
+                NidoNotice(kind: .error, verbatim: error, detail: model.macDownloadErrorDetail,
+                           identifier: "ipsw-download-error")
+            } else if let notice = model.macDownloadNotice {
+                NidoNotice(kind: .info, verbatim: notice, identifier: "ipsw-download-paused")
+            }
+            if model.isInspectingImage {
+                NidoProgressPanel(title: "Checking the image",
+                                  detail: "Nido reads the IPSW and checks that this Mac can install it: usually a few seconds.",
+                                  showsBar: false)
+            } else if let error = model.macImageError {
+                NidoNotice(kind: .error, verbatim: error, detail: model.macImageErrorDetail, identifier: "ipsw-error")
+            } else if model.macImage != nil {
+                ForEach(model.ipswRows, id: \.self) { row in
+                    NidoInfoRow(verbatim: row.label, row.value, note: row.note)
+                }
+            } else if model.macDownloadError == nil, model.macDownloadNotice == nil {
+                NidoNotice(kind: .info, title: "Choose an IPSW file, or download macOS from Apple; a beta works too.",
+                           detail: "Nido downloads macOS from Apple only when you ask. It never copies, moves or changes a file you choose.",
+                           identifier: "ipsw-hint")
+            }
         }
     }
 
@@ -305,7 +353,72 @@ struct WizardView: View {
                 placeholder: "name", text: $model.sshUser, isInvalid: model.sshUserError != nil,
                 identifier: "ssh-user")
             if let error = model.sshUserError { errorLine(error, identifier: "ssh-user-error") }
-            NidoNotice(kind: .info, title: "Nido never asks for or saves passwords.",
+            if model.offersAccount {
+                macAccountSection
+            } else {
+                            NidoNotice(kind: .info, title: "Nido keeps no password unless you later let it authorize its key with the account password (Settings › Agent).",
+                           detail: "After Setup Assistant, turn on Remote Login in macOS: the Terminal Access panel in the VM’s window guides you.",
+                           identifier: "mac-password-notice")
+            }
+        }
+    }
+
+    /// macOS 27 creates the account at the first start: full name, a generated password by default
+    /// (masked, Show, Regenerate) or two fields for one's own, and the agent switch.
+    @ViewBuilder private var macAccountSection: some View {
+        NidoToggleRow(title: "Create the account for me",
+                      explanation: "macOS 27 creates it at the first start, so Setup Assistant doesn’t ask.",
+                      isOn: $model.createsAccount, identifier: "mac-account-create")
+        if model.createsAccount {
+            NidoTextFieldRow(
+                label: "Full name", note: "The name macOS shows for the account.",
+                placeholder: "Full name", text: $model.accountFullName,
+                isInvalid: model.accountError != nil && model.accountFullName.isEmpty,
+                identifier: "mac-account-name")
+            if model.choosesOwnPassword {
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                    SecureField(text: $model.accountPassword) { Text("Password") }
+                        .accessibilityIdentifier("mac-account-password")
+                    SecureField(text: $model.accountPasswordAgain) { Text("Password again") }
+                        .accessibilityIdentifier("mac-account-password-again")
+                }
+                .textFieldStyle(.roundedBorder)
+                .font(.nido(Theme.TypeSize.body))
+                .nidoRow()
+            } else {
+                HStack(spacing: Theme.Space.s) {
+                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        Text("Generated password")
+                            .font(.nido(Theme.TypeSize.body, .semibold))
+                            .foregroundStyle(Theme.Color.textPrimary)
+                        Text(verbatim: showsPassword ? model.generatedPassword : String(repeating: "•", count: 20))
+                            .font(.system(size: Theme.TypeSize.body, design: .monospaced))
+                            .foregroundStyle(Theme.Color.textSecondary)
+                            .textSelection(.enabled)
+                            .accessibilityIdentifier("mac-account-generated")
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    NidoButton(showsPassword ? "Hide" : "Show") { showsPassword.toggle() }
+                        .accessibilityIdentifier("mac-account-show")
+                    NidoButton("Regenerate") { model.regeneratePassword() }
+                        .accessibilityIdentifier("mac-account-regenerate")
+                }
+                .nidoRow()
+            }
+            NidoToggleRow(title: "Choose my own password",
+                          explanation: "Instead of the generated one.",
+                          isOn: $model.choosesOwnPassword, identifier: "mac-account-choose-own")
+            if let error = model.accountError { errorLine(error, identifier: "mac-account-error") }
+        }
+        NidoToggleRow(title: "Let an agent use this Mac (Nido Agent)",
+                      explanation: "Lets an AI agent control this VM through Nido’s MCP tools.",
+                      isOn: $model.agentAccess, identifier: "mac-agent-access")
+        if model.createsAccount {
+            NidoNotice(kind: .info, title: "About the password",
+                       detail: "Nido keeps this password in your Mac’s Keychain to set up the VM and authorize its key; you can see it in the VM’s Settings › Agent. macOS in the VM asks for it in System Settings.",
+                       identifier: "mac-password-notice")
+        } else {
+            NidoNotice(kind: .info, title: "Nido keeps no password unless you later let it authorize its key with the account password (Settings › Agent).",
                        detail: "After Setup Assistant, turn on Remote Login in macOS: the Terminal Access panel in the VM’s window guides you.",
                        identifier: "mac-password-notice")
         }

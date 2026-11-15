@@ -51,6 +51,52 @@ protocol MacVMInstalling: Sendable {
     func install(_ request: MacVMRequest, progress: @escaping @Sendable (Double) -> Void) async throws
 }
 
+/// Asks Apple for the macOS image and downloads it (`LiveMacImageDownloader` in the app, a fake in
+/// the tests and, in DEBUG, `DebugFakeMacImageDownloader`). Nothing here runs before the user
+/// presses "Download from Apple".
+protocol MacImageDownloading: Sendable {
+    /// The restore image Apple offers this Mac. Goes online.
+    func latestOffer() async throws -> MacImageOffer
+    /// The size of `offer`'s file (a HEAD request, part of the same ask as the offer), nil when
+    /// Apple does not say or the request fails.
+    func size(of offer: MacImageOffer) async -> UInt64?
+    /// Bytes of `offer` already in the cache from an interrupted download (0 when none): the
+    /// download resumes from there.
+    func partialBytes(for offer: MacImageOffer) -> Int64
+    /// Downloads `offer` into the cache (resuming a partial file) and returns the checked file.
+    /// Cancelling the task keeps the partial file and throws `CancellationError`.
+    func download(_ offer: MacImageOffer, progress: @escaping @Sendable (DownloadProgress) -> Void) async throws -> URL
+}
+
+/// `MacImageDownloading` on top of NidoCore: the default destination, in the image cache.
+struct LiveMacImageDownloader: MacImageDownloading {
+    let catalog: any MacImageCataloging
+    let downloader: MacImageDownloader
+
+    init(cacheRoot: URL, catalog: any MacImageCataloging = LiveMacImageCatalog()) {
+        self.catalog = catalog
+        self.downloader = MacImageDownloader(cacheRoot: cacheRoot)
+    }
+
+    func latestOffer() async throws -> MacImageOffer {
+        try await catalog.latestSupported()
+    }
+
+    func size(of offer: MacImageOffer) async -> UInt64? {
+        try? await downloader.remoteSize(of: offer)
+    }
+
+    func partialBytes(for offer: MacImageOffer) -> Int64 {
+        guard let destination = try? downloader.destination(for: offer, output: nil) else { return 0 }
+        return downloader.partialBytes(for: destination)
+    }
+
+    func download(_ offer: MacImageOffer, progress: @escaping @Sendable (DownloadProgress) -> Void) async throws -> URL {
+        let destination = try downloader.destination(for: offer, output: nil)
+        return try await downloader.download(offer, to: destination, progress: progress)
+    }
+}
+
 /// `MacVMInstalling` on top of NidoCore: both run off the main actor.
 struct LiveMacVMInstaller: MacVMInstalling {
     let paths: NidoPaths
@@ -84,6 +130,28 @@ struct LiveMacVMInstaller: MacVMInstalling {
                 progress(Double(step) / 100)
             }
             // Until Annulla: `Task.sleep` throws `CancellationError` when the task is cancelled.
+            while true { try await Task.sleep(for: .seconds(3600)) }
+        }
+    }
+
+    /// DEBUG `-NidoFakeMacInstaller` (UI tests): Apple offers macOS 26.6; the download reaches 42 %
+    /// of 1 GiB and waits there until it is cancelled. Nothing goes online nor is written.
+    struct DebugFakeMacImageDownloader: MacImageDownloading {
+        static let offer = MacImageOffer(
+            build: "25G62", version: "26.6",
+            url: URL(string: "https://updates.cdn-apple.com/UniversalMac_26.6_25G62_Restore.ipsw")!)
+
+        func latestOffer() async throws -> MacImageOffer { Self.offer }
+
+        func size(of offer: MacImageOffer) async -> UInt64? { 1 << 30 }
+
+        func partialBytes(for offer: MacImageOffer) -> Int64 { 0 }
+
+        func download(_ offer: MacImageOffer, progress: @escaping @Sendable (DownloadProgress) -> Void) async throws -> URL {
+            for step in 0...42 {
+                try await Task.sleep(for: .milliseconds(20))
+                progress(DownloadProgress(receivedBytes: UInt64(step) * (1 << 30) / 100, expectedBytes: 1 << 30))
+            }
             while true { try await Task.sleep(for: .seconds(3600)) }
         }
     }

@@ -56,6 +56,10 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
     /// Set by the first `start()` or `restoreMachineState`: a saved state is restored only into a
     /// machine that never ran.
     @ObservationIgnored private var hasRun = false
+    /// Where the guest account password is read from for first-boot provisioning.
+    @ObservationIgnored public var guestPasswords: any GuestPasswordStore = KeychainGuestPasswordStore()
+    /// True once this session's start carried guest provisioning (macOS 27 first boot).
+    public private(set) var sentProvisioning = false
     /// The restore of a saved state in progress: a stop asked meanwhile (the state is still
     /// `.stopped`) is kept and carried out when it ends (ruling R-M3A-22).
     @ObservationIgnored private let restoreWindow = PendingStop()
@@ -269,13 +273,58 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
         hasRun = true
         state = .starting
         do {
-            try await vm.start()
+            let plan = try firstBootPlan()
+            if let plan {
+                try await startProvisioned(plan)
+            } else {
+                try await vm.start()
+            }
             // A stop() issued while starting owns the state from then on.
             if state == .starting { state = .running }
         } catch {
             if state == .starting { state = .error(error.localizedDescription) }
             throw error
         }
+    }
+
+    /// The provisioning plan for this start, or nil. The Keychain is read only when every other
+    /// condition holds; a Keychain error is thrown, never swallowed.
+    private func firstBootPlan() throws -> MacProvisioningPlan? {
+        // A config read error is thrown: starting plain would silently give the user Setup Assistant.
+        let bundle = try VMBundle(url: bundleURL).readConfig()
+        let hostMajor = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
+        guard MacFirstBoot.needsPassword(config: bundle, hostMajor: hostMajor) else { return nil }
+        let password = try guestPasswords.read(vm: bundle.id)
+        return MacFirstBoot.plan(config: bundle, hostMajor: hostMajor, password: password)
+    }
+
+    private func startProvisioned(_ plan: MacProvisioningPlan) async throws {
+        #if compiler(>=6.4)
+        if #available(macOS 27, *) {
+            let options = VZMacGuestProvisioningOptions()
+            options.fullName = plan.fullName
+            options.username = plan.username
+            options.password = plan.password.value
+            options.logsInAutomatically = true
+            options.enablesRemoteLogin = true
+            // A refusal names the field (full name, short name, password), not VZ's error code.
+            do {
+                try options.validate()
+            } catch {
+                throw MacFirstBoot.provisioningError(error, password: plan.password)
+            }
+            let startOptions = VZMacOSVirtualMachineStartOptions()
+            try startOptions.setGuestProvisioning(options)
+            try await vm.start(options: startOptions)
+            sentProvisioning = true
+            // Non-fatal on purpose: the VM is already running, and Virtualization honors provisioning
+            // only on a first boot that has not been set up, so a resend after a failed write is ignored.
+            try? VMBundle(url: bundleURL).updateConfig { $0.macProvisioningSent = true }
+            return
+        }
+        #endif
+        // Only reachable with an old compiler/OS, where needsPassword is already false.
+        try await vm.start()
     }
 
     /// Pauses a running VM. Only valid from `.running`; otherwise throws `NidoError.notRunning`.

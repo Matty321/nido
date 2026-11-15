@@ -24,3 +24,4 @@ dist/
 *.cer
 *.mobileprovision
 *.provisionprofile
+.claude/worktrees/

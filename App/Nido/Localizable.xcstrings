@@ -506,6 +506,35 @@
         }
       }
     },
+    "%@ are already downloaded: the download resumes." : {
+      "comment" : "%@ is an amount of bytes.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sind bereits geladen: Der Download wird fortgesetzt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ya están descargados: la descarga se reanuda."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sont déjà téléchargés : le téléchargement reprend."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sono già scaricati: il download riprende."
+          }
+        }
+      }
+    },
     "%@ are finishing their first boot: quitting now may leave them without SSH access" : {
       "comment" : "%@ is a list of two or more VM names (“a and b”, “a, b and c”).",
       "localizations" : {
@@ -1803,6 +1832,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ pubblica nuove build con le correzioni di sicurezza. Il controllo scarica solo la lista dei checksum."
+          }
+        }
+      }
+    },
+    "%@ refused the stored password of its account: enter the current one in Settings › Agent." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ hat das gespeicherte Passwort seines Accounts abgelehnt: Gib das aktuelle in Einstellungen › Agent ein."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ha rechazado la contraseña guardada de su cuenta: introduce la actual en Ajustes › Agente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ a refusé le mot de passe enregistré de son compte : saisissez le mot de passe actuel dans Réglages › Agent."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ha rifiutato la password salvata del suo account: inserisci quella attuale in Impostazioni › Agente."
           }
         }
       }
@@ -4942,6 +4999,34 @@
         }
       }
     },
+    "Account password" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password dell’account"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account-Passwort"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contraseña de la cuenta"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot de passe du compte"
+          }
+        }
+      }
+    },
     "AI" : {
       "localizations" : {
         "de" : {
@@ -5900,6 +5985,34 @@
         }
       }
     },
+    "Asking Apple" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple wird gefragt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preguntando a Apple"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demande à Apple en cours"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Richiesta ad Apple"
+          }
+        }
+      }
+    },
     "Assigned when the VM was created." : {
       "localizations" : {
         "de" : {
@@ -6105,6 +6218,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Almeno %lld per macOS %@ · %@"
+          }
+        }
+      }
+    },
+    "Authorize" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorizza"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorisieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorizar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autoriser"
           }
         }
       }
@@ -6414,6 +6555,121 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Occupata"
+          }
+        }
+      }
+    },
+    "Choose the macOS .ipsw file downloaded from Apple’s developer site, or Download from Apple. Nido hasn’t created any files." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle die .ipsw-Datei von macOS, die du von Apples Entwickler-Website heruntergeladen hast, oder wähle Von Apple laden. Nido hat keine Dateien erstellt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige el archivo .ipsw de macOS descargado del sitio para desarrolladores de Apple, o pulsa Descargar de Apple. Nido no ha creado ningún archivo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez le fichier .ipsw de macOS téléchargé sur le site Apple Developer, ou Télécharger depuis Apple. Nido n’a créé aucun fichier."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli il file .ipsw di macOS scaricato dal sito sviluppatori di Apple, oppure Scarica da Apple. Nido non ha creato alcun file."
+          }
+        }
+      }
+    },
+    "copy the password of the account in %@ to its clipboard" : {
+      "comment" : "Completes the Touch ID prompt; %@ is the VM’s name.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "das Passwort des Accounts in %@ in seine Zwischenablage zu kopieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "copiar la contraseña de la cuenta en %@ a su portapapeles"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "copier le mot de passe du compte dans %@ dans son presse-papiers"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "copiare la password dell’account in %@ nei suoi appunti"
+          }
+        }
+      }
+    },
+    "Copy to the VM’s clipboard" : {
+      "comment" : "Settings › Agent: puts the stored account password on the VM’s own clipboard.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In die Zwischenablage der VM kopieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar al portapapeles de la VM"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier dans le presse-papiers de la VM"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia negli appunti della VM"
+          }
+        }
+      }
+    },
+    "Couldn’t copy the password to the VM: %@" : {
+      "comment" : "%@ is the error.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passwort kann nicht in die VM kopiert werden: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se ha podido copiar la contraseña a la VM: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de copier le mot de passe dans la VM : %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile copiare la password nella VM: %@"
           }
         }
       }
@@ -7301,6 +7557,35 @@
         }
       }
     },
+    "Can’t save the guest keyboard: %@" : {
+      "comment" : "Terminal Access panel: writing the chosen layout to the VM's config failed; %@ is the reason.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Tastatur der VM kann nicht gesichert werden: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se puede guardar el teclado de la VM: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’enregistrer le clavier de la VM : %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile salvare la tastiera della VM: %@"
+          }
+        }
+      }
+    },
     "Can’t save the settings: %@" : {
       "localizations" : {
         "de" : {
@@ -8065,34 +8350,6 @@
         }
       }
     },
-    "Choose the macOS .ipsw file downloaded from Apple’s developer site. Nido hasn’t created any files." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wähle die .ipsw-Datei von macOS, die du von Apples Entwickler-Website heruntergeladen hast. Nido hat keine Dateien erstellt."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elige el archivo .ipsw de macOS descargado del sitio para desarrolladores de Apple. Nido no ha creado ningún archivo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choisissez le fichier .ipsw de macOS téléchargé sur le site Apple Developer. Nido n’a créé aucun fichier."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Scegli il file .ipsw di macOS scaricato dal sito sviluppatori di Apple. Nido non ha creato alcun file."
-          }
-        }
-      }
-    },
     "Choose the macOS IPSW file" : {
       "comment" : "Title of the open panel.",
       "localizations" : {
@@ -8122,30 +8379,30 @@
         }
       }
     },
-    "Choose the macOS IPSW file you downloaded: Nido checks that this Mac can install it." : {
+    "Choose a macOS IPSW file or download it from Apple: Nido checks that this Mac can install it." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wähle die heruntergeladene IPSW-Datei von macOS: Nido prüft, ob dieser Mac sie installieren kann."
+            "value" : "Wähle eine macOS-IPSW-Datei oder lade sie von Apple herunter: Nido prüft, ob dieser Mac sie installieren kann."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elige el archivo IPSW de macOS que has descargado: Nido comprueba que este Mac pueda instalarlo."
+            "value" : "Elige un archivo IPSW de macOS o descárgalo de Apple: Nido comprueba que este Mac pueda instalarlo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choisissez le fichier IPSW de macOS que vous avez téléchargé : Nido vérifie que ce Mac peut l’installer."
+            "value" : "Choisissez un fichier IPSW de macOS ou téléchargez-le depuis Apple : Nido vérifie que ce Mac peut l’installer."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scegli il file IPSW di macOS che hai scaricato: Nido controlla che questo Mac possa installarlo."
+            "value" : "Scegli un file IPSW di macOS o scaricalo da Apple: Nido controlla che questo Mac possa installarlo."
           }
         }
       }
@@ -9485,6 +9742,35 @@
         }
       }
     },
+    "Couldn’t read the password: %@" : {
+      "comment" : "%@ is the error.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passwort kann nicht gelesen werden: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se ha podido leer la contraseña: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire le mot de passe : %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile leggere la password: %@"
+          }
+        }
+      }
+    },
     "Couldn’t remove the domain: %@" : {
       "comment" : "%@ is the error.",
       "localizations" : {
@@ -10583,6 +10869,35 @@
         }
       }
     },
+    "Download from Apple" : {
+      "comment" : "Button on the macOS image page of the wizard.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Von Apple laden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descargar de Apple"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Télécharger depuis Apple"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scarica da Apple"
+          }
+        }
+      }
+    },
     "Download gets it and replaces the cached copy once it’s verified. Existing VMs don’t change." : {
       "comment" : "“Download” is the wizard's button.",
       "localizations" : {
@@ -10612,30 +10927,87 @@
         }
       }
     },
-    "Download the IPSW from Apple’s developer site; a beta works too." : {
+    "Choose an IPSW file, or download macOS from Apple; a beta works too." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lade die IPSW-Datei von Apples Entwickler-Website herunter; auch eine Beta funktioniert."
+            "value" : "Wähle eine IPSW-Datei oder lade macOS von Apple herunter; auch eine Beta funktioniert."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Descarga el IPSW del sitio para desarrolladores de Apple; también sirve una beta."
+            "value" : "Elige un archivo IPSW o descarga macOS de Apple; también sirve una beta."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Téléchargez le fichier IPSW sur le site Apple Developer ; une bêta convient aussi."
+            "value" : "Choisissez un fichier IPSW ou téléchargez macOS depuis Apple ; une bêta convient aussi."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scarica l'IPSW dal sito sviluppatori di Apple, anche una beta."
+            "value" : "Scegli un file IPSW o scarica macOS da Apple, anche una beta."
+          }
+        }
+      }
+    },
+    "Download macOS %@ from Apple?" : {
+      "comment" : "Question of the confirmation sheet; %@ is a version.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS %@ von Apple herunterladen?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Descargar macOS %@ de Apple?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Télécharger macOS %@ depuis Apple ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scaricare macOS %@ da Apple?"
+          }
+        }
+      }
+    },
+    "Download paused: the part already downloaded is kept. Download from Apple again to resume." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download pausiert: Der bereits geladene Teil bleibt erhalten. Lade erneut von Apple, um fortzusetzen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descarga en pausa: se conserva la parte ya descargada. Descarga de Apple otra vez para reanudarla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléchargement en pause : la partie déjà téléchargée est conservée. Téléchargez de nouveau depuis Apple pour le reprendre."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download in pausa: la parte già scaricata viene conservata. Scarica di nuovo da Apple per riprenderlo."
           }
         }
       }
@@ -10722,6 +11094,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Download di %@ in corso…"
+          }
+        }
+      }
+    },
+    "Downloading macOS %@" : {
+      "comment" : "%@ is a version.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS %@ wird heruntergeladen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descargando macOS %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléchargement de macOS %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download di macOS %@"
           }
         }
       }
@@ -11262,6 +11663,35 @@
         }
       }
     },
+    "From Apple" : {
+      "comment" : "Label of the row with the Download from Apple button.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Von Apple"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De Apple"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Depuis Apple"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Da Apple"
+          }
+        }
+      }
+    },
     "From Template" : {
       "comment" : "A wizard profile: a new VM from a template.",
       "localizations" : {
@@ -11690,6 +12120,35 @@
         }
       }
     },
+    "Guest keyboard" : {
+      "comment" : "Terminal Access panel (macOS VM): label of the menu that picks the keyboard layout the VM uses, for Type in VM.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tastatur der VM"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teclado de la VM"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clavier de la VM"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tastiera della VM"
+          }
+        }
+      }
+    },
     "Guest ready (the monitor responds)" : {
       "localizations" : {
         "de" : {
@@ -11886,6 +12345,34 @@
         }
       }
     },
+    "Hide password" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nascondi password"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passwort ausblenden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ocultar contraseña"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masquer le mot de passe"
+          }
+        }
+      }
+    },
     "High CPU" : {
       "localizations" : {
         "de" : {
@@ -11994,6 +12481,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hugging Face tramite il ponte di Nido: i testi escono dal Mac."
+          }
+        }
+      }
+    },
+    "In the VM, press ⌘V. The VM’s clipboard is cleared in 60 seconds." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drücke in der VM ⌘V. Die Zwischenablage der VM wird in 60 Sekunden geleert."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En la VM, pulsa ⌘V. El portapapeles de la VM se vacía en 60 segundos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans la VM, appuyez sur ⌘V. Le presse-papiers de la VM est vidé dans 60 secondes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nella VM, premi ⌘V. Gli appunti della VM vengono svuotati tra 60 secondi."
           }
         }
       }
@@ -13064,6 +13579,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "È un file normale (forse una copia vecchia di nido). Nido lo sostituisce con un collegamento al comando dentro l'app."
+          }
+        }
+      }
+    },
+    "Kept in your Mac’s Keychain. You need it to confirm the two permissions in the VM’s System Settings." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conservata nel Portachiavi del tuo Mac. Ti serve per confermare i due permessi in Impostazioni di Sistema nella VM."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Schlüsselbund deines Macs gespeichert. Du brauchst es, um die beiden Berechtigungen in den Systemeinstellungen der VM zu bestätigen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardada en el llavero de tu Mac. La necesitas para confirmar los dos permisos en Ajustes del Sistema de la VM."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conservé dans le trousseau de votre Mac. Il vous faut pour confirmer les deux autorisations dans les Réglages Système de la VM."
           }
         }
       }
@@ -14373,6 +14916,90 @@
         }
       }
     },
+    "Nido Agent is set up." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent è configurato."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent ist eingerichtet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent está configurado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent est configuré."
+          }
+        }
+      }
+    },
+    "Nido Agent isn’t ready yet: see Settings › Agent." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent non è ancora pronto: vedi Impostazioni › Agent."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent ist noch nicht bereit: siehe Einstellungen › Agent."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent aún no está listo: consulta Ajustes › Agent."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent n’est pas encore prêt : voir Réglages › Agent."
+          }
+        }
+      }
+    },
+    "Nido asks Apple which macOS this Mac supports when you press the button, and downloads it only after you confirm." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido fragt Apple, welches macOS dieser Mac unterstützt, wenn du den Knopf drückst, und lädt es erst nach deiner Bestätigung herunter."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido pregunta a Apple qué macOS admite este Mac cuando pulsas el botón, y lo descarga solo después de que lo confirmes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido demande à Apple quel macOS ce Mac prend en charge quand vous appuyez sur le bouton, et ne le télécharge qu’après votre confirmation."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido chiede ad Apple quale macOS supporta questo Mac quando premi il pulsante, e lo scarica solo dopo la tua conferma."
+          }
+        }
+      }
+    },
     "Nido Settings" : {
       "localizations" : {
         "de" : {
@@ -14593,6 +15220,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nido scarica l'immagine ufficiale e ne controlla l'integrità prima di usarla."
+          }
+        }
+      }
+    },
+    "Nido goes online only because you asked. The image comes from Apple’s servers; if the download is interrupted you can resume it, and Nido checks that macOS accepts the file before using it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido geht nur online, weil du es verlangt hast. Das Image kommt von Apples Servern; wird der Download unterbrochen, kannst du ihn fortsetzen, und Nido prüft vor der Verwendung, dass macOS die Datei akzeptiert."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido se conecta a internet solo porque lo has pedido. La imagen viene de los servidores de Apple; si la descarga se interrumpe, puedes reanudarla, y Nido comprueba que macOS acepte el archivo antes de usarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido se connecte à internet uniquement parce que vous l’avez demandé. L’image vient des serveurs d’Apple ; si le téléchargement est interrompu, vous pouvez le reprendre, et Nido vérifie que macOS accepte le fichier avant de l’utiliser."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido va online solo perché lo hai chiesto. L'immagine arriva dai server di Apple; se il download si interrompe puoi riprenderlo, e Nido controlla che macOS accetti il file prima di usarlo."
           }
         }
       }
@@ -14852,6 +15507,34 @@
         }
       }
     },
+    "Nido is setting up Nido Agent from the VM’s window." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido richtet Nido Agent gerade über das Fenster der VM ein."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido está configurando Nido Agent desde la ventana de la VM."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido configure Nido Agent depuis la fenêtre de la VM."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido sta configurando Nido Agent dalla finestra della VM."
+          }
+        }
+      }
+    },
     "Nido is working on %@ (a clone or a snapshot): try again when it’s done." : {
       "localizations" : {
         "de" : {
@@ -14876,6 +15559,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "È in corso un'operazione su %@ in Nido (clonazione o snapshot): riprova al termine."
+          }
+        }
+      }
+    },
+    "Nido keeps no password unless you later let it authorize its key with the account password (Settings › Agent)." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido speichert kein Passwort, es sei denn, du lässt es später seinen Schlüssel mit dem Passwort des Accounts autorisieren (Einstellungen › Agent)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido no guarda ninguna contraseña, a menos que más adelante le dejes autorizar su clave con la contraseña de la cuenta (Ajustes › Agente)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido ne garde aucun mot de passe, sauf si vous le laissez plus tard autoriser sa clé avec le mot de passe du compte (Réglages › Agent)."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido non conserva password, a meno che in seguito tu non gli faccia autorizzare la sua chiave con la password dell’account (Impostazioni › Agente)."
           }
         }
       }
@@ -14908,58 +15619,86 @@
         }
       }
     },
-    "Nido never asks for or saves passwords." : {
+    "Nido needs the password of the account in %@ to authorize its key: enter it in Settings › Agent." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nido fragt keine Passwörter ab und speichert keine."
+            "value" : "Nido braucht das Passwort des Accounts in %@, um seinen Schlüssel zu autorisieren: Gib es in Einstellungen › Agent ein."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nido no pide ni guarda contraseñas."
+            "value" : "Nido necesita la contraseña de la cuenta en %@ para autorizar su clave: introdúcela en Ajustes › Agente."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nido ne demande ni n’enregistre aucun mot de passe."
+            "value" : "Nido a besoin du mot de passe du compte dans %@ pour autoriser sa clé : saisissez-le dans Réglages › Agent."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nido non chiede né salva password."
+            "value" : "Nido ha bisogno della password dell’account in %@ per autorizzare la sua chiave: inseriscila in Impostazioni › Agente."
           }
         }
       }
     },
-    "Nido only reads it: it doesn’t download, copy, move or change it." : {
+    "Nido needs the password of the account in the VM once, to authorize its key. It is kept in your Mac’s Keychain once it worked." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nido liest die Datei nur: Sie wird weder heruntergeladen noch kopiert, verschoben oder geändert."
+            "value" : "Nido braucht einmal das Passwort des Accounts in der VM, um seinen Schlüssel zu autorisieren. Sobald es funktioniert hat, bleibt es im Schlüsselbund deines Macs."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nido solo lo lee: no lo descarga, ni lo copia, ni lo mueve, ni lo modifica."
+            "value" : "Nido necesita una vez la contraseña de la cuenta en la VM para autorizar su clave. Se guarda en el llavero de tu Mac cuando ha funcionado."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nido se contente de le lire : il ne le télécharge pas, ne le copie pas, ne le déplace pas et ne le modifie pas."
+            "value" : "Nido a besoin une fois du mot de passe du compte dans la VM pour autoriser sa clé. Il reste dans le trousseau de votre Mac une fois qu’il a fonctionné."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nido lo legge soltanto: non lo scarica, non lo copia, non lo sposta e non lo modifica."
+            "value" : "Nido ha bisogno una volta della password dell’account nella VM, per autorizzare la sua chiave. Resta nel Portachiavi del tuo Mac quando ha funzionato."
+          }
+        }
+      }
+    },
+    "Nido downloads macOS from Apple only when you ask. It never copies, moves or changes a file you choose." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido lädt macOS nur auf Anfrage von Apple herunter. Eine Datei, die du auswählst, wird nie kopiert, verschoben oder geändert."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido descarga macOS de Apple solo cuando se lo pides. Nunca copia, mueve ni modifica un archivo que elijas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido télécharge macOS depuis Apple uniquement quand vous le demandez. Il ne copie, ne déplace ni ne modifie jamais un fichier que vous choisissez."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido scarica macOS da Apple solo quando glielo chiedi. Non copia, non sposta e non modifica mai un file che scegli."
           }
         }
       }
@@ -15162,30 +15901,31 @@
         }
       }
     },
-    "Nido uses this Mac’s keyboard layout: if the VM’s is different, type the command yourself. Keep Caps Lock off in the VM." : {
+    "Nido types with the layout chosen in Guest keyboard: it must be the one the VM uses. Keep Caps Lock off in the VM." : {
+      "comment" : "Terminal Access panel: under the authorize command; Guest keyboard is the menu's label.",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nido verwendet das Tastaturlayout dieses Mac: Ist es in der VM ein anderes, gib den Befehl selbst ein. Lass die Feststelltaste in der VM ausgeschaltet."
+            "value" : "Nido tippt mit dem unter „Tastatur der VM“ gewählten Layout: Es muss das sein, das die VM verwendet. Lass die Feststelltaste in der VM ausgeschaltet."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nido usa la distribución de teclado de este Mac: si la de la VM es distinta, escribe el comando tú mismo. Mantén desactivado Bloq Mayús en la VM."
+            "value" : "Nido escribe con la distribución elegida en Teclado de la VM: debe ser la que usa la VM. Mantén desactivado Bloq Mayús en la VM."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nido utilise la disposition du clavier de ce Mac : si celle de la VM est différente, saisissez la commande vous-même. Laissez le verrouillage des majuscules désactivé dans la VM."
+            "value" : "Nido tape avec la disposition choisie dans Clavier de la VM : ce doit être celle qu’utilise la VM. Laissez le verrouillage des majuscules désactivé dans la VM."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nido usa la disposizione della tastiera di questo Mac: se nella VM è diversa, digita il comando a mano. Tieni spento Blocco maiuscole nella VM."
+            "value" : "Nido digita con la disposizione scelta in Tastiera della VM: deve essere quella che usa la VM. Tieni spento Blocco maiuscole nella VM."
           }
         }
       }
@@ -19131,6 +19871,146 @@
         }
       }
     },
+    "Setting up Nido Agent in %@…" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurazione di Nido Agent in %@…"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent wird in %@ eingerichtet …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurando Nido Agent en %@…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configuration de Nido Agent dans %@…"
+          }
+        }
+      }
+    },
+    "Show password" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostra password"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passwort anzeigen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar contraseña"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher le mot de passe"
+          }
+        }
+      }
+    },
+    "The VM must run in this app to receive the password." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die VM muss in dieser App laufen, um das Passwort zu erhalten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La VM debe ejecutarse en esta app para recibir la contraseña."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La VM doit s’exécuter dans cette app pour recevoir le mot de passe."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La VM deve essere in esecuzione in questa app per ricevere la password."
+          }
+        }
+      }
+    },
+    "To use %@ with nido ssh, once, after Setup Assistant. These steps need no password." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So nutzt du %@ mit nido ssh – einmalig nach dem Systemassistenten. Diese Schritte brauchen kein Passwort."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para usar %@ con nido ssh, una sola vez, después del Asistente de Configuración. Estos pasos no necesitan contraseña."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour utiliser %@ avec nido ssh, une seule fois, après l’Assistant réglages. Ces étapes ne demandent aucun mot de passe."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per usare %@ con nido ssh, una volta sola dopo l'assistente iniziale. Questi passaggi non richiedono password."
+          }
+        }
+      }
+    },
+    "show the password of the account in %@" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mostrare la password dell’account in %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "das Passwort des Accounts in %@ anzuzeigen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mostrar la contraseña de la cuenta en %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "afficher le mot de passe du compte dans %@"
+          }
+        }
+      }
+    },
     "SSH key of %@" : {
       "localizations" : {
         "de" : {
@@ -19211,6 +20091,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Come il sistema"
+          }
+        }
+      }
+    },
+    "Same as this Mac" : {
+      "comment" : "Terminal Access panel: first entry of the Guest keyboard menu (the VM uses this Mac's current keyboard layout).",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie dieser Mac"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Igual que este Mac"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comme ce Mac"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Come questo Mac"
           }
         }
       }
@@ -22171,6 +23080,34 @@
         }
       }
     },
+    "The password isn’t valid: it can’t be empty or contain line breaks." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La password non è valida: non può essere vuota né contenere a capo."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Passwort ist ungültig: Es darf nicht leer sein oder Zeilenumbrüche enthalten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La contraseña no es válida: no puede estar vacía ni contener saltos de línea."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le mot de passe n’est pas valide : il ne peut pas être vide ni contenir de sauts de ligne."
+          }
+        }
+      }
+    },
     "The VM and its disk (%@) will be deleted from this Mac. This can’t be undone." : {
       "comment" : "The disk's size, e.g. 64 GiB.",
       "localizations" : {
@@ -23043,30 +23980,30 @@
         }
       }
     },
-    "The character %@ can’t be typed with this Mac’s keyboard: type the command yourself in the VM." : {
+    "The character %@ can’t be typed with the keyboard chosen for this VM: type the command yourself in the VM." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Das Zeichen %@ lässt sich mit der Tastatur dieses Mac nicht eingeben: Gib den Befehl selbst in der VM ein."
+            "value" : "Das Zeichen %@ lässt sich mit der für diese VM gewählten Tastatur nicht eingeben: Gib den Befehl selbst in der VM ein."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El carácter %@ no se puede escribir con el teclado de este Mac: escribe el comando tú mismo en la VM."
+            "value" : "El carácter %@ no se puede escribir con el teclado elegido para esta VM: escribe el comando tú mismo en la VM."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le caractère %@ ne peut pas être saisi avec le clavier de ce Mac : saisissez la commande vous-même dans la VM."
+            "value" : "Le caractère %@ ne peut pas être saisi avec le clavier choisi pour cette VM : saisissez la commande vous-même dans la VM."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Il carattere %@ non si può digitare con la tastiera di questo Mac: scrivi il comando a mano nella VM."
+            "value" : "Il carattere %@ non si può digitare con la tastiera scelta per questa VM: scrivi il comando a mano nella VM."
           }
         }
       }
@@ -23411,6 +24348,35 @@
         }
       }
     },
+    "The file is %@." : {
+      "comment" : "%@ is the size of the image.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Datei ist %@ groß."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El archivo pesa %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le fichier pèse %@."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il file è di %@."
+          }
+        }
+      }
+    },
     "The first boot didn’t start the guest monitor within 5 minutes. Look at the console in the Screen view; if cloud-init has finished, install the Guest Tools over SSH." : {
       "localizations" : {
         "de" : {
@@ -23495,6 +24461,34 @@
         }
       }
     },
+    "The image is being downloaded from Apple." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Image wird von Apple geladen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La imagen se está descargando de Apple."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’image est en cours de téléchargement depuis Apple."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L'immagine è in download da Apple."
+          }
+        }
+      }
+    },
     "The image is still being checked." : {
       "localizations" : {
         "de" : {
@@ -23519,6 +24513,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Controllo dell'immagine in corso."
+          }
+        }
+      }
+    },
+    "The keyboard layout chosen for the VM isn’t on this Mac: choose another in Guest keyboard." : {
+      "comment" : "Terminal Access panel: the layout saved for the VM is no longer installed on this Mac; nothing was typed.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das für die VM gewählte Tastaturlayout gibt es auf diesem Mac nicht: Wähle unter „Tastatur der VM“ ein anderes."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La distribución de teclado elegida para la VM no está en este Mac: elige otra en Teclado de la VM."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La disposition de clavier choisie pour la VM n’existe pas sur ce Mac : choisissez-en une autre dans Clavier de la VM."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La disposizione di tastiera scelta per la VM non c'è su questo Mac: scegline un'altra in Tastiera della VM."
           }
         }
       }
@@ -24173,6 +25196,34 @@
         }
       }
     },
+    "The part already downloaded is kept: Download from Apple again to resume." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der bereits geladene Teil bleibt erhalten: Lade erneut von Apple, um fortzusetzen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se conserva la parte ya descargada: descarga de Apple otra vez para reanudar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La partie déjà téléchargée est conservée : téléchargez de nouveau depuis Apple pour reprendre."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La parte già scaricata viene conservata: scarica di nuovo da Apple per riprendere."
+          }
+        }
+      }
+    },
     "The restore failed and was only partly undone: the original file is kept at %@. Try again: Nido puts the files back in place before every operation." : {
       "comment" : "%@ is a file's path.",
       "localizations" : {
@@ -24282,6 +25333,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Il nome breve dell'account che creerai nell'assistente iniziale. Serve solo a nido ssh e si può cambiare dopo."
+          }
+        }
+      }
+    },
+    "The size is unknown until the download starts." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Größe ist erst mit dem Start des Downloads bekannt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El tamaño no se conoce hasta que empieza la descarga."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La taille n’est connue qu’au début du téléchargement."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La dimensione non è nota fino all'inizio del download."
           }
         }
       }
@@ -24931,34 +26010,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Per vedere le cartelle in %@, esegui una volta nella VM:\n%@"
-          }
-        }
-      }
-    },
-    "To use %@ with nido ssh, once, after Setup Assistant. Nido never asks for or saves passwords." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "So nutzt du %@ mit nido ssh – einmalig nach dem Systemassistenten. Nido fragt nie nach Passwörtern und speichert keine."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Para usar %@ con nido ssh, una sola vez, después del Asistente de Configuración. Nido nunca pide ni guarda contraseñas."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pour utiliser %@ avec nido ssh, une seule fois, après l’Assistant réglages. Nido ne demande et n’enregistre jamais de mot de passe."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Per usare %@ con nido ssh, una volta sola dopo l'assistente iniziale. Nido non chiede né salva password."
           }
         }
       }
@@ -25813,6 +26864,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aggiorna"
+          }
+        }
+      }
+    },
+    "Update Nido Agent to use this." : {
+      "comment" : "The Nido Agent in the VM is too old for this action.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktualisiere Nido Agent, um dies zu verwenden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actualiza Nido Agent para usar esta función."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mettez à jour Nido Agent pour utiliser cette fonction."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiorna Nido Agent per usare questa funzione."
           }
         }
       }
@@ -26884,6 +27964,34 @@
         }
       }
     },
+    "Which macOS image does Apple offer this Mac?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welches macOS-Image bietet Apple für diesen Mac an?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Qué imagen de macOS ofrece Apple a este Mac?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quelle image de macOS Apple propose-t-il pour ce Mac ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quale immagine di macOS offre Apple a questo Mac?"
+          }
+        }
+      }
+    },
     "With the bridge on, the text that programs in the VM send to the bridge leaves the Mac and reaches Hugging Face and the provider that serves the model, with your token. Nido doesn’t log prompts or answers, only the model, the tokens used and the outcome. Local mode (Ollama in the VM) is always available." : {
       "localizations" : {
         "de" : {
@@ -27892,31 +29000,31 @@
         }
       }
     },
-    "from an IPSW file" : {
+    "from an IPSW file or from Apple" : {
       "comment" : "Detail under the macOS tile of the wizard.",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "aus IPSW-Datei"
+            "value" : "aus IPSW-Datei oder von Apple"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "desde un archivo IPSW"
+            "value" : "desde un archivo IPSW o desde Apple"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "depuis un fichier IPSW"
+            "value" : "depuis un fichier IPSW ou depuis Apple"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "da file IPSW"
+            "value" : "da file IPSW o da Apple"
           }
         }
       }
@@ -28328,30 +29436,30 @@
         }
       }
     },
-    "macOS installs from an IPSW file you download from Apple’s developer site, betas included: Nido only reads it. Installing takes 4 to 20 minutes, depending on the Mac and the disk; you complete macOS Setup Assistant in the VM’s window." : {
+    "macOS installs from an IPSW file, betas included: one you choose, or one Nido downloads from Apple when you ask. Installing takes 4 to 20 minutes, depending on the Mac and the disk; you complete macOS Setup Assistant in the VM’s window." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "macOS wird aus einer IPSW-Datei installiert, die du selbst von Apples Entwickler-Website herunterlädst, auch Betas: Nido liest sie nur. Die Installation dauert 4 bis 20 Minuten, je nach Mac und Festplatte; den Systemassistenten von macOS schließt du danach im Fenster der VM ab."
+            "value" : "macOS wird aus einer IPSW-Datei installiert, auch Betas: einer, die du auswählst, oder einer, die Nido auf Anfrage von Apple herunterlädt. Die Installation dauert 4 bis 20 Minuten, je nach Mac und Volume; den macOS-Einrichtungsassistenten schließt du im Fenster der VM ab."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "macOS se instala desde un archivo IPSW que descargas tú del sitio para desarrolladores de Apple, betas incluidas: Nido solo lo lee. La instalación tarda de 4 a 20 minutos, según el Mac y el disco; luego completas el Asistente de Configuración de macOS en la ventana de la VM."
+            "value" : "macOS se instala desde un archivo IPSW, betas incluidas: uno que eliges tú, o uno que Nido descarga de Apple cuando se lo pides. La instalación tarda de 4 a 20 minutos, según el Mac y el disco; el Asistente de Configuración de macOS lo completas en la ventana de la VM."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "macOS s’installe à partir d’un fichier IPSW que vous téléchargez sur le site Apple Developer, bêtas comprises : Nido se contente de le lire. L’installation dure de 4 à 20 minutes selon le Mac et le disque ; vous terminez ensuite l’Assistant réglages de macOS dans la fenêtre de la VM."
+            "value" : "macOS s’installe depuis un fichier IPSW, bêtas comprises : un fichier que vous choisissez, ou que Nido télécharge depuis Apple quand vous le demandez. L’installation dure de 4 à 20 minutes, selon le Mac et le disque ; vous terminez l’Assistant de configuration de macOS dans la fenêtre de la VM."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "macOS si installa da un file IPSW che scarichi tu dal sito sviluppatori di Apple, anche beta: Nido lo legge soltanto. L'installazione dura da 4 a 20 minuti, secondo il Mac e il disco; l'assistente iniziale di macOS lo completi tu nella finestra della VM."
+            "value" : "macOS si installa da un file IPSW, anche beta: uno che scegli tu, o uno che Nido scarica da Apple quando glielo chiedi. L'installazione dura da 4 a 20 minuti, secondo il Mac e il disco; l'assistente iniziale di macOS lo completi tu nella finestra della VM."
           }
         }
       }
@@ -29825,6 +30933,1126 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "con stato salvato"
+          }
+        }
+      }
+    },
+    "An agent is using this VM" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Agent verwendet diese VM"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un agente está usando esta VM"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un agent utilise cette VM"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un agente sta usando questa VM"
+          }
+        }
+      }
+    },
+    "Agent" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agente"
+          }
+        }
+      }
+    },
+    "An agent on this Mac can see this VM’s screen and use its mouse and keyboard." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un agente su questo Mac può vedere lo schermo di questa VM e usarne mouse e tastiera."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Agent auf diesem Mac kann den Bildschirm dieser VM sehen und ihre Maus und Tastatur verwenden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un agente en este Mac puede ver la pantalla de esta VM y usar su ratón y su teclado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un agent sur ce Mac peut voir l’écran de cette VM et utiliser sa souris et son clavier."
+          }
+        }
+      }
+    },
+    "Takes effect at the next start." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ha effetto al prossimo avvio."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gilt ab dem nächsten Start."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se aplica en el próximo arranque."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prend effet au prochain démarrage."
+          }
+        }
+      }
+    },
+    "Start the VM to set up Nido Agent." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avvia la VM per configurare Nido Agent."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starte die VM, um Nido Agent einzurichten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inicia la VM para configurar Nido Agent."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Démarrez la VM pour configurer Nido Agent."
+          }
+        }
+      }
+    },
+    "Log in to the VM in its window to go on." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accedi alla VM nella sua finestra per continuare."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melde dich im Fenster der VM an, um fortzufahren."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inicia sesión en la VM en su ventana para continuar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrez une session dans la VM, dans sa fenêtre, pour continuer."
+          }
+        }
+      }
+    },
+    "Allow Nido Agent in Screen Recording and Accessibility in the VM’s System Settings." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Consenti Nido Agent in Registrazione schermo e Accessibilità nelle Impostazioni di Sistema della VM."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erlaube Nido Agent in den Systemeinstellungen der VM unter Bildschirmaufnahme und Bedienungshilfen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite a Nido Agent en Grabación de pantalla y Accesibilidad en los Ajustes del Sistema de la VM."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorisez Nido Agent dans Enregistrement de l’écran et Accessibilité, dans les Réglages Système de la VM."
+          }
+        }
+      }
+    },
+    "Nido Agent %@ is ready." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent %@ è pronto."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent %@ ist bereit."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent %@ está listo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent %@ est prêt."
+          }
+        }
+      }
+    },
+    "Nido Agent in the VM is out of date." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent nella VM non è aggiornato."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent in der VM ist veraltet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent en la VM está desactualizado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent dans la VM est obsolète."
+          }
+        }
+      }
+    },
+    "Nido Agent %@ in the VM is out of date." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent %@ nella VM non è aggiornato."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent %@ in der VM ist veraltet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent %@ en la VM está desactualizado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent %@ dans la VM est obsolète."
+          }
+        }
+      }
+    },
+    "Update Nido Agent" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiorna Nido Agent"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent aktualisieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actualizar Nido Agent"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mettre à jour Nido Agent"
+          }
+        }
+      }
+    },
+    "Install Nido Agent" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installa Nido Agent"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent installieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instalar Nido Agent"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installer Nido Agent"
+          }
+        }
+      }
+    },
+    "Cancelled." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annullato."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abgebrochen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annulé."
+          }
+        }
+      }
+    },
+    "Agent access" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accesso dell’agente"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent-Zugriff"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acceso del agente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accès de l’agent"
+          }
+        }
+      }
+    },
+    "Nido Agent" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent"
+          }
+        }
+      }
+    },
+    "Connect an agent" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collega un agente"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent verbinden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectar un agente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecter un agent"
+          }
+        }
+      }
+    },
+    "Run this in a terminal to give Claude Code this VM. The skill that teaches it how to use the VM installs with nido skill install." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esegui questo in un terminale per dare questa VM a Claude Code. La skill che gli insegna a usarla si installa con nido skill install."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Führe das in einem Terminal aus, um Claude Code diese VM zu geben. Die Skill, die ihm den Umgang mit der VM beibringt, installierst du mit nido skill install."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ejecuta esto en una terminal para dar esta VM a Claude Code. La skill que le enseña a usarla se instala con nido skill install."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exécutez ceci dans un terminal pour donner cette VM à Claude Code. La skill qui lui apprend à l’utiliser s’installe avec nido skill install."
+          }
+        }
+      }
+    },
+    "Lets an agent on this Mac drive this VM through Nido Agent, a small app that runs inside it." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permette a un agente su questo Mac di guidare questa VM tramite Nido Agent, una piccola app che gira al suo interno."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lässt einen Agent auf diesem Mac diese VM über Nido Agent steuern, eine kleine App, die in der VM läuft."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite que un agente en este Mac maneje esta VM mediante Nido Agent, una pequeña app que se ejecuta en ella."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permet à un agent sur ce Mac de piloter cette VM via Nido Agent, une petite app qui s’exécute à l’intérieur."
+          }
+        }
+      }
+    },
+    "Restart the VM to set up Nido Agent." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riavvia la VM per configurare Nido Agent."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starte die VM neu, um Nido Agent einzurichten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reinicia la VM para configurar Nido Agent."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redémarrez la VM pour configurer Nido Agent."
+          }
+        }
+      }
+    },
+    "Nido Agent doesn’t answer: log in to the VM in its window, or install it." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent non risponde: accedi alla VM nella sua finestra, oppure installalo."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent antwortet nicht: Melde dich im Fenster der VM an oder installiere ihn."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent no responde: inicia sesión en la VM en su ventana o instálalo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent ne répond pas : ouvrez une session dans la VM, dans sa fenêtre, ou installez-le."
+          }
+        }
+      }
+    },
+    "Nido Agent isn’t ready. See the messages below." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent non è pronto. Vedi i messaggi sotto."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent ist nicht bereit. Siehe die Meldungen unten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent no está listo. Consulta los mensajes de abajo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent n’est pas prêt. Consultez les messages ci-dessous."
+          }
+        }
+      }
+    },
+    "%@ is suspended: if you change CPU, memory, shared folders or agent access, the next start discards the saved state and the VM starts from scratch." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ è sospesa: se cambi CPU, memoria, cartelle condivise o accesso dell’agente, al prossimo avvio lo stato salvato verrà scartato e la VM partirà da capo."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist im Ruhezustand: Wenn du CPU, Arbeitsspeicher, geteilte Ordner oder den Agent-Zugriff änderst, wird beim nächsten Start der gesicherte Zustand verworfen und die VM führt einen Kaltstart aus."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ está suspendida: si cambias la CPU, la memoria, las carpetas compartidas o el acceso del agente, en el próximo inicio se descartará el estado guardado y la VM empezará de cero."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ est suspendue : si vous modifiez le CPU, la mémoire, les dossiers partagés ou l’accès de l’agent, l’état enregistré sera supprimé au prochain démarrage et la VM repartira de zéro."
+          }
+        }
+      }
+    },
+    "Enter a full name" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scrivi il nome completo"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib den vollständigen Namen ein"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escribe el nombre completo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisis le nom complet"
+          }
+        }
+      }
+    },
+    "Enter a password" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scrivi una password"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib ein Passwort ein"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escribe una contraseña"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisis un mot de passe"
+          }
+        }
+      }
+    },
+    "The passwords don’t match" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le password non coincidono"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Passwörter stimmen nicht überein"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las contraseñas no coinciden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les mots de passe ne correspondent pas"
+          }
+        }
+      }
+    },
+    "This password can’t be used: it must be shorter than 1,024 bytes and have no line breaks." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa password non è utilizzabile: deve essere più corta di 1.024 byte e senza a capo."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Passwort ist nicht verwendbar: Es muss kürzer als 1.024 Byte sein und darf keine Zeilenumbrüche enthalten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta contraseña no se puede usar: debe tener menos de 1.024 bytes y ningún salto de línea."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce mot de passe est inutilisable : il doit faire moins de 1 024 octets et ne contenir aucun saut de ligne."
+          }
+        }
+      }
+    },
+    "Create the account for me" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crea l’account per me"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konto für mich anlegen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crear la cuenta por mí"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer le compte pour moi"
+          }
+        }
+      }
+    },
+    "macOS 27 creates it at the first start, so Setup Assistant doesn’t ask." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS 27 lo crea al primo avvio, quindi l’Assistente Impostazioni non lo chiede."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS 27 legt es beim ersten Start an, der Systemassistent fragt also nicht danach."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS 27 la crea en el primer arranque, así que el Asistente de Configuración no la pide."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS 27 le crée au premier démarrage : l’Assistant réglages ne le demande pas."
+          }
+        }
+      }
+    },
+    "Full name" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nome completo"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vollständiger Name"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nombre completo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nom complet"
+          }
+        }
+      }
+    },
+    "The name macOS shows for the account." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il nome che macOS mostra per l’account."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Name, den macOS für das Konto anzeigt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El nombre que macOS muestra para la cuenta."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le nom que macOS affiche pour le compte."
+          }
+        }
+      }
+    },
+    "Password" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passwort"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contraseña"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot de passe"
+          }
+        }
+      }
+    },
+    "Password again" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password di nuovo"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passwort wiederholen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repite la contraseña"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot de passe, encore une fois"
+          }
+        }
+      }
+    },
+    "Generated password" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password generata"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Generiertes Passwort"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contraseña generada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot de passe généré"
+          }
+        }
+      }
+    },
+    "Regenerate" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rigenera"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neu erzeugen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Generar otra"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Régénérer"
+          }
+        }
+      }
+    },
+    "Choose my own password" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scelgo io la password"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigenes Passwort wählen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elegir mi propia contraseña"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisir mon propre mot de passe"
+          }
+        }
+      }
+    },
+    "Instead of the generated one." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al posto di quella generata."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Statt des generierten Passworts."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En lugar de la generada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À la place de celui généré."
+          }
+        }
+      }
+    },
+    "Let an agent use this Mac (Nido Agent)" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lascia che un agente usi questo Mac (Nido Agent)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einen Agenten diesen Mac nutzen lassen (Nido Agent)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dejar que un agente use este Mac (Nido Agent)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laisser un agent utiliser ce Mac (Nido Agent)"
+          }
+        }
+      }
+    },
+    "Lets an AI agent control this VM through Nido’s MCP tools." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permette a un agente IA di controllare questa VM con gli strumenti MCP di Nido."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein KI-Agent kann diese VM über die MCP-Werkzeuge von Nido steuern."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite que un agente de IA controle esta VM con las herramientas MCP de Nido."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permet à un agent IA de piloter cette VM avec les outils MCP de Nido."
+          }
+        }
+      }
+    },
+    "About the password" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sulla password"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zum Passwort"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sobre la contraseña"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À propos du mot de passe"
+          }
+        }
+      }
+    },
+    "Nido keeps this password in your Mac’s Keychain to set up the VM and authorize its key; you can see it in the VM’s Settings › Agent. macOS in the VM asks for it in System Settings." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido conserva questa password nel Portachiavi del tuo Mac per configurare la VM e autorizzarne la chiave; la vedi in Impostazioni › Agente della VM. macOS nella VM la chiede in Impostazioni di Sistema."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido bewahrt dieses Passwort im Schlüsselbund deines Macs auf, um die VM einzurichten und ihren Schlüssel zu autorisieren; du siehst es in den Einstellungen › Agent der VM. macOS in der VM fragt in den Systemeinstellungen danach."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido guarda esta contraseña en el llavero de tu Mac para configurar la VM y autorizar su clave; la ves en Ajustes › Agente de la VM. macOS en la VM la pide en Ajustes del Sistema."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido garde ce mot de passe dans le trousseau de ton Mac pour configurer la VM et autoriser sa clé ; tu le vois dans Réglages › Agent de la VM. macOS dans la VM le demande dans Réglages Système."
           }
         }
       }

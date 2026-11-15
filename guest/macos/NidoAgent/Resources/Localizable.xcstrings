@@ -1,0 +1,786 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Accessibility" : {
+      "comment" : "Name of the macOS privacy permission, as in System Settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bedienungshilfen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accesibilidad"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accessibilité"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accessibilità"
+          }
+        }
+      }
+    },
+    "After allowing Screen Recording, macOS may ask you to quit and reopen Nido Agent." : {
+      "comment" : "Permissions window: footnote.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nachdem du die Bildschirmaufnahme erlaubt hast, bittet macOS dich eventuell, Nido Agent zu beenden und neu zu öffnen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Después de permitir la grabación de pantalla, puede que macOS te pida salir de Nido Agent y volver a abrirlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Après avoir autorisé l’enregistrement de l’écran, macOS peut vous demander de quitter et de rouvrir Nido Agent."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dopo aver consentito la registrazione dello schermo, macOS potrebbe chiederti di chiudere e riaprire Nido Agent."
+          }
+        }
+      }
+    },
+    "Agent access is off for this VM in Nido" : {
+      "comment" : "Menu-bar state: the VM has no vsock device because agent access is off on the host.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Agent-Zugriff ist für diese VM in Nido ausgeschaltet"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El acceso del agente está desactivado para esta VM en Nido"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’accès agent est désactivé pour cette VM dans Nido"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’accesso dell’agente è disattivato per questa VM in Nido"
+          }
+        }
+      }
+    },
+    "Allow Opening at Login…" : {
+      "comment" : "Menu-bar menu item: the login item waits for the user's approval; opens Login Items in System Settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnen bei der Anmeldung erlauben …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permitir abrir al iniciar sesión…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autoriser l’ouverture à la connexion…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Consenti l’apertura al login…"
+          }
+        }
+      }
+    },
+    "Allowed" : {
+      "comment" : "Permissions window: a permission is granted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erlaubt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permitido"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorisé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Consentito"
+          }
+        }
+      }
+    },
+    "Cannot listen for Nido: retrying" : {
+      "comment" : "Menu-bar state: the listener failed and will try again.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warten auf Nido nicht möglich: neuer Versuch"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se puede esperar a Nido: reintentando"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’attendre Nido : nouvel essai"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile restare in ascolto di Nido: nuovo tentativo"
+          }
+        }
+      }
+    },
+    "Does not open at login" : {
+      "comment" : "Menu-bar state: Nido Agent is not a login item.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird bei der Anmeldung nicht geöffnet"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se abre al iniciar sesión"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ne s’ouvre pas à la connexion"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non si apre al login"
+          }
+        }
+      }
+    },
+    "Needs your approval in System Settings" : {
+      "comment" : "Permissions window: opening at login waits for the user's approval in System Settings > General > Login Items.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Braucht deine Zustimmung in den Systemeinstellungen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Necesita tu aprobación en Ajustes del Sistema"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nécessite votre approbation dans Réglages Système"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Richiede la tua approvazione in Impostazioni di Sistema"
+          }
+        }
+      }
+    },
+    "Nido Agent Permissions" : {
+      "comment" : "Permissions window title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berechtigungen für Nido Agent"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permisos de Nido Agent"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorisations de Nido Agent"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permessi di Nido Agent"
+          }
+        }
+      }
+    },
+    "Nido Agent lets an AI agent you allow in Nido see this Mac’s screen and use its mouse and keyboard. It needs two permissions in System Settings > Privacy & Security." : {
+      "comment" : "Permissions window: introduction.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent lässt einen KI-Agenten, den du in Nido erlaubst, den Bildschirm dieses Mac sehen und Maus und Tastatur benutzen. Dafür sind zwei Berechtigungen in Systemeinstellungen > Datenschutz & Sicherheit nötig."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent permite que un agente de IA que autorices en Nido vea la pantalla de este Mac y use su teclado y ratón. Necesita dos permisos en Ajustes del Sistema > Privacidad y seguridad."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent permet à un agent IA que vous autorisez dans Nido de voir l’écran de ce Mac et d’utiliser sa souris et son clavier. Il a besoin de deux autorisations dans Réglages Système > Confidentialité et sécurité."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent permette a un agente IA che autorizzi in Nido di vedere lo schermo di questo Mac e di usarne mouse e tastiera. Servono due permessi in Impostazioni di Sistema > Privacy e sicurezza."
+          }
+        }
+      }
+    },
+    "Not allowed" : {
+      "comment" : "Permissions window: a permission is not granted yet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht erlaubt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No permitido"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non autorisé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non consentito"
+          }
+        }
+      }
+    },
+    "Off" : {
+      "comment" : "Permissions window: Nido Agent does not open at login.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desactivado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactivé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non attivo"
+          }
+        }
+      }
+    },
+    "On" : {
+      "comment" : "Permissions window: Nido Agent opens at login.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attivo"
+          }
+        }
+      }
+    },
+    "Open System Settings" : {
+      "comment" : "Permissions window: button opening the permission’s pane, or Login Items.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Systemeinstellungen öffnen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir Ajustes del Sistema"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir Réglages Système"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apri Impostazioni di Sistema"
+          }
+        }
+      }
+    },
+    "Open at Login" : {
+      "comment" : "Permissions window: title of the row about opening Nido Agent at login.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei der Anmeldung öffnen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir al iniciar sesión"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir à la connexion"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apertura al login"
+          }
+        }
+      }
+    },
+    "Opens at login" : {
+      "comment" : "Menu-bar state: Nido Agent is a login item.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird bei der Anmeldung geöffnet"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se abre al iniciar sesión"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S’ouvre à la connexion"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si apre al login"
+          }
+        }
+      }
+    },
+    "Permissions allowed" : {
+      "comment" : "Menu-bar state: both permissions are granted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berechtigungen erteilt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permisos concedidos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorisations accordées"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permessi concessi"
+          }
+        }
+      }
+    },
+    "Permissions needed" : {
+      "comment" : "Menu-bar state: a permission is missing.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berechtigungen erforderlich"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faltan permisos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorisations requises"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Servono permessi"
+          }
+        }
+      }
+    },
+    "Permissions…" : {
+      "comment" : "Menu-bar menu item opening the permissions window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berechtigungen …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permisos…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorisations…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permessi…"
+          }
+        }
+      }
+    },
+    "Quit Nido Agent" : {
+      "comment" : "Menu-bar menu item.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent beenden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salir de Nido Agent"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quitter Nido Agent"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esci da Nido Agent"
+          }
+        }
+      }
+    },
+    "Ready for Nido" : {
+      "comment" : "Menu-bar state: listening for the host.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bereit für Nido"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Listo para Nido"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prêt pour Nido"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pronto per Nido"
+          }
+        }
+      }
+    },
+    "Screen Recording" : {
+      "comment" : "Name of the macOS privacy permission, as in System Settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bildschirmaufnahme"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grabación de pantalla"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrement de l’écran"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrazione schermo"
+          }
+        }
+      }
+    },
+    "So Nido can reach this Mac after every restart." : {
+      "comment" : "Permissions window: why Nido Agent opens at login.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Damit Nido diesen Mac nach jedem Neustart erreicht."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para que Nido pueda llegar a este Mac tras cada reinicio."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour que Nido puisse joindre ce Mac après chaque redémarrage."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Così Nido può raggiungere questo Mac dopo ogni riavvio."
+          }
+        }
+      }
+    },
+    "Starting…" : {
+      "comment" : "Menu-bar state: the listener is starting.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gestartet …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Iniciando…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Démarrage…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avvio…"
+          }
+        }
+      }
+    },
+    "To click, scroll and type on this Mac." : {
+      "comment" : "Permissions window: why Accessibility is needed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um auf diesem Mac zu klicken, zu scrollen und zu tippen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para hacer clic, desplazarse y escribir en este Mac."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour cliquer, faire défiler et saisir du texte sur ce Mac."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per fare clic, scorrere e scrivere su questo Mac."
+          }
+        }
+      }
+    },
+    "To take screenshots of this Mac’s screen." : {
+      "comment" : "Permissions window: why Screen Recording is needed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um Screenshots vom Bildschirm dieses Mac zu machen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para hacer capturas de la pantalla de este Mac."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour faire des captures de l’écran de ce Mac."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per fare screenshot dello schermo di questo Mac."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

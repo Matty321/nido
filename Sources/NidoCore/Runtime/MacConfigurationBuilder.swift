@@ -12,9 +12,10 @@ import Virtualization
 /// - audio output only (no microphone);
 /// - one VirtioFS device with the macOS automount tag (the guest shows it in
 ///   `/Volumes/My Shared Files`), always attached and empty unless folders are shared; the same
-///   rules and warnings as Linux (`LinuxConfigurationBuilder.sharedDirectories`).
-/// Nothing else: no serial console, no virtio-socket (the Guest Tools monitor and the AI bridge are
-/// Linux-only in M3b), no Rosetta device (a macOS guest installs Rosetta itself), no USB.
+///   rules and warnings as Linux (`LinuxConfigurationBuilder.sharedDirectories`);
+/// - one virtio-socket device only with `VMConfig.agentAccess` (Nido Agent, port 7710).
+/// Nothing else: no serial console, no other virtio-socket (the Guest Tools monitor and the AI
+/// bridge are Linux-only in M3b), no Rosetta device (a macOS guest installs Rosetta itself), no USB.
 public enum MacConfigurationBuilder {
     /// The display of a VM built without a `DisplaySpec` (the installer, `nido start`).
     public static let defaultDisplay = DisplaySpec(widthInPixels: 1920, heightInPixels: 1200)
@@ -93,6 +94,10 @@ public enum MacConfigurationBuilder {
         let device = VZVirtioFileSystemDeviceConfiguration(tag: sharedFolderTag)
         device.share = VZMultipleDirectoryShare(directories: shared.directories)
         configuration.directorySharingDevices = [device]
+
+        if config.agentAccess == true {
+            configuration.socketDevices = [VZVirtioSocketDeviceConfiguration()]
+        }
 
         // Last: nothing throws after the relay is started.
         let network = try LinuxConfigurationBuilder.networkDevice(

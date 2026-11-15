@@ -113,36 +113,52 @@ public enum VMControl {
     /// atomically renamed to a tombstone (invisible to `open`/`list`); the lock is then released
     /// and the tombstone removed. `owner` is the caller's kind (`.cli` for `nido delete`, `.app`
     /// for the app): it is what the lock line says while the delete runs.
-    public static func deleteVM(_ name: VMName, paths: NidoPaths, owner: LockOwner) throws {
-        try deleteVM(name, paths: paths, owner: owner, whileLocked: { _ in })
+    /// The guest account's password of the VM (`passwords`) goes with it; a failure to remove it
+    /// is ignored (the VM is gone, the item is orphaned, not leaked).
+    public static func deleteVM(
+        _ name: VMName, paths: NidoPaths, owner: LockOwner,
+        passwords: any GuestPasswordStore = KeychainGuestPasswordStore()
+    ) throws {
+        try deleteVM(name, paths: paths, owner: owner, passwords: passwords, whileLocked: { _ in })
     }
 
     /// `deleteVM` for the app: the lock is taken with `BundleLock.acquireAsync`, so a brief
     /// contention is retried without blocking the calling actor.
-    public static func deleteVMAsync(_ name: VMName, paths: NidoPaths, owner: LockOwner) async throws {
+    public static func deleteVMAsync(
+        _ name: VMName, paths: NidoPaths, owner: LockOwner,
+        passwords: any GuestPasswordStore = KeychainGuestPasswordStore()
+    ) async throws {
         let bundle = try VMBundle.open(name, paths: paths)
         let tombstone: URL
+        let id: UUID?
         do {
             let lock = try await BundleLock.acquireAsync(bundle, owner: owner)
             defer { lock.release() }
+            id = try? bundle.readConfig().id
             tombstone = try bundle.moveToTombstone()
         }
         try VMBundle.removeTombstone(at: tombstone)
+        if let id { try? passwords.delete(vm: id) }
     }
 
     /// `whileLocked` runs with the lock held, before the rename (test seam).
     static func deleteVM(
-        _ name: VMName, paths: NidoPaths, owner: LockOwner, whileLocked: (VMBundle) throws -> Void
+        _ name: VMName, paths: NidoPaths, owner: LockOwner,
+        passwords: any GuestPasswordStore = KeychainGuestPasswordStore(),
+        whileLocked: (VMBundle) throws -> Void
     ) throws {
         let bundle = try VMBundle.open(name, paths: paths)
         let tombstone: URL
+        let id: UUID?
         do {
             let lock = try BundleLock.acquire(bundle, owner: owner)
             defer { lock.release() }
             try whileLocked(bundle)
+            id = try? bundle.readConfig().id
             tombstone = try bundle.moveToTombstone()
         }
         try VMBundle.removeTombstone(at: tombstone)
+        if let id { try? passwords.delete(vm: id) }
     }
 
     // MARK: - config edits

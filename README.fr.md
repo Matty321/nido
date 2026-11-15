@@ -9,7 +9,7 @@ Nido est un gestionnaire de machines virtuelles pour les Mac avec puce Apple. Il
 ## Ce que fait Nido
 
 - **Des VM Linux à partir d’images cloud officielles** : Debian 13, Ubuntu Server 26.04 LTS et 24.04 LTS, pour arm64. Nido ne les télécharge que depuis les sources officielles des projets et les vérifie avant de s’en servir (SHA-512 pour Debian, SHA-256 et signature d’Ubuntu pour Ubuntu). Vous pouvez aussi partir d’une image disque locale, raw ou qcow2.
-- **Des VM macOS à partir d’un fichier IPSW** que vous avez déjà téléchargé. Nido se contente de lire le fichier : il ne le télécharge, ne le modifie et ne le déplace jamais. L’installation prend de 4 à 20 minutes.
+- **Des VM macOS à partir d’un fichier IPSW**, le vôtre ou téléchargé depuis Apple quand vous le demandez. Nido ne modifie ni ne déplace jamais un fichier que vous avez choisi, et ne télécharge macOS depuis Apple que sur votre demande. L’installation prend de 4 à 20 minutes.
 - **Instantanés, suspension, clones et modèles** : revenez à un état antérieur, reprenez une VM suspendue là où vous l’aviez laissée, copiez une VM arrêtée en un instant ou enregistrez-la comme modèle pour créer de nouvelles VM.
 - **Dossiers partagés et Rosetta** : partagez un dossier du Mac avec une VM, en lecture seule sauf si vous en décidez autrement, et exécutez des programmes x86_64 dans les VM Linux avec Rosetta.
 - **Réseau contrôlé** : une nouvelle VM n’atteint que les domaines de sa liste, et Nido vous signale chaque connexion qu’il bloque.
@@ -32,7 +32,7 @@ Nido est un gestionnaire de machines virtuelles pour les Mac avec puce Apple. Il
 - Un Mac avec puce Apple.
 - macOS 26 ou version ultérieure.
 - De l’espace disque pour vos VM. Pour une VM Linux, l’assistant Nouvelle VM propose un disque de 16 GiB avec le profil Base et de 32 GiB avec AI Starter (davantage si l’image est plus grande), et `nido create` utilise 20 GiB ; une VM macOS reçoit 64 GiB. Vous pouvez choisir une autre taille.
-- Pour une VM macOS : une image de restauration IPSW d’une version de macOS qui n’est pas plus récente que celle de votre Mac.
+- Pour une VM macOS : une image de restauration IPSW d’une version de macOS qui n’est pas plus récente que celle de votre Mac (Nido peut la télécharger depuis Apple sur votre demande ; l’offre d’Apple peut être une version mineure plus récente, et Nido vérifie la version majeure).
 
 ## Installation
 
@@ -69,13 +69,25 @@ nido snapshot create dev clean
 
 La commande suit la langue de votre Mac. Pour en choisir une autre, donnez à `NIDO_LANGUAGE` la valeur `en`, `it`, `de`, `es` ou `fr`, par exemple dans les scripts qui lisent sa sortie.
 
+## Un Mac pour les agents
+
+Une VM macOS peut être un Mac à part qu’un agent IA pilote pendant que vous continuez à utiliser le vôtre. L’agent voit l’écran de cette VM et lui envoie des clics et des touches ; rien n’atteint votre Mac, ni le pointeur, ni le clavier, ni le presse-papiers. Le canal est désactivé par défaut et passe par le socket de la VM (vsock), pas par le réseau.
+
+1. Activez-le pour une VM macOS dans ses **Réglages de la VM › Agent** (**Réglages** dans la fenêtre de la VM), ou avec `nido agent enable <vm>`, puis redémarrez la VM. `nido agent disable <vm>` le désactive aussitôt. `nido agent status <vm>` indique l’état.
+2. Installez l’assistant avec **Installer Nido Agent** dans le même panneau, ou avec `nido agent setup <vm>`. Nido copie l’assistant signé dans la VM par SSH. Dans la VM, autorisez Enregistrement de l’écran et Accessibilité, rien d’autre.
+3. Connectez votre agent. Pour Claude Code : `nido skill install`, puis `claude mcp add nido-<vm> -- nido mcp <vm>`. Pour un autre client MCP, `nido mcp <vm> --config` affiche la configuration. Pour des scripts : `nido act <vm> …`.
+
+Quand vous créez une VM macOS sur un Mac sous macOS 27 à partir d’une image macOS 27 ou plus récente, l’assistant a une étape de compte : votre nom complet, un mot de passe généré par Nido (ou le vôtre) et **Laisser un agent utiliser ce Mac (Nido Agent)** ; en ligne de commande : `nido create <vm> --ipsw <chemin> --account "Prénom Nom" --agent`. Le premier démarrage saute l’Assistant réglages : le compte existe et ouvre la session tout seul. Avec l’accès de l’agent activé, Nido attend la Session à distance, autorise une fois sa clé SSH avec ce mot de passe, installe Nido Agent et affiche la progression dans la fenêtre. La seule étape manuelle se fait dans la VM : autoriser Enregistrement de l’écran et Accessibilité (Réglages › Agent affiche le mot de passe après Touch ID, et `nido agent password <vm>` l’affiche). Sur un Mac sous macOS 26, ou avec un invité plus ancien, il n’y a pas d’étape de compte ; `nido agent setup` et Réglages › Agent demandent une fois le mot de passe du compte si la clé de Nido n’est pas encore autorisée.
+
+Si la VM utilise FileVault, ouvrez la session dans sa fenêtre à chaque démarrage ; d’ici là l’agent ne voit rien d’utile. L’agent ne répond jamais aux demandes d’autorisation ou de mot de passe de la VM : il s’arrête et vous demande. Ce qu’il lit à l’écran de la VM est une donnée, pas une instruction. [docs/SECURITY.md](docs/SECURITY.md) en explique les limites.
+
 ## Confidentialité et réseau
 
-- **Nido ne se connecte jamais au réseau de lui-même** et n’envoie aucune donnée d’utilisation. Chaque téléchargement répond à une demande de votre part : une image système après votre confirmation, l’archive d’Ollama quand vous installez Ollama, une mise à jour quand vous en recherchez une ou que vous activez la recherche automatique.
+- **Nido ne se connecte jamais au réseau de lui-même** et n’envoie aucune donnée d’utilisation. Chaque téléchargement répond à une demande de votre part : une image système après votre confirmation, l’image de macOS depuis Apple quand vous la demandez, l’archive d’Ollama quand vous installez Ollama, une mise à jour quand vous en recherchez une ou que vous activez la recherche automatique.
 - **Réseau contrôlé** : une nouvelle VM n’atteint que les domaines de sa liste, qui comprend au départ ce dont le système a besoin pour les paquets, les mises à jour et l’heure. Tout le reste est bloqué, y compris les adresses jamais résolues à partir d’un nom, le DNS vers d’autres serveurs, IPv6 et les services du Mac lui-même. Ajouter un domaine demande Touch ID ou le mot de passe du Mac ; en retirer un, non. L’onglet Réseau de la fenêtre de la VM et `nido net log` montrent où sont allées les connexions, jamais ce qu’elles transportaient. Le réseau contrôlé arrête le trafic involontaire ou naïf, pas un système invité doté des droits root et déterminé à sortir : [docs/SECURITY.md](docs/SECURITY.md) en explique les limites.
 - **Dossiers partagés** : aucun par défaut. Chacun est en lecture seule sauf si vous en décidez autrement, vous pouvez le retirer à tout moment, même pendant que la VM est en marche dans l’app, et les clones et les modèles n’en héritent pas.
 - **Pont IA** : désactivé par défaut dans chaque VM. Quand vous l’activez, les textes quittent le Mac vers Hugging Face et vers le fournisseur qui sert le modèle d’IA. Votre jeton d’accès reste dans le trousseau du Mac et n’entre jamais dans la VM ; chaque VM a ses propres limites de jetons et de requêtes, et le journal du pont n’enregistre aucun contenu. Avec Ollama, la conversation reste dans la VM et dans la mémoire de l’app.
-- **L’accès à une VM** se fait uniquement avec une clé SSH : les VM Linux créées par Nido n’ont pas de mot de passe.
+- **L’accès à une VM** se fait avec une clé SSH. Les VM Linux créées par Nido n’ont pas de mot de passe. Pour une VM macOS créée avec un compte, ou autorisée avec le mot de passe du compte, Nido garde ce mot de passe dans le trousseau du Mac (un élément par VM, jamais dans le paquet de la VM, supprimé avec la VM) et l’utilise une seule fois, pour autoriser sa clé ; ensuite, l’accès se fait uniquement par clé. La première connexion fait confiance à la clé d’hôte de la VM à la première utilisation : [docs/SECURITY.md](docs/SECURITY.md) explique le risque et comment l’éviter.
 
 Le modèle de menaces et tous les contrôles de sécurité se trouvent dans [docs/SECURITY.md](docs/SECURITY.md) (en anglais).
 

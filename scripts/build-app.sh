@@ -58,6 +58,7 @@ fi
 
 gvproxy_id="io.gitlab.pichierri.Nido.gvproxy"
 cli_id="io.gitlab.pichierri.Nido.cli"
+agent_id="io.gitlab.pichierri.Nido.Agent"
 sign_identity="-"
 # A real identity also gets a secure timestamp (needed by notarization; it contacts Apple's server).
 timestamp=()
@@ -114,6 +115,15 @@ check() {
     fi
     codesign --force --sign "$sign_identity" --identifier "$gvproxy_id" --options runtime ${timestamp[@]+"${timestamp[@]}"} \
         "$app/Contents/Helpers/gvproxy"
+    # Nido Agent (the helper that setup copies into a macOS guest): built and signed by build-agent.sh with
+    # Nido's identity, Hardened Runtime and no entitlements, then shipped in Resources (inside out, before the seal).
+    local agent_out agent_app
+    agent_out="$(mktemp -d -t nido-agent)"
+    agent_app="$(bash scripts/build-agent.sh "$sign_identity" "$agent_out" | tail -n 1)"
+    rm -rf "$app/Contents/Resources/NidoAgent.app"
+    mkdir -p "$app/Contents/Resources"
+    ditto "$agent_app" "$app/Contents/Resources/NidoAgent.app"
+    rm -rf "$agent_out"
     # The CLI is signed after gvproxy and before the app seal (inside out), with the virtualization entitlement only.
     cp "$cli_binary" "$app/Contents/Helpers/nido"
     codesign --force --sign "$sign_identity" --identifier "$cli_id" --entitlements Resources/nido.entitlements \
@@ -188,6 +198,28 @@ check() {
         exit 1
     fi
 
+    # Nido Agent: present, Nido's identifier, Hardened Runtime, no entitlements, strict signature.
+    local agent="$app/Contents/Resources/NidoAgent.app"
+    if [[ ! -d "$agent" ]]; then
+        echo "build-app: $configuration: $agent is missing" >&2
+        exit 1
+    fi
+    codesign --verify --strict --deep "$agent"
+    local agent_info
+    agent_info="$(codesign -dv "$agent" 2>&1)"
+    if [[ "$agent_info" != *"Identifier=$agent_id"* ]]; then
+        echo "build-app: $configuration: unexpected Nido Agent identifier: '$agent_info'" >&2
+        exit 1
+    fi
+    if ! grep -E '^CodeDirectory' <<<"$agent_info" | grep -q runtime; then
+        echo "build-app: $configuration: Hardened Runtime missing on Nido Agent" >&2
+        exit 1
+    fi
+    if [[ -n "$(codesign -d --entitlements - --xml "$agent" 2>/dev/null)" ]]; then
+        echo "build-app: $configuration: Nido Agent has entitlements" >&2
+        exit 1
+    fi
+
     # Every code in Frameworks and Helpers: Hardened Runtime. Sparkle: no entitlements at all, no XPC services.
     local code
     while IFS= read -r code; do
@@ -212,6 +244,7 @@ check() {
     echo "build-app: OK – $app"
     echo "  Sparkle: Hardened Runtime, no entitlements, no XPCServices"
     echo "  helper: gvproxy ($gvproxy_id), Hardened Runtime, no entitlements"
+    echo "  helper: NidoAgent.app ($agent_id), Hardened Runtime, no entitlements"
     echo "  helper: nido ($cli_id), Hardened Runtime, entitlements $cli_keys"
     echo "  entitlements: $keys"
     echo "  $flags"

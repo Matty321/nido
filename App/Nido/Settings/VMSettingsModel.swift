@@ -155,10 +155,14 @@ final class VMSettingsModel {
     var showsGuestTools: Bool { guest == .linux }
     /// "Nome utente per nido ssh": the account a macOS guest is reached as.
     var showsSSHUser: Bool { guest == .macos }
+    /// Agent access (an agent driving the guest's screen) is for macOS guests only, and not for
+    /// a template, which never runs (as Sharing, it changes after Edit Template in the library).
+    var showsAgent: Bool { guest == .macos && !isTemplate }
     /// The enabled sections of S08, in order, by id: the Italian names they always had, which
     /// also name the rows for the UI tests (`settings-section-<id>`). `sectionTitle` is the copy.
     var sectionNames: [String] {
         ["Generale", "Hardware", "Condivisione"] + (showsGuestTools ? ["Guest Tools"] : [])
+            + (showsAgent ? ["Agent"] : [])
     }
 
     /// The heading of the section `id` (`sectionNames`, and Accesso and Rete of the view).
@@ -167,6 +171,7 @@ final class VMSettingsModel {
         case "Generale": String(localized: "General")
         case "Hardware": String(localized: "Hardware")
         case "Condivisione": String(localized: "Sharing")
+        case "Agent": String(localized: "Agent")
         case "Accesso": String(localized: "Access")
         case "Rete": String(localized: "Network")
         default: id  // Guest Tools: a name, never translated.
@@ -249,14 +254,18 @@ final class VMSettingsModel {
     /// True when the next start will discard that state (the settings changed since the suspend).
     private(set) var suspendedStateIsStale = false
 
-    /// Under Hardware and Condivisione of a suspended VM: what a change does to its saved state.
+    /// Under Hardware, Condivisione and Agent of a suspended VM: what a change does to its saved
+    /// state.
     var suspendedNote: String? {
         guard isSuspended, !isLocked else { return nil }
         if suspendedStateIsStale {
             return String(localized: "The settings of \(name) changed after the suspend: the next start discards the saved state and the VM starts from scratch.")
         }
-        return showsRosetta
-            ? String(localized: "\(name) is suspended: if you change CPU, memory, shared folders or Rosetta, the next start discards the saved state and the VM starts from scratch.")
+        if showsRosetta {
+            return String(localized: "\(name) is suspended: if you change CPU, memory, shared folders or Rosetta, the next start discards the saved state and the VM starts from scratch.")
+        }
+        return showsAgent
+            ? String(localized: "\(name) is suspended: if you change CPU, memory, shared folders or agent access, the next start discards the saved state and the VM starts from scratch.")
             : String(localized: "\(name) is suspended: if you change CPU, memory or shared folders, the next start discards the saved state and the VM starts from scratch.")
     }
 
@@ -271,8 +280,9 @@ final class VMSettingsModel {
         if stale != suspendedStateIsStale { suspendedStateIsStale = stale }
     }
 
-    /// A change was written: this model and the VM's window reread the suspended state.
-    private func configurationWritten() {
+    /// A change was written (here, or by the Agent pane's switch): this model and the VM's window
+    /// reread the suspended state.
+    func configurationWritten() {
         refreshSuspendedState()
         onConfigurationChanged()
     }

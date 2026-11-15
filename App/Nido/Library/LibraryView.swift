@@ -33,6 +33,7 @@ struct LibraryView: View {
             appRunsMachine: { name in environment.sessions.runsMachine(name) },
             isSnapshotting: { name in environment.sessions.isSnapshotting(name) },
             isBridgeActive: { name in environment.sessions.isAIBridgeActive(name) },
+            liveAgentActive: { name in environment.sessions.isAgentActive(name) },
             measureTemplate: { name in
                 fakeTemplateSizes[name] ?? LiveVMTemplates.allocatedBytes(of: name, paths: paths)
             },
@@ -267,6 +268,7 @@ struct LibraryView: View {
             resources: LibraryModel.resources(of: vm),
             state: model.cardState(for: vm),
             bridgeActive: model.showsBridgePill(for: vm),
+            agentActive: model.showsAgentMark(for: vm),
             // Opens the VM's window (or brings it to the front); the model ignores cards that
             // cannot be opened here. Only the card's text reacts, not its buttons.
             onDoubleClick: { Task { await model.doubleClick(vm) } }
@@ -326,6 +328,7 @@ struct LibraryView: View {
             registry: environment.registry, images: images, creator: creator,
             freeDiskBytes: Self.freeSpace(at: environment.paths.root), checkHeadroom: checkHeadroom,
             macInstaller: environment.macInstaller, installs: environment.macInstalls,
+            macImageDownloader: environment.macImageDownloader,
             presetIPSW: environment.ipswFile)
         wizard.tint = environment.tints.freshTint(for: wizard.name, among: model.items.map(\.name))
         configure(wizard)

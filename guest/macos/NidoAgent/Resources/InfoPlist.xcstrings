@@ -1,0 +1,41 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSScreenCaptureUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nido Agent takes screenshots of this Mac’s screen for the AI agent you allow in Nido."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nido Agent cattura schermate dello schermo di questo Mac per l’agente IA che consenti in Nido."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nido Agent erstellt Bildschirmfotos von diesem Mac für den KI-Agenten, den du in Nido erlaubst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nido Agent hace capturas de la pantalla de este Mac para el agente de IA que permites en Nido."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nido Agent réalise des captures de l’écran de ce Mac pour l’agent IA que vous autorisez dans Nido."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

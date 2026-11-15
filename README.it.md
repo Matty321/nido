@@ -9,7 +9,7 @@ Nido è un gestore di macchine virtuali per i Mac con chip Apple. Fa girare VM L
 ## Cosa fa Nido
 
 - **VM Linux dalle immagini cloud ufficiali**: Debian 13, Ubuntu Server 26.04 LTS e 24.04 LTS, per arm64. Nido le scarica solo dalle fonti ufficiali dei progetti e le verifica prima di usarle (SHA-512 per Debian, SHA-256 e firma di Ubuntu per Ubuntu). Puoi anche partire da un'immagine disco locale, raw o qcow2.
-- **VM macOS da un file IPSW** che hai già scaricato. Nido si limita a leggere il file: non lo scarica, non lo modifica e non lo sposta. L'installazione richiede da 4 a 20 minuti.
+- **VM macOS da un file IPSW**, tuo o scaricato da Apple quando lo chiedi. Nido non modifica né sposta un file che hai scelto, e scarica macOS da Apple solo quando lo chiedi. L'installazione richiede da 4 a 20 minuti.
 - **Snapshot, sospensione, cloni e modelli**: torna a uno stato precedente, riprendi una VM sospesa da dove l'avevi lasciata, copia una VM ferma in un istante o salvala come modello per creare nuove VM.
 - **Cartelle condivise e Rosetta**: condividi una cartella del Mac con una VM, in sola lettura salvo scelta diversa, ed esegui i programmi x86_64 nelle VM Linux con Rosetta.
 - **Rete controllata**: una VM nuova raggiunge solo i domini della sua lista, e Nido ti avvisa di ogni connessione che blocca.
@@ -32,7 +32,7 @@ Nido è un gestore di macchine virtuali per i Mac con chip Apple. Fa girare VM L
 - Un Mac con chip Apple.
 - macOS 26 o successivo.
 - Spazio su disco per le VM. Per una VM Linux la creazione guidata (Nuova VM) propone un disco da 16 GiB con il profilo Base e da 32 GiB con AI Starter (di più se l'immagine è più grande), mentre `nido create` usa 20 GiB; una VM macOS ha 64 GiB. Puoi scegliere un'altra dimensione.
-- Per una VM macOS: un'immagine di ripristino IPSW di una versione di macOS non più recente di quella del tuo Mac.
+- Per una VM macOS: un'immagine di ripristino IPSW di una versione di macOS non più recente di quella del tuo Mac (Nido può scaricarla da Apple quando lo chiedi; l'offerta di Apple può essere una minor più recente, e Nido controlla la versione major).
 
 ## Installazione
 
@@ -69,13 +69,25 @@ nido snapshot create dev clean
 
 Il comando segue la lingua del Mac. Per sceglierne un'altra, imposta `NIDO_LANGUAGE` a `en`, `it`, `de`, `es` o `fr`, per esempio negli script che leggono quello che scrive.
 
+## Un Mac per gli agenti
+
+Una VM macOS può essere un Mac separato che un agente IA usa mentre tu continui a usare il tuo. L’agente vede lo schermo di quella VM e le invia clic e tasti; niente arriva al tuo Mac, né il puntatore, né la tastiera, né gli appunti. Il canale è spento per impostazione predefinita e passa dal socket della VM (vsock), non dalla rete.
+
+1. Attivalo per una VM macOS nelle sue **Impostazioni VM › Agente** (**Impostazioni** nella finestra della VM), oppure con `nido agent enable <vm>`, poi riavvia la VM. `nido agent disable <vm>` lo spegne subito. `nido agent status <vm>` mostra lo stato.
+2. Installa l’helper con **Installa Nido Agent** nello stesso pannello, oppure con `nido agent setup <vm>`. Nido copia nella VM l’helper firmato via SSH. Nella VM consenti Registrazione schermo e Accessibilità, nient’altro.
+3. Collega il tuo agente. Per Claude Code: `nido skill install`, poi `claude mcp add nido-<vm> -- nido mcp <vm>`. Per un altro client MCP, `nido mcp <vm> --config` stampa la configurazione. Per gli script: `nido act <vm> …`.
+
+Creando una VM macOS su un Mac con macOS 27 da un’immagine macOS 27 o successiva, la procedura guidata ha un passo Account: il tuo nome completo, una password generata da Nido (o una scelta da te) e **Lascia che un agente usi questo Mac (Nido Agent)**; da riga di comando: `nido create <vm> --ipsw <percorso> --account "Nome Cognome" --agent`. Il primo avvio salta assistente iniziale: l’account esiste e accede da solo. Con l’accesso dell’agente attivo, Nido aspetta Login remoto, autorizza una volta la sua chiave SSH con quella password, installa Nido Agent e mostra l’avanzamento nella finestra. L’unico passo manuale è nella VM: consenti Registrazione schermo e Accessibilità (Impostazioni › Agente mostra la password dopo Touch ID, e `nido agent password <vm>` la stampa). Su un Mac con macOS 26, o con un guest più vecchio, il passo Account non c’è; `nido agent setup` e Impostazioni › Agente chiedono una volta la password dell’account se la chiave di Nido non è ancora autorizzata.
+
+Se la VM usa FileVault, a ogni avvio accedi dalla sua finestra; finché non lo fai l’agente non vede nulla di utile. L’agente non risponde mai alle richieste di permesso o di password nella VM: si ferma e ti chiede. Ciò che legge sullo schermo della VM sono dati, non istruzioni. [docs/SECURITY.md](docs/SECURITY.md) spiega i limiti.
+
 ## Privacy e rete
 
-- **Nido non si collega mai alla rete da solo** e non invia dati d'uso. Ogni download parte da una tua richiesta: un'immagine di sistema dopo la tua conferma, l'archivio di Ollama quando installi Ollama, un aggiornamento quando lo cerchi o attivi il controllo automatico.
+- **Nido non si collega mai alla rete da solo** e non invia dati d'uso. Ogni download parte da una tua richiesta: un'immagine di sistema dopo la tua conferma, l'immagine di macOS da Apple quando la chiedi, l'archivio di Ollama quando installi Ollama, un aggiornamento quando lo cerchi o attivi il controllo automatico.
 - **Rete controllata**: una VM nuova raggiunge solo i domini della sua lista, che parte da quello che serve al sistema per pacchetti, aggiornamenti e orologio. Tutto il resto è bloccato, compresi gli indirizzi mai cercati per nome, il DNS verso altri server, IPv6 e i servizi del Mac stesso. Aggiungere un dominio chiede Touch ID o la password del Mac; toglierlo no. La scheda Rete nella finestra della VM e `nido net log` mostrano dove sono andate le connessioni, mai cosa contenevano. La rete controllata ferma le uscite per sbaglio e quelle ingenue, non un guest con accesso root deciso a uscire: [docs/SECURITY.md](docs/SECURITY.md) ne spiega i limiti.
 - **Cartelle condivise**: nessuna per impostazione predefinita. Ognuna è in sola lettura salvo scelta diversa, puoi toglierla in qualsiasi momento, anche a VM accesa nell'app, e cloni e modelli non la ereditano.
 - **Ponte AI**: spento per impostazione predefinita in ogni VM. Quando lo attivi, i testi escono dal Mac verso Hugging Face e verso il provider che serve il modello. Il token di accesso resta nel Portachiavi del Mac e non entra mai nella VM; ogni VM ha i suoi limiti di token e di richieste, e il registro del ponte non contiene i testi. Con Ollama la chat resta nella VM e nella memoria dell'app.
-- **L'accesso a una VM** è solo con una chiave SSH: le VM Linux create da Nido non hanno password.
+- **L'accesso a una VM** è con una chiave SSH. Le VM Linux create da Nido non hanno password. Per una VM macOS creata con un account, o autorizzata con la password dell’account, Nido tiene quella password nel Portachiavi del Mac (un elemento per VM, mai nel bundle della VM, eliminato con la VM) e la usa una sola volta, per autorizzare la sua chiave; poi l’accesso è solo con la chiave. Il primo accesso si fida della chiave host della VM al primo utilizzo: [docs/SECURITY.md](docs/SECURITY.md) spiega il rischio e come evitarlo.
 
 Il modello di minaccia e tutti i controlli di sicurezza sono in [docs/SECURITY.md](docs/SECURITY.md) (in inglese).
 

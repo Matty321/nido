@@ -106,6 +106,16 @@ struct VMWindowView: View {
             if !window.isFullScreen {
                 // The window's own close, minimise and zoom buttons sit in this strip.
                 Color.clear.frame(height: Theme.Layout.titleBarHeight)
+                    // Over the strip, never in the layout: the screen keeps its size.
+                    .overlay {
+                        if let setup = model.firstRunSetup {
+                            FirstRunSetupStrip(state: setup)
+                        } else if model.agentActive {
+                            AgentBanner()
+                        }
+                    }
+                    .animation(.default, value: model.agentActive)
+                    .animation(.default, value: model.firstRunSetup)
                 toolbar
                 if model.showsViewTabs { tabs }
             }
@@ -126,6 +136,17 @@ struct VMWindowView: View {
                 }
                 .allowsHitTesting(false)
             }
+        }
+        .overlay(alignment: .top) {
+            // Full screen has no title strip: the same banner at the top of the display, under
+            // the toolbar when it slides in. It takes no clicks.
+            Group {
+                if window.isFullScreen, model.agentActive {
+                    AgentBanner().padding(.top, Theme.Space.s)
+                }
+            }
+            .animation(.default, value: model.agentActive)
+            .allowsHitTesting(false)
         }
         .overlay(alignment: .top) {
             if window.isFullScreen { fullScreenBar }
@@ -454,7 +475,8 @@ struct VMWindowView: View {
             ZStack {
                 Theme.MacScreen.background
                 if let machine = model.displayMachine {
-                    MacDisplayView(machine: machine, isFullScreen: window.isFullScreen, controller: display)
+                    MacDisplayView(machine: machine, isFullScreen: window.isFullScreen, controller: display,
+                                   reconfiguresDisplay: !model.freezesGuestDisplay)
                         .opacity(paused ? Theme.Layout.pausedDisplayOpacity : 1)
                         .allowsHitTesting(!paused)
                         .accessibilityIdentifier("vm-display")
@@ -467,13 +489,10 @@ struct VMWindowView: View {
         }
     }
 
-    /// "Digita nella VM": the command, with keys from this Mac's current layout.
+    /// "Digita nella VM": the command, with keys from the guest's layout (chosen in the panel,
+    /// else this Mac's current one).
     private func typeAuthorizeCommand(_ access: TerminalAccessModel) {
-        guard let layout = SystemKeyboardLayout() else {
-            access.reportLayoutUnavailable()
-            return
-        }
-        Task { await access.typeCommand(into: display, layout: layout) }
+        Task { await access.typeCommand(into: display) }
     }
 
     private func message(_ panel: NidoEmptyState) -> some View {

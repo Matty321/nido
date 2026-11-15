@@ -19,6 +19,8 @@ final class FakeSession: VMSessionHandle, MachineStateSaving {
         }
     }
     var onStateChange: ((VMRunState) -> Void)?
+    /// Whether the start sent the guest its account (`VMSession.sentProvisioning`).
+    var sentProvisioning = false
     /// The guest's console, when the test gives the session one.
     var console: (any GuestConsole)?
     /// The guest's monitor channel, when the test gives the session one.
@@ -27,6 +29,15 @@ final class FakeSession: VMSessionHandle, MachineStateSaving {
     var aiBridgeAttached: Bool?
 
     var machineIsGone = true
+    /// The activity callback `startAgentHost` was given (the agent runs a command: true, then false).
+    private(set) var agentActivity: (@Sendable (Bool) -> Void)?
+    func startAgentHost(
+        bundle: VMBundle, config: VMConfig, onWarning: (String) -> Void,
+        onActivity: @escaping @Sendable (Bool) -> Void
+    ) -> AgentControlServer? {
+        agentActivity = onActivity
+        return nil
+    }
     /// What the configuration left out (shown in the window's bar).
     var warnings: [String] = []
     var startError: NidoError?
@@ -280,6 +291,253 @@ struct VMWindowModelTests {
     private func model(_ root: TempRoot, _ factory: FakeSessionFactory,
                        name: String = "debian-13") throws -> VMWindowModel {
         VMWindowModel(name: try VMName(name), paths: root.paths, factory: factory)
+    }
+
+    // MARK: - Agent banner and frozen display
+
+    private func macRoot(agentAccess: Bool?) throws -> TempRoot {
+        let root = try TempRoot(vms: ["mac"])
+        try root.bundle("mac").writeConfig(VMConfig(
+            id: UUID(), name: try VMName("mac"), guest: .macos, cpuCount: 2, memoryBytes: 4 << 30,
+            diskBytes: 8 << 30, macAddress: "7a:80:2e:82:30:a5", agentAccess: agentAccess))
+        return root
+    }
+
+    /// A model whose 3 s hold waits for `release()` instead of the clock.
+    private func agentModel(_ root: TempRoot, _ factory: FakeSessionFactory)
+        throws -> (VMWindowModel, release: () -> Void)
+    {
+        let (stream, continuation) = AsyncStream.makeStream(of: Void.self)
+        let model = VMWindowModel(
+            name: try VMName("mac"), paths: root.paths, factory: factory,
+            agentHoldSleep: { _ in for await _ in stream { break } })
+        return (model, { continuation.yield() })
+    }
+
+    private func settle() async { for _ in 0..<10 { await Task.yield() } }
+
+    // MARK: - First-run setup
+
+    @Test func firstRunSetupRunsAfterProvisionedStart() async throws {
+        let root = try macRoot(agentAccess: true)
+        let calls = Mutex(0)
+        let factory = FakeSessionFactory()
+        factory.configure = { $0.sentProvisioning = true }
+        let model = VMWindowModel(
+            name: try VMName("mac"), paths: root.paths, factory: factory,
+            agentHoldSleep: { _ in },
+            firstRunSetup: { _, _, onEvent in
+                calls.withLock { $0 += 1 }
+                onEvent(.keyAuthorized)
+                return true
+            })
+        await model.start()
+        for _ in 0..<200 where calls.withLock({ $0 }) == 0 { await settle() }
+        #expect(calls.withLock { $0 } == 1)
+    }
+
+    @Test func firstRunSetupEndsDoneThenHides() async throws {
+        let root = try macRoot(agentAccess: true)
+        let factory = FakeSessionFactory()
+        factory.configure = { $0.sentProvisioning = true }
+        let (stream, continuation) = AsyncStream.makeStream(of: Void.self)
+        let model = VMWindowModel(
+            name: try VMName("mac"), paths: root.paths, factory: factory,
+            agentHoldSleep: { _ in for await _ in stream { break } },
+            firstRunSetup: { _, _, _ in true })
+        await model.start()
+        for _ in 0..<200 where model.firstRunSetup != .done { await settle() }
+        #expect(model.firstRunSetup == .done)
+        continuation.yield()
+        for _ in 0..<200 where model.firstRunSetup != nil { await settle() }
+        #expect(model.firstRunSetup == nil)
+    }
+
+    @Test func firstRunSetupFailureIsShown() async throws {
+        let root = try macRoot(agentAccess: true)
+        let factory = FakeSessionFactory()
+        factory.configure = { $0.sentProvisioning = true }
+        let model = VMWindowModel(
+            name: try VMName("mac"), paths: root.paths, factory: factory,
+            agentHoldSleep: { _ in },
+            firstRunSetup: { _, _, _ in throw MacAgentSetupError.passwordNeeded("mac") })
+        await model.start()
+        for _ in 0..<200 { await settle(); if case .failed = model.firstRunSetup { break } }
+        guard case .failed(let message)? = model.firstRunSetup else {
+            Issue.record("expected failed, got \(String(describing: model.firstRunSetup))")
+            return
+        }
+        #expect(message == String(localized: "Nido needs the password of the account in \("mac") to authorize its key: enter it in Settings › Agent."))
+    }
+
+    /// A stored password the guest refused: the strip points to Settings › Agent as well.
+    @Test func firstRunSetupRejectedPasswordPointsToSettings() async throws {
+        let root = try macRoot(agentAccess: true)
+        let factory = FakeSessionFactory()
+        factory.configure = { $0.sentProvisioning = true }
+        let model = VMWindowModel(
+            name: try VMName("mac"), paths: root.paths, factory: factory,
+            agentHoldSleep: { _ in },
+            firstRunSetup: { _, _, _ in throw GuestSSHError.passwordRejected(user: "agent", vm: "mac") })
+        await model.start()
+        for _ in 0..<200 { await settle(); if case .failed = model.firstRunSetup { break } }
+        #expect(model.firstRunSetup == .failed(
+            String(localized: "\("mac") refused the stored password of its account: enter the current one in Settings › Agent.")))
+    }
+
+    /// While the first-run setup works, the Terminal Access panel does not open by itself (the
+    /// setup authorizes Nido's key); a setup that reached the guest with the key keeps it closed.
+    @Test func terminalPanelWaitsForFirstRunSetup() async throws {
+        let root = try macRoot(agentAccess: true)
+        let factory = FakeSessionFactory()
+        factory.configure = { $0.sentProvisioning = true }
+        let (gate, open) = AsyncStream.makeStream(of: Void.self)
+        let model = VMWindowModel(
+            name: try VMName("mac"), paths: root.paths, factory: factory,
+            agentHoldSleep: { _ in },
+            firstRunSetup: { bundle, _, _ in
+                for await _ in gate { break }
+                // What `MacAgentSetup` records once a command with the key worked.
+                _ = try bundle.updateConfig { $0.sshSucceeded = true }
+                return true
+            })
+        let panel = try #require(model.terminalAccess)
+        await model.start()
+        for _ in 0..<20 { await settle() }
+        guard case .working? = model.firstRunSetup else {
+            Issue.record("expected working, got \(String(describing: model.firstRunSetup))")
+            return
+        }
+        #expect(!panel.isShown)
+        model.windowAppeared()
+        #expect(!panel.isShown)
+        open.yield()
+        for _ in 0..<200 where model.firstRunSetup != nil { await settle() }
+        #expect(model.firstRunSetup == nil)
+        #expect(!panel.isShown)
+        // From the bar, always.
+        panel.show()
+        #expect(panel.isShown)
+        await model.stop()
+    }
+
+    /// A first-run setup that failed lets the panel open again: it is the other way to authorize
+    /// the key.
+    @Test func terminalPanelOpensAfterAFailedFirstRunSetup() async throws {
+        let root = try macRoot(agentAccess: true)
+        let factory = FakeSessionFactory()
+        factory.configure = { $0.sentProvisioning = true }
+        let model = VMWindowModel(
+            name: try VMName("mac"), paths: root.paths, factory: factory,
+            agentHoldSleep: { _ in },
+            firstRunSetup: { _, _, _ in throw MacAgentSetupError.passwordNeeded("mac") })
+        let panel = try #require(model.terminalAccess)
+        await model.start()
+        for _ in 0..<200 { await settle(); if case .failed = model.firstRunSetup { break } }
+        #expect(panel.isShown)
+        await model.stop()
+    }
+
+    @Test(arguments: [(false, true), (true, false), (true, nil), (false, nil)] as [(Bool, Bool?)])
+    func noFirstRunSetupOtherwise(sent: Bool, access: Bool?) async throws {
+        let root = try macRoot(agentAccess: access)
+        let calls = Mutex(0)
+        let factory = FakeSessionFactory()
+        factory.configure = { $0.sentProvisioning = sent }
+        let model = VMWindowModel(
+            name: try VMName("mac"), paths: root.paths, factory: factory,
+            agentHoldSleep: { _ in }, firstRunSetup: { _, _, _ in calls.withLock { $0 += 1 }; return true })
+        await model.start()
+        for _ in 0..<20 { await settle() }
+        #expect(calls.withLock { $0 } == 0)
+        #expect(model.firstRunSetup == nil)
+    }
+
+    @Test func bannerShowsWhileAgentActs() async throws {
+        let root = try macRoot(agentAccess: true)
+        let factory = FakeSessionFactory()
+        let (model, _) = try agentModel(root, factory)
+        await model.start()
+        #expect(!model.agentActive)
+        factory.made[0].agentActivity?(true)
+        await settle()
+        #expect(model.agentActive)
+        factory.made[0].agentActivity?(false)
+        await settle()
+        #expect(model.agentActive, "held for a while after the last command")
+    }
+
+    @Test func bannerClearsAfterHold() async throws {
+        let root = try macRoot(agentAccess: true)
+        let factory = FakeSessionFactory()
+        let (model, release) = try agentModel(root, factory)
+        await model.start()
+        factory.made[0].agentActivity?(true)
+        factory.made[0].agentActivity?(false)
+        await settle()
+        #expect(model.agentActive)
+        release()
+        await settle()
+        #expect(!model.agentActive)
+        // A new command within the hold keeps it on.
+        factory.made[0].agentActivity?(true)
+        factory.made[0].agentActivity?(false)
+        factory.made[0].agentActivity?(true)
+        await settle()
+        release()
+        await settle()
+        #expect(model.agentActive, "a command is running")
+    }
+
+    /// The hops of two callbacks can arrive swapped: the older value is dropped, the banner never sticks.
+    @Test func bannerIgnoresAStaleHop() async throws {
+        let root = try macRoot(agentAccess: true)
+        let (model, release) = try agentModel(root, FakeSessionFactory())
+        await model.start()
+        model.agentActivityChanged(busy: false, sequence: 2)
+        model.agentActivityChanged(busy: true, sequence: 1)
+        #expect(!model.agentActive, "the stale true must not light the banner")
+        release()
+        await settle()
+        #expect(!model.agentActive)
+    }
+
+    @Test func bannerClearsOnSuspend() async throws {
+        let root = try macRoot(agentAccess: true)
+        let factory = FakeSessionFactory()
+        let (model, _) = try agentModel(root, factory)
+        await model.start()
+        factory.made[0].agentActivity?(true)
+        await settle()
+        #expect(model.agentActive)
+        _ = await model.suspend()
+        #expect(!model.agentActive)
+    }
+
+    @Test func bannerClearsOnStop() async throws {
+        let root = try macRoot(agentAccess: true)
+        let factory = FakeSessionFactory()
+        let (model, _) = try agentModel(root, factory)
+        await model.start()
+        factory.made[0].agentActivity?(true)
+        await settle()
+        #expect(model.agentActive)
+        factory.made[0].guestStops()
+        #expect(!model.agentActive)
+        // A late callback of the old session does not light the banner again.
+        factory.made[0].agentActivity?(true)
+        await settle()
+        #expect(!model.agentActive)
+    }
+
+    @Test func displayFrozenOnlyWithAgentAccess() async throws {
+        for (access, frozen) in [(true as Bool?, true), (nil, false), (false, false)] {
+            let root = try macRoot(agentAccess: access)
+            let (model, _) = try agentModel(root, FakeSessionFactory())
+            #expect(!model.freezesGuestDisplay, "before start")
+            await model.start()
+            #expect(model.freezesGuestDisplay == frozen)
+        }
     }
 
     @Test func startTakesAppLock() async throws {
@@ -1434,6 +1692,75 @@ struct OtherLayout: KeyboardLayout {
     }
 }
 
+/// A layout given as rows of (key code, [plain, Shift, Option, Shift-Option]).
+struct TableLayout: KeyboardLayout {
+    let rows: [UInt16: [String?]]
+    init(_ rows: [(UInt16, [String?])]) { self.rows = Dictionary(uniqueKeysWithValues: rows) }
+    func character(keyCode: UInt16, shift: Bool, option: Bool) -> String? {
+        rows[keyCode]?[(shift ? 1 : 0) + (option ? 2 : 0)]
+    }
+    /// What the guest gets for `strokes` when it uses this layout.
+    func received(_ strokes: [Keystroke]) -> String {
+        strokes.map { character(keyCode: $0.keyCode, shift: $0.shift, option: $0.option) ?? "∅" }.joined()
+    }
+}
+
+/// macOS German (`com.apple.keylayout.German`), the keys the authorize command needs (read with
+/// `UCKeyTranslate` on macOS 27): `'` is Shift-#, y and z are swapped against US.
+let germanLayout = TableLayout([
+    (0, ["a", "A", nil, nil]), (1, ["s", "S", nil, nil]), (2, ["d", "D", nil, nil]), (3, ["f", "F", nil, nil]),
+    (4, ["h", "H", nil, nil]), (5, ["g", "G", nil, nil]), (6, ["y", "Y", nil, nil]), (7, ["x", "X", nil, nil]),
+    (8, ["c", "C", nil, nil]), (9, ["v", "V", nil, nil]), (11, ["b", "B", nil, nil]), (12, ["q", "Q", nil, nil]),
+    (13, ["w", "W", nil, nil]), (14, ["e", "E", nil, nil]), (15, ["r", "R", nil, nil]),
+    (16, ["z", "Z", nil, nil]), (17, ["t", "T", nil, nil]), (18, ["1", nil, nil, nil]),
+    (19, ["2", "\"", nil, nil]), (20, ["3", "§", nil, nil]), (21, ["4", "$", nil, nil]),
+    (22, ["6", "&", nil, nil]), (23, ["5", nil, nil, nil]), (25, ["9", nil, nil, nil]),
+    (26, ["7", "/", nil, nil]), (28, ["8", nil, nil, nil]), (29, ["0", "=", nil, nil]),
+    (30, ["+", nil, nil, nil]), (31, ["o", "O", nil, nil]), (32, ["u", "U", nil, nil]),
+    (34, ["i", "I", nil, nil]), (35, ["p", "P", nil, nil]), (37, ["l", "L", "@", nil]),
+    (38, ["j", "J", nil, nil]), (40, ["k", "K", nil, nil]), (42, [nil, "'", nil, nil]),
+    (44, ["-", "_", nil, nil]), (45, ["n", "N", nil, nil]), (46, ["m", "M", nil, nil]),
+    (47, [".", nil, nil, nil]), (49, [" ", nil, nil, nil]), (50, [nil, ">", nil, nil]),
+])
+
+/// macOS Italian (`com.apple.keylayout.Italian-Pro`, "Italian" in the menu), the same keys: `'`
+/// has a key of its own, Shift-# gives `§`.
+let italianLayout = TableLayout([
+    (0, ["a", "A", nil, nil]), (1, ["s", "S", nil, nil]), (2, ["d", "D", nil, nil]), (3, ["f", "F", nil, nil]),
+    (4, ["h", "H", nil, nil]), (5, ["g", "G", nil, nil]), (6, ["z", "Z", nil, nil]), (7, ["x", "X", nil, nil]),
+    (8, ["c", "C", nil, nil]), (9, ["v", "V", nil, nil]), (11, ["b", "B", nil, nil]), (12, ["q", "Q", nil, nil]),
+    (13, ["w", "W", nil, nil]), (14, ["e", "E", nil, nil]), (15, ["r", "R", nil, nil]),
+    (16, ["y", "Y", nil, nil]), (17, ["t", "T", nil, nil]), (18, ["1", nil, nil, nil]),
+    (19, ["2", "\"", nil, nil]), (20, ["3", nil, nil, nil]), (21, ["4", "$", nil, nil]),
+    (22, ["6", "&", nil, nil]), (23, ["5", nil, nil, nil]), (25, ["9", nil, nil, nil]),
+    (26, ["7", "/", nil, nil]), (27, ["'", nil, nil, nil]), (28, ["8", nil, nil, nil]),
+    (29, ["0", "=", nil, nil]), (30, ["+", nil, nil, nil]), (31, ["o", "O", nil, nil]),
+    (32, ["u", "U", nil, nil]), (34, ["i", "I", nil, nil]), (35, ["p", "P", nil, nil]),
+    (37, ["l", "L", nil, nil]), (38, ["j", "J", nil, nil]), (40, ["k", "K", nil, nil]),
+    (41, [nil, nil, "@", nil]), (42, [nil, "§", nil, nil]), (44, ["-", "_", nil, nil]),
+    (45, ["n", "N", nil, nil]), (46, ["m", "M", nil, nil]), (47, [".", nil, nil, nil]),
+    (49, [" ", nil, nil, nil]), (50, [nil, ">", nil, nil]),
+])
+
+/// This Mac's layouts in the tests: German current, Italian installed.
+@MainActor
+struct FakeLayouts: KeyboardLayouts {
+    static let italianID = "com.apple.keylayout.Italian-Pro"
+    var mac: (any KeyboardLayout)? = germanLayout
+    func available() -> [KeyboardLayoutChoice] {
+        [KeyboardLayoutChoice(id: "com.apple.keylayout.German", name: "German", enabled: true),
+         KeyboardLayoutChoice(id: Self.italianID, name: "Italian")]
+    }
+    func current() -> (any KeyboardLayout)? { mac }
+    func layout(id: String) -> (any KeyboardLayout)? {
+        switch id {
+        case "com.apple.keylayout.German": germanLayout
+        case Self.italianID: italianLayout
+        default: nil
+        }
+    }
+}
+
 /// Records what would be typed into the guest.
 @MainActor
 final class RecordingSink: KeystrokeSink {
@@ -1516,7 +1843,7 @@ struct MacWindowTests {
         let panel = try #require(model.terminalAccess)
         panel.reload()
         #expect(panel.title == "Accesso da terminale")
-        #expect(panel.intro == "Per usare macos-agenti con nido ssh, una volta sola dopo l'assistente iniziale. Nido non chiede né salva password.")
+        #expect(panel.intro == "Per usare macos-agenti con nido ssh, una volta sola dopo l'assistente iniziale. Questi passaggi non richiedono password.")
         #expect(panel.steps.map(\.title) == [
             "Completa l'assistente iniziale", "Attiva Login remoto", "Autorizza la tua chiave", "Collegati dal Mac"])
         #expect(panel.steps.map(\.detail) == [
@@ -1529,7 +1856,9 @@ struct MacWindowTests {
         #expect(panel.sshCommand == "nido ssh macos-agenti")
         #expect(panel.footnote == "Il pannello si apre da solo finché nido ssh non è riuscito almeno una volta; poi dalla barra, Accesso da terminale.")
         // Caps Lock on in the guest would invert the key's letters.
-        #expect(panel.layoutNote == "Nido usa la disposizione della tastiera di questo Mac: se nella VM è diversa, digita il comando a mano. Tieni spento Blocco maiuscole nella VM.")
+        #expect(panel.layoutNote == "Nido digita con la disposizione scelta in Tastiera della VM: deve essere quella che usa la VM. Tieni spento Blocco maiuscole nella VM.")
+        #expect(panel.guestKeyboardLabel == "Tastiera della VM")
+        #expect(panel.sameAsThisMac == "Come questo Mac")
         #expect(panel.canType)
         #expect(panel.keyProblem == nil)
 
@@ -1644,7 +1973,7 @@ struct MacWindowTests {
         }
         await panel.typeCommand(into: partial, layout: NoDollar())
         #expect(partial.typed.isEmpty)
-        #expect(panel.typingError == "Il carattere $ non si può digitare con la tastiera di questo Mac: scrivi il comando a mano nella VM.")
+        #expect(panel.typingError == "Il carattere $ non si può digitare con la tastiera scelta per questa VM: scrivi il comando a mano nella VM.")
 
         // The VM stopped while typing: said, never "Comando scritto".
         let stopped = RecordingSink()
@@ -1658,6 +1987,63 @@ struct MacWindowTests {
         gone.failure = KeystrokeError.noDisplay
         await panel.typeCommand(into: gone, layout: USLayout())
         #expect(panel.typingError == KeystrokeError.noDisplay.localizedDescription)
+    }
+
+    /// "Type in VM" maps with the layout chosen for the guest (kept in the VM's config), else
+    /// with this Mac's current one. Seen live: a German Mac typed into an Italian guest
+    /// `echo §ssh-rsa …§ >> …/authoriyed_kezs`.
+    @Test func typingUsesTheGuestLayoutChosen() async throws {
+        let root = try macRoot()
+        let model = try model(root, FakeSessionFactory())
+        let panel = try #require(model.terminalAccess)
+        panel.layouts = FakeLayouts()
+        panel.reload()
+        #expect(panel.guestLayoutID == nil)
+        // The list is read when the panel is shown, not at every reload.
+        #expect(panel.layoutChoices.isEmpty)
+        panel.show()
+        #expect(panel.layoutChoices.map(\.name) == ["German", "Italian"])
+        #expect(panel.layoutChoices.map(\.enabled) == [true, false])
+
+        // Same as this Mac (German): right on a German guest, wrong on an Italian one.
+        let mac = RecordingSink()
+        await panel.typeCommand(into: mac)
+        #expect(germanLayout.received(mac.typed) == panel.authorizeCommand)
+        #expect(italianLayout.received(mac.typed).contains("authoriyed_kezs"))
+
+        // Italian chosen: kept in the config, and the Italian guest gets the command.
+        panel.chooseGuestLayout(FakeLayouts.italianID)
+        #expect(panel.guestLayoutID == FakeLayouts.italianID)
+        #expect(try root.bundle("macos-agenti").readConfig().guestKeyboardLayoutID == FakeLayouts.italianID)
+        let guest = RecordingSink()
+        await panel.typeCommand(into: guest)
+        #expect(italianLayout.received(guest.typed) == panel.authorizeCommand)
+        #expect(panel.typingError == nil)
+
+        // A new panel (next window) reads the choice back; "Same as this Mac" clears it.
+        let next = try #require(try self.model(root, FakeSessionFactory()).terminalAccess)
+        next.layouts = FakeLayouts()
+        next.reload()
+        #expect(next.guestLayoutID == FakeLayouts.italianID)
+        next.chooseGuestLayout(nil)
+        #expect(try root.bundle("macos-agenti").readConfig().guestKeyboardLayoutID == nil)
+
+        // A layout this Mac no longer has: nothing typed, and said.
+        _ = try root.bundle("macos-agenti").updateConfig { $0.guestKeyboardLayoutID = "com.example.gone" }
+        panel.reload()
+        let gone = RecordingSink()
+        await panel.typeCommand(into: gone)
+        #expect(gone.typed.isEmpty)
+        #expect(panel.typingError == "La disposizione di tastiera scelta per la VM non c'è su questo Mac: scegline un'altra in Tastiera della VM.")
+
+        // This Mac's layout cannot be read (and none chosen): nothing typed.
+        _ = try root.bundle("macos-agenti").updateConfig { $0.guestKeyboardLayoutID = nil }
+        panel.layouts = FakeLayouts(mac: nil)
+        panel.reload()
+        let unreadable = RecordingSink()
+        await panel.typeCommand(into: unreadable)
+        #expect(unreadable.typed.isEmpty)
+        #expect(panel.typingError == "La disposizione della tastiera di questo Mac non si può leggere: scrivi il comando a mano nella VM.")
     }
 }
 
@@ -1764,6 +2150,39 @@ struct GuestKeystrokesTests {
         // a key; ^ ` ´ ¨ likewise): the command must be typable on those Macs too.
         let command = GuestKeystrokes.command(around: macKey)
         #expect(!command.contains { "~^`´¨".contains($0) })
+    }
+
+    /// The same characters are other keys on German and Italian: `'` (Shift-# against its own
+    /// key), y and z. Mapped with the guest's layout, the guest gets the command as written.
+    @Test func germanAndItalianLayoutsGiveOtherKeys() throws {
+        let german = try GuestKeystrokes.keystrokes(for: "'yz\"", layout: germanLayout)
+        #expect(german.map(\.keyCode) == [42, 6, 16, 19])
+        #expect(german.map(\.shift) == [true, false, false, true])
+        let italian = try GuestKeystrokes.keystrokes(for: "'yz\"", layout: italianLayout)
+        #expect(italian.map(\.keyCode) == [27, 16, 6, 19])
+        #expect(italian.map(\.shift) == [false, false, false, true])
+        // German keys on an Italian guest: what was seen live.
+        #expect(italianLayout.received(german) == "§zy\"")
+
+        let command = try GuestKeystrokes.authorizeCommand(publicKey: macKey)
+        for layout in [germanLayout, italianLayout] {
+            #expect(layout.received(try GuestKeystrokes.keystrokes(for: command, layout: layout)) == command)
+        }
+    }
+
+    /// This Mac's layouts: listed once each, and one read by its ID maps like the fixed table.
+    @MainActor @Test func systemLayoutsAreListedAndReadByID() throws {
+        let layouts = SystemKeyboardLayouts()
+        let all = layouts.available()
+        #expect(all.count > 10)
+        #expect(Set(all.map(\.id)).count == all.count)
+        // The Mac's enabled layouts first (at least the current one is enabled).
+        #expect(all.first?.enabled == true)
+        #expect(all.drop { $0.enabled }.allSatisfy { !$0.enabled })
+        #expect(all.contains { $0.id == "com.apple.keylayout.Italian-Pro" })
+        let italian = try #require(layouts.layout(id: "com.apple.keylayout.Italian-Pro"))
+        #expect(try GuestKeystrokes.keystrokes(for: "'yz", layout: italian).map(\.keyCode) == [27, 16, 6])
+        #expect(layouts.layout(id: "com.example.none") == nil)
     }
 
     @Test func mappingFollowsTheLayout() throws {

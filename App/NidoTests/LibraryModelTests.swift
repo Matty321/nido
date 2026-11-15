@@ -126,6 +126,26 @@ struct LibraryModelTests {
         #expect(model.buttons(for: summary("a", .unreadable(running: nil))).map(\.action) == [.showInFinder, .delete])
     }
 
+    @Test func agentMarkFollowsLiveActivity() {
+        var active: Set<String> = []
+        let model = LibraryModel(
+            registry: FakeRegistry(), control: FakeControl(), liveAgentActive: { active.contains($0) })
+        let mac = summary("mac", .running(.app))
+        #expect(!model.showsAgentMark(for: mac))
+        active.insert("mac")
+        #expect(model.showsAgentMark(for: mac))
+        active.remove("mac")
+        #expect(!model.showsAgentMark(for: mac))
+    }
+
+    @Test func noMarkForVMWithoutSession() {
+        let store = VMSessionStore(paths: NidoPaths(root: FileManager.default.temporaryDirectory), factory: FakeSessionFactory())
+        let model = LibraryModel(
+            registry: FakeRegistry(), control: FakeControl(), liveAgentActive: { store.isAgentActive($0) })
+        #expect(!store.isAgentActive("sconosciuta"))
+        #expect(!model.showsAgentMark(for: summary("sconosciuta", .running(.app))))
+    }
+
     @Test func liveSessionStatesReachTheCards() {
         let live: [String: VMRunState] = [
             "a": .starting, "b": .paused, "c": .error("disco illeggibile"), "d": .stopped, "f": .stopping,

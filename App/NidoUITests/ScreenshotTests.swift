@@ -545,7 +545,7 @@ final class ScreenshotTests: XCTestCase, ScreenFixtures {
             ("values+phase2", "S14-Preparazione-fase-2", "46", false),
             ("values+phase2-fails", "S14-Preparazione-log", "nido-provision.log", true),
             ("values+phase2-done", "S14-Preparazione-completata", "debian-ai è pronta", false),
-            ("values+phase2-fails", "S14-Preparazione-errore", "spazio insufficiente", false),
+            ("values+phase2-fails", "S14-Preparazione-errore", "spazio su disco insufficiente", false),
             ("values+ssh-key", "S14-Preparazione-chiave-SSH", "Terminale", false),
         ]
         for appearance in Appearance.allCases {

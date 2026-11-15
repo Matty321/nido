@@ -2,6 +2,7 @@
 import Foundation
 import NidoCore
 import Observation
+import Synchronization
 import Virtualization
 
 /// What the VM window needs from a running VM: `VMSession` in the app, a fake in the unit tests.
@@ -9,6 +10,9 @@ import Virtualization
 protocol VMSessionHandle: AnyObject {
     var state: VMRunState { get }
     var onStateChange: ((VMRunState) -> Void)? { get set }
+    /// True after a start that sent the guest its account (`VMSession.sentProvisioning`); the
+    /// fakes say false.
+    var sentProvisioning: Bool { get }
     var console: (any GuestConsole)? { get }
     /// False while the machine might still be running (e.g. a failed forced stop): the lock stays.
     var machineIsGone: Bool { get }
@@ -40,9 +44,20 @@ protocol VMSessionHandle: AnyObject {
     func updateSharedFolders(_ folders: [SharedFolder]) throws -> [String]
     /// The machine whose screen the window shows (a macOS guest); nil for a headless session.
     var displayMachine: VZVirtualMachine? { get }
+    /// Serves the agent control socket for a macOS VM with agent access on (`AgentHost`); nil for
+    /// every other session, including the fakes of the UI tests. `onActivity` is true while the
+    /// agent's command runs (`AgentHost.startIfEnabled`); it is called from any thread.
+    func startAgentHost(
+        bundle: VMBundle, config: VMConfig, onWarning: (String) -> Void,
+        onActivity: @escaping @Sendable (Bool) -> Void
+    ) -> AgentControlServer?
+    /// Puts `text` on the guest's clipboard through Nido Agent, over this session's own vsock
+    /// (`AgentHost.setClipboard`); `notRunning` for every other session, including the fakes.
+    func setGuestClipboard(_ text: String, clearAfter: Int) async -> AgentAnswer
 }
 
 extension VMSessionHandle {
+    var sentProvisioning: Bool { false }
     var acceptsStop: Bool {
         let errorWithMachine: Bool = if case .error = state { !machineIsGone } else { false }
         return state.acceptsStop || errorWithMachine
@@ -52,6 +67,11 @@ extension VMSessionHandle {
     var guestChannel: (any GuestChannel)? { nil }
     var aiBridgeAttached: Bool? { nil }
     var displayMachine: VZVirtualMachine? { nil }
+    func startAgentHost(
+        bundle: VMBundle, config: VMConfig, onWarning: (String) -> Void,
+        onActivity: @escaping @Sendable (Bool) -> Void
+    ) -> AgentControlServer? { nil }
+    func setGuestClipboard(_ text: String, clearAfter: Int) async -> AgentAnswer { .failure(.notRunning, "") }
     func updateSharedFolders(_ folders: [SharedFolder]) throws -> [String] {
         throw NidoError.notFound(String(localized: "shared folder device", comment: "What wasn’t found: completes NidoCore’s “not found: %@”."))
     }
@@ -67,6 +87,19 @@ extension VMSession: VMSessionHandle {
     var aiBridgeAttached: Bool? { guest == .linux ? aiBridge != nil : nil }
     /// A macOS guest has a Mac display, shown in the window (`MacDisplayView`).
     var displayMachine: VZVirtualMachine? { guest == .macos ? virtualMachine : nil }
+
+    func startAgentHost(
+        bundle: VMBundle, config: VMConfig, onWarning: (String) -> Void,
+        onActivity: @escaping @Sendable (Bool) -> Void
+    ) -> AgentControlServer? {
+        AgentHost.startIfEnabled(
+            session: self, bundle: bundle, config: config, onWarning: onWarning, onActivity: onActivity)
+    }
+
+    func setGuestClipboard(_ text: String, clearAfter: Int) async -> AgentAnswer {
+        guard guest == .macos else { return .failure(.notRunning, "") }
+        return await AgentHost.setClipboard(text, clearAfter: clearAfter, session: self)
+    }
 
     var machineIsGone: Bool {
         switch virtualMachine.state {
@@ -194,6 +227,44 @@ final class VMWindowModel {
     private(set) var state: VMRunState = .stopped
     /// The live session, for the display; nil when the state is settled.
     private(set) var session: (any VMSessionHandle)?
+    /// The agent control socket of the live session (a macOS VM with agent access on); stopped
+    /// wherever the session is let go.
+    private var agentServer: AgentControlServer?
+    /// True while an agent command runs and for `agentBannerHold` after the last one: the window
+    /// shows "An agent is using this VM". False at once when the session ends.
+    private(set) var agentActive = false
+    /// Nido Agent's first-run setup after a start that sent the guest its account (macOS 27
+    /// guest with agent access on): what the thin strip over the screen shows; nil otherwise.
+    enum FirstRunSetup: Equatable {
+        case working(String)
+        case done
+        case failed(String)
+    }
+    private(set) var firstRunSetup: FirstRunSetup?
+    /// True while the first-run setup works: Settings › Agent starts no second setup, and the
+    /// Terminal Access panel does not open by itself (the setup authorizes Nido's key).
+    var isSettingUpAgent: Bool {
+        if case .working = firstRunSetup { return true }
+        return false
+    }
+    @ObservationIgnored private var firstRunTask: Task<Void, Never>?
+    @ObservationIgnored private let firstRunSetupRunner:
+        @Sendable (VMBundle, VMConfig, @escaping @Sendable (MacAgentSetupEvent) -> Void) async throws -> Bool
+    /// Whether the live session's VM has agent access on (a macOS guest): its display then keeps
+    /// the guest's resolution instead of following the window, so the agent's screenshots and
+    /// coordinates stay valid while the user resizes the window.
+    private(set) var freezesGuestDisplay = false
+    /// How long the banner stays after the last command.
+    nonisolated static let agentBannerHold: Duration = .seconds(3)
+    /// The newest activity value applied; an older one that hops late is dropped.
+    @ObservationIgnored private var agentSequence = 0
+    /// Which session's activity callback counts: bumped at each agent start and when the session
+    /// ends, so a late call of an old session cannot flip a new one.
+    @ObservationIgnored private var agentGeneration = 0
+    /// The pending end of the banner hold; replaced by each new command.
+    @ObservationIgnored private var agentHoldTask: Task<Void, Never>?
+    /// Waits out the banner hold; injected so tests do not sleep.
+    @ObservationIgnored private let agentHoldSleep: @Sendable (Duration) async -> Void
     /// True while the close confirmation ("Arrestare debian-13?") is shown.
     private(set) var isConfirmingClose = false
     /// When the VM last stopped in this app (the stopped screen says so).
@@ -287,8 +358,14 @@ final class VMWindowModel {
     init(
         name: VMName, paths: NidoPaths, factory: any SessionFactory, gracePeriod: Duration = VMWindowModel.gracePeriod,
         aiBridgeServices: AIBridgeServices? = nil, monitor: MonitorModel = MonitorModel(),
-        aiRuntime: AIRuntimeModel? = nil, checkHeadroom: (@Sendable (VMBundle) -> MemoryHeadroom?)? = nil
+        aiRuntime: AIRuntimeModel? = nil, checkHeadroom: (@Sendable (VMBundle) -> MemoryHeadroom?)? = nil,
+        agentHoldSleep: @escaping @Sendable (Duration) async -> Void = { try? await Task.sleep(for: $0) },
+        firstRunSetup: @escaping @Sendable (
+            VMBundle, VMConfig, @escaping @Sendable (MacAgentSetupEvent) -> Void
+        ) async throws -> Bool = VMWindowModel.liveFirstRunSetup
     ) {
+        self.agentHoldSleep = agentHoldSleep
+        self.firstRunSetupRunner = firstRunSetup
         self.name = name
         self.paths = paths
         let guest = (try? VMBundle.open(name, paths: paths).readConfig())?.guest ?? .linux
@@ -387,6 +464,13 @@ final class VMWindowModel {
         (text.prefix(1).uppercased() + text.dropFirst()) + (text.hasSuffix(".") ? "" : ".")
     }
 
+    /// Settings › Agent: `text` to the clipboard of the guest running here, for `clearAfter`
+    /// seconds; `notRunning` unless the VM runs (not paused, not stopping) in this window.
+    func copyToGuestClipboard(_ text: String, clearAfter: Int) async -> AgentAnswer {
+        guard let session, state == .running else { return .failure(.notRunning, "") }
+        return await session.setGuestClipboard(text, clearAfter: clearAfter)
+    }
+
     /// S08 Condivisione with the VM running here: the session's folders become `folders` at once.
     /// Throws `.notRunning` when no machine of this window runs.
     func applyLiveShares(_ folders: [SharedFolder]) throws -> [String] {
@@ -402,12 +486,14 @@ final class VMWindowModel {
         guard state.isSettled, session == nil, !refusesStart else { return }
         errorDetail = nil
         warnings = []
+        freezesGuestDisplay = false
         isSuspended = false
         stopBeforeSession = false
         state = .starting
         firstBootStartedAt = nil
         let created: any VMSessionHandle
         let firstBoot: Bool
+        var agentTarget: (bundle: VMBundle, config: VMConfig)?
         do {
             let bundle = try VMBundle.open(name, paths: paths)
             // Retries a brief contention without blocking the main actor.
@@ -423,7 +509,10 @@ final class VMWindowModel {
             // files to inspect) when it left anything behind.
             try SnapshotStore(bundle: bundle).recoverBeforeUse()
             // The config the session is built from decides the guest (the factory reads it too).
-            if let config = try? bundle.readConfig() { resolveGuest(config.guest) }
+            if let config = try? bundle.readConfig() {
+                resolveGuest(config.guest)
+                agentTarget = (bundle, config)
+            }
             // Read before the session creates console.log.
             firstBoot = Self.isFirstBoot(bundle)
             created = try await factory.makeSession(bundle: bundle)
@@ -438,6 +527,30 @@ final class VMWindowModel {
         session = created
         if firstBoot { firstBootStartedAt = Date() }
         warnings = created.warnings
+        if let agentTarget {
+            freezesGuestDisplay = guest == .macos && agentTarget.config.agentAccess == true
+            agentGeneration += 1
+            agentSequence = 0
+            let generation = agentGeneration
+            // Commands counted and numbered where the callback runs, in program order; only the
+            // resulting busy value hops to the main actor, and a stale hop is dropped.
+            let counter = Mutex((running: 0, sequence: 0))
+            agentServer = created.startAgentHost(
+                bundle: agentTarget.bundle, config: agentTarget.config,
+                onWarning: { [weak self] in self?.warnings.append($0) },
+                onActivity: { [weak self] running in
+                    // From the connection's thread; a late call of an old session is dropped.
+                    let (busy, sequence) = counter.withLock { state in
+                        state.running = max(0, state.running + (running ? 1 : -1))
+                        state.sequence += 1
+                        return (state.running > 0, state.sequence)
+                    }
+                    Task { @MainActor in
+                        guard let self, self.agentGeneration == generation else { return }
+                        self.agentActivityChanged(busy: busy, sequence: sequence)
+                    }
+                })
+        }
         startPanels(for: created)
         // A macOS guest shows its screen: no serial terminal, even if the session had one.
         terminal = guest == .macos ? nil : created.console.map { console in
@@ -460,7 +573,91 @@ final class VMWindowModel {
                 return
             }
         }
+        if session === created, created.sentProvisioning, let config = agentTarget?.config,
+           config.agentAccess == true, let bundle = agentTarget?.bundle
+        {
+            beginFirstRunSetup(bundle: bundle, config: config)
+        }
         if session === created { apply(created.state) }
+    }
+
+    // MARK: - First-run setup
+
+    /// How long Remote Login may take on a provisioned first boot (as `nido start`).
+    nonisolated static let firstRunWait: Duration = .seconds(600)
+    /// How long "done" stays in the strip.
+    static let firstRunDoneHold: Duration = .seconds(5)
+
+    /// What `nido start` does after a provisioned start: sets Nido Agent up while the VM runs.
+    /// It never blocks the window; the strip tells how it goes.
+    private func beginFirstRunSetup(bundle: VMBundle, config: VMConfig) {
+        firstRunTask?.cancel()
+        let vm = config.name.rawValue
+        firstRunSetup = .working(String(localized: "Setting up Nido Agent in \(vm)…"))
+        // The VM reported running before the setup began: a panel that opened by itself goes.
+        terminalAccess?.withdrawAutoShow()
+        let runner = firstRunSetupRunner
+        let (stream, continuation) = AsyncStream.makeStream(of: MacAgentSetupEvent.self)
+        let consumer = Task { @MainActor [weak self] in
+            for await event in stream {
+                guard let self, case .working = self.firstRunSetup else { continue }
+                self.firstRunSetup = .working(event.line(vm: vm))
+            }
+        }
+        firstRunTask = Task { [weak self, agentHoldSleep] in
+            let outcome: FirstRunSetup
+            do {
+                let ready = try await runner(bundle, config) { continuation.yield($0) }
+                outcome = ready ? .done : .failed(String(localized: "Nido Agent isn’t ready yet: see Settings › Agent."))
+            } catch is CancellationError {
+                continuation.finish()
+                await consumer.value
+                return
+            } catch {
+                outcome = .failed(Self.firstRunFailure(for: error, vm: vm))
+            }
+            continuation.finish()
+            await consumer.value
+            guard !Task.isCancelled, let self else { return }
+            self.firstRunSetup = outcome
+            // Opens only if Nido's key never reached the guest (the setup records when it did):
+            // after a failure, the panel is the other way to authorize it.
+            if self.state == .running { self.terminalAccess?.autoShow() }
+            guard outcome == .done else { return }
+            await agentHoldSleep(Self.firstRunDoneHold)
+            guard !Task.isCancelled, self.firstRunSetup == .done else { return }
+            self.firstRunSetup = nil
+        }
+    }
+
+    /// The strip's words for a failed first-run setup: a password that is missing or refused
+    /// points to Settings › Agent, where it can be typed; anything else as the pane says it.
+    nonisolated static func firstRunFailure(for error: any Error, vm: String) -> String {
+        if case MacAgentSetupError.passwordNeeded = error {
+            return String(localized: "Nido needs the password of the account in \(vm) to authorize its key: enter it in Settings › Agent.")
+        }
+        if case GuestSSHError.passwordRejected = error {
+            return String(localized: "\(vm) refused the stored password of its account: enter the current one in Settings › Agent.")
+        }
+        return AgentSettingsModel.message(for: error)
+    }
+
+    /// The session ended: the setup stops and its strip goes.
+    private func endFirstRunSetup() {
+        firstRunTask?.cancel()
+        firstRunTask = nil
+        firstRunSetup = nil
+    }
+
+    /// `MacAgentSetup.live` for `bundle`, waiting for Remote Login (a first boot takes minutes).
+    nonisolated static func liveFirstRunSetup(
+        bundle: VMBundle, config: VMConfig, onEvent: @escaping @Sendable (MacAgentSetupEvent) -> Void
+    ) async throws -> Bool {
+        let setup = try MacAgentSetup.live(
+            bundle: bundle, config: config, surface: .app,
+            describe: { ($0 as? AgentFailure)?.message ?? $0.localizedDescription },
+            waitForRemoteLogin: firstRunWait)
+        return try await setup.run(onEvent: onEvent)
     }
 
     // MARK: - macOS guest (M3b)
@@ -485,7 +682,7 @@ final class VMWindowModel {
     /// The window (re)appeared: "Accesso da terminale" opens again by itself while the VM runs,
     /// until `nido ssh` reached the guest once.
     func windowAppeared() {
-        terminalAccess?.windowAppeared(vmRuns: state == .running)
+        terminalAccess?.windowAppeared(vmRuns: state == .running && !isSettingUpAgent)
     }
 
     /// Keys and pastes from the window, for the guest: only while it runs.
@@ -581,6 +778,7 @@ final class VMWindowModel {
     private func performSuspend(_ session: any VMSessionHandle) async -> Bool {
         lastSuspendFailure = nil
         isSuspending = true
+        clearAgentActivity()
         commandInFlight = true
         defer {
             isSuspending = false
@@ -996,7 +1194,8 @@ final class VMWindowModel {
         let old = state
         if state != new { state = new }
         if old != new { syncPanels(from: old, to: new) }
-        if old != new, new == .running { terminalAccess?.autoShow() }
+        if old != new, new == .running, !isSettingUpAgent { terminalAccess?.autoShow() }
+        if new == .stopping || new.isSettled { clearAgentActivity(); endFirstRunSetup() }
         guard new.isSettled else { return }
         terminalAccess?.vmStopped()
         let waiters = settleWaiters
@@ -1016,11 +1215,46 @@ final class VMWindowModel {
         }
         session?.onStateChange = nil
         session = nil
+        // The machine is gone: no command may reach the guest through a socket nobody serves.
+        agentServer?.stop()
+        agentServer = nil
+        clearAgentActivity()
+        freezesGuestDisplay = false
         warnings = []
         terminal?.stop()
         terminal = nil
         lock?.release()
         lock = nil
+    }
+
+    // MARK: - Agent activity
+
+    /// The agent is busy or idle (`sequence` orders the values the callback made): the banner
+    /// shows while busy and stays `agentBannerHold` after the last command. A value older than
+    /// one already applied is dropped.
+    func agentActivityChanged(busy: Bool, sequence: Int) {
+        guard sequence > agentSequence else { return }
+        agentSequence = sequence
+        agentHoldTask?.cancel()
+        agentHoldTask = nil
+        if busy {
+            agentActive = true
+            return
+        }
+        agentHoldTask = Task { [weak self, agentHoldSleep] in
+            await agentHoldSleep(Self.agentBannerHold)
+            guard !Task.isCancelled else { return }
+            self?.agentActive = false
+        }
+    }
+
+    /// The session ends: the banner goes at once, nothing is left to hold.
+    private func clearAgentActivity() {
+        agentGeneration += 1
+        agentHoldTask?.cancel()
+        agentHoldTask = nil
+        agentSequence = 0
+        agentActive = false
     }
 
     // MARK: - Monitor and AI (M3c)

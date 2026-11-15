@@ -40,7 +40,7 @@ struct VMSettingsModelTests {
         #expect(model.guest == .macos)
         #expect(!model.showsRosetta)
         #expect(!model.showsGuestTools)
-        #expect(model.sectionNames == ["Generale", "Hardware", "Condivisione"])
+        #expect(model.sectionNames == ["Generale", "Hardware", "Condivisione", "Agent"])
         // A macOS config never has guestMountsSharedFolders: no Linux fstab command for it.
         #expect(model.legacyGuestCommand == nil)
         #expect(model.rosettaLegacyCommand == nil)
@@ -602,11 +602,11 @@ struct VMSettingsModelTests {
 /// window's message follows the change.
 @MainActor
 struct VMSettingsSuspendedTests {
-    private func suspendedBundle() throws -> (VMBundle, URL) {
+    private func suspendedBundle(guest: GuestOS = .linux) throws -> (VMBundle, URL) {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("nido-settings-\(UUID().uuidString)", isDirectory: true)
         var config = VMConfig(
-            id: UUID(), name: try VMName("debian-13"), guest: .linux, cpuCount: 2,
+            id: UUID(), name: try VMName("debian-13"), guest: guest, cpuCount: 2,
             memoryBytes: UInt64(4) << 30, diskBytes: UInt64(32) << 30, macAddress: "52:54:00:12:34:56")
         let bundle = try VMBundle.create(config: config, paths: NidoPaths(root: root))
         try Data("state".utf8).write(to: bundle.stateURL)
@@ -625,6 +625,23 @@ struct VMSettingsSuspendedTests {
         #expect(model.suspendedNote == "debian-13 è sospesa: se cambi CPU, memoria, cartelle condivise o Rosetta, al prossimo avvio lo stato salvato verrà scartato e la VM partirà da capo.")
         model.cpuCount = 3
         #expect(await model.save())
+        #expect(changes == 1)
+        #expect(model.suspendedNote == "Le impostazioni di debian-13 sono cambiate dopo la sospensione: al prossimo avvio lo stato salvato verrà scartato e la VM partirà da capo.")
+    }
+
+    /// Agent access is part of a saved state's configuration: a macOS VM's note names it, and
+    /// the Agent pane's switch updates the note at once (through `configurationWritten`).
+    @Test func agentAccessChangesTheSuspendedNote() async throws {
+        let (bundle, root) = try suspendedBundle(guest: .macos)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var changes = 0
+        let model = try VMSettingsModel(bundle: bundle, onConfigurationChanged: { changes += 1 })
+        #expect(model.suspendedNote == "debian-13 è sospesa: se cambi CPU, memoria, cartelle condivise o accesso dell’agente, al prossimo avvio lo stato salvato verrà scartato e la VM partirà da capo.")
+        let agent = AgentSettingsModel(
+            bundle: bundle, config: try bundle.readConfig(), isRunning: { false },
+            status: { .failure(.notRunning, "") }, setup: { _, _ in true }, bundledVersion: { "1.0.0" },
+            onConfigurationChanged: { model.configurationWritten() })
+        await agent.setAgentAccess(true)
         #expect(changes == 1)
         #expect(model.suspendedNote == "Le impostazioni di debian-13 sono cambiate dopo la sospensione: al prossimo avvio lo stato salvato verrà scartato e la VM partirà da capo.")
     }
