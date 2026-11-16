@@ -2,6 +2,12 @@
 
 Alle Versionen von Nido, die neueste zuerst. Beim ersten Öffnen nach einem Update zeigt Nido die Neuerungen der installierten Version (unter Hilfe › Neue Funktionen in Nido kannst du sie erneut lesen).
 
+## [0.9.2] – 2026-11-16
+
+### Fehlerbehebungen
+- **Im Vollbildmodus erscheint die Symbolleiste der VM unter der Menüleiste.** Wenn du den Zeiger an den oberen Bildschirmrand bewegst, zeigt macOS die Menüleiste und die Titelleiste des Fensters, und Nidos Symbolleiste erscheint jetzt darunter, wie in den Apps des Systems. Vorher verdeckte die Menüleiste sie auf einem Bildschirm ohne Notch (etwa einem externen Monitor), und ihre Tasten, auch Vollbildmodus beenden, ließen sich nicht klicken.
+- **Die Hinweise zu 0.9.1 zeigen jedes Zeichen richtig** auf Englisch und Deutsch.
+
 ## [0.9.1] – 2026-11-16
 
 ### Fehlerbehebungen
@@ -9,7 +15,7 @@ Alle Versionen von Nido, die neueste zuerst. Beim ersten Öffnen nach einem Upda
 - **Wenn der erste Start Nidos Schlüssel nicht autorisieren kann**, erscheint das Passwortfeld sofort in **Einstellungen › Agent**, und der Hinweis im VM-Fenster verschwindet nach 30 Sekunden.
 - **Ist der Schlüssel autorisiert, aber der Schlüsselbund lehnt das Passwort ab**, läuft die Einrichtung weiter und sagt es dir, statt zu scheitern.
 - **Das Passwort geht nur an das `ssh`, das Nido selbst gestartet hat**, und eine abgebrochene Installation lässt ihr Passwort nicht mehr im Schlüsselbund zurück.
-- **In die Zwischenablage der VM kopieren ist deaktiviert, wenn es nicht funktionieren kann**, und nennt den Grund, etwa wenn die VM nicht in Nido lÃ¤uft.
+- **In die Zwischenablage der VM kopieren ist deaktiviert, wenn es nicht funktionieren kann**, und nennt den Grund, etwa wenn die VM nicht in Nido läuft.
 - **Zugriff über Terminal** zeigt die richtigen Schritte für eine mit Account erstellte VM; der Assistent für neue VMs prüft den Account, sobald du aufhörst zu tippen; `nido start` gibt nach dem Stoppen der VM nichts mehr aus.
 
 ## [0.9.0] – 2026-11-15

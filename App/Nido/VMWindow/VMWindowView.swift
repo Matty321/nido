@@ -89,8 +89,6 @@ struct VMWindowView: View {
     @Environment(\.openWindow) private var openWindow
     @State private var window = WindowBridge()
     @State private var showsDetails = false
-    /// Full screen: the toolbar slides in while the pointer is at the top edge.
-    @State private var revealsBar = false
     @State private var tab = Tab.screen
     /// The last "Apri il registro" this window followed.
     @State private var handledLogRequest: Int?
@@ -138,8 +136,9 @@ struct VMWindowView: View {
             }
         }
         .overlay(alignment: .top) {
-            // Full screen has no title strip: the same banner at the top of the display, under
-            // the toolbar when it slides in. It takes no clicks.
+            // Full screen has no title strip: the same banner at the top of the display; the
+            // title bar and the toolbar that macOS slides down cover it while shown. It takes no
+            // clicks.
             Group {
                 if window.isFullScreen, model.agentActive {
                     AgentBanner().padding(.top, Theme.Space.s)
@@ -148,15 +147,13 @@ struct VMWindowView: View {
             .animation(.default, value: model.agentActive)
             .allowsHitTesting(false)
         }
-        .overlay(alignment: .top) {
-            if window.isFullScreen { fullScreenBar }
-        }
         .background(Theme.Color.surface)
         .ignoresSafeArea(.container, edges: .top)
         .background(WindowAccessor(bridge: window))
         .navigationTitle(model.name.rawValue)
         .onAppear {
             window.shouldClose = { [model] in model.confirmClose() }
+            if window.fullScreenAccessory == nil { window.fullScreenAccessory = fullScreenToolbar() }
             model.windowAppeared()
         }
         .onDisappear(perform: onClosed)
@@ -177,7 +174,6 @@ struct VMWindowView: View {
         } message: {
             Text(details)
         }
-        .onChange(of: window.isFullScreen) { revealsBar = false }
         .sheet(isPresented: confirmingHeadroom) {
             NidoConfirmSheet(
                 verbatim: model.headroomTitle ?? "",
@@ -318,121 +314,19 @@ struct VMWindowView: View {
     // MARK: - Toolbar (Components.swift VMToolbar)
 
     private var toolbar: some View {
-        HStack(spacing: Theme.Space.s) {
-            Text(model.name.rawValue)
-                .font(.nido(Theme.TypeSize.headline, .semibold))
-                .foregroundStyle(Theme.Color.textPrimary)
-                .lineLimit(1)
-                // Name and state keep their width: the buttons collapse into "Altro" first.
-                .layoutPriority(1)
-            badge.layoutPriority(1)
-            if !model.warnings.isEmpty { warningLabel }
-            Spacer(minLength: 0)
-            // Every button when they fit; otherwise the run controls and "Altro".
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: Theme.Space.s) { toolbarButtons(model.toolbarButtons) }
-                compactToolbar
-            }
-        }
-        .padding(.vertical, Theme.Space.s)
-        .padding(.horizontal, Theme.Space.l)
-        .background(Theme.Color.surface)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Theme.Color.border).frame(height: Theme.Layout.hairline)
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("vm-toolbar")
+        VMToolbar(model: model, window: window, perform: perform)
     }
 
-    private func toolbarButtons(_ buttons: [VMWindowModel.ToolbarButton]) -> some View {
-        ForEach(buttons, id: \.action) { button in
-            NidoButton(verbatim: VMWindowModel.label(for: button.action, isFullScreen: window.isFullScreen),
-                       kind: button.kind) { perform(button.action) }
-                .disabled(!button.isEnabled)
-                .accessibilityIdentifier("vm-\(button.action)")
-        }
-    }
-
-    private var compactToolbar: some View {
-        let split = VMWindowModel.compactSplit(model.toolbarButtons)
-        return HStack(spacing: Theme.Space.s) {
-            toolbarButtons(split.visible)
-            if !split.more.isEmpty {
-                Menu {
-                    ForEach(split.more, id: \.action) { button in
-                        Button(VMWindowModel.label(for: button.action, isFullScreen: window.isFullScreen)) {
-                            perform(button.action)
-                        }
-                        .disabled(!button.isEnabled)
-                        .accessibilityIdentifier("vm-\(button.action)")
-                    }
-                } label: {
-                    Text("More")
-                }
-                .menuStyle(.button)
-                .menuIndicator(.hidden)
-                .buttonStyle(NidoButtonStyle(kind: .secondary))
-                .fixedSize()
-                .disabled(split.more.allSatisfy { !$0.isEnabled })
-                .accessibilityIdentifier("vm-more")
-            }
-        }
-    }
-
-    private var badge: some View {
-        let (status, label): (NidoStatusBadge.Status, String?) = if model.isSuspending {
-            (.suspended, String(localized: "Suspending"))
-        } else if model.isSnapshotting, model.state == .paused {
-            // A live snapshot pauses the VM for a few seconds while its state is saved.
-            (.paused, String(localized: "Snapshot in progress"))
-        } else if model.state == .stopped, model.isSuspended {
-            (.suspended, nil)
-        } else {
-            switch model.state {
-        case .starting: (.starting, nil)
-        case .running: (.running, nil)
-        case .pausing: (.paused, String(localized: "Pausing"))
-        case .paused: (.paused, nil)
-        case .resuming: (.starting, String(localized: "Resuming"))
-        case .stopping: (.starting, String(localized: "Stopping"))
-        case .stopped: (.stopped, nil)
-        case .error: (.error, nil)
-            }
-        }
-        return NidoStatusBadge(status: status, verbatim: label)
-            .accessibilityIdentifier("vm-state")
-    }
-
-    /// What the start left out (a shared folder missing on the Mac…); the full text on hover.
-    private var warningLabel: some View {
-        let text = model.warnings.joined(separator: "\n")
-        return Text(verbatim: model.warnings.count == 1
-                    ? model.warnings[0] : String(localized: "\(model.warnings.count) warnings at startup"))
-            .font(.nido(Theme.TypeSize.caption, .semibold))
-            .foregroundStyle(Theme.Color.statusPaused)
-            .lineLimit(1)
-            .truncationMode(.tail)
-            .help(text)
-            .accessibilityLabel(text)
-            .accessibilityIdentifier("vm-warnings")
-    }
-
-    /// S11: the same toolbar over the console, shown while the pointer is at the top edge.
-    @ViewBuilder private var fullScreenBar: some View {
-        if revealsBar {
-            toolbar
-                .shadow(color: Theme.Layout.sheetShadowColor,
-                        radius: Theme.Layout.sheetShadowRadius, y: Theme.Layout.sheetShadowY)
-                .onHover { inside in if !inside { revealsBar = false } }
-                .transition(.move(edge: .top))
-        } else {
-            Color.clear
-                .frame(height: Theme.Space.s)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-                .onHover { inside in if inside { withAnimation { revealsBar = true } } }
-                .accessibilityIdentifier("vm-fullscreen-edge")
-        }
+    /// S11: the same toolbar in full screen, in a title bar accessory under the window's title
+    /// bar. When the pointer reaches the top of the screen macOS slides the menu bar and the
+    /// title bar down over the VM, and the toolbar comes down with them, below both, as in the
+    /// system's apps; it goes away with them (`fullScreenMinHeight` 0). A bar of Nido's own at
+    /// the top edge would sit under the menu bar on a screen without a notch. The bridge adds
+    /// the accessory only in full screen, so the windowed title strip never shows it.
+    private func fullScreenToolbar() -> NSTitlebarAccessoryViewController {
+        // Its own hosting view: the toolbar gets the model and the bridge, not this view's state.
+        let (model, window) = (model, window)
+        return TitlebarAccessory.bottom { VMToolbar(model: model, window: window, perform: perform) }
     }
 
     private func perform(_ action: VMWindowModel.ToolbarAction) {
@@ -559,6 +453,142 @@ struct VMWindowView: View {
     }
 }
 
+/// The VM's toolbar: the name, the state and the buttons (Components.swift VMToolbar). A view of
+/// its own because full screen shows it in another hosting view (`TitlebarAccessory`).
+private struct VMToolbar: View {
+    let model: VMWindowModel
+    let window: WindowBridge
+    let perform: @MainActor (VMWindowModel.ToolbarAction) -> Void
+
+    var body: some View {
+        HStack(spacing: Theme.Space.s) {
+            Text(model.name.rawValue)
+                .font(.nido(Theme.TypeSize.headline, .semibold))
+                .foregroundStyle(Theme.Color.textPrimary)
+                .lineLimit(1)
+                // Name and state keep their width: the buttons collapse into "Altro" first.
+                .layoutPriority(1)
+            badge.layoutPriority(1)
+            if !model.warnings.isEmpty { warningLabel }
+            Spacer(minLength: 0)
+            // Every button when they fit; otherwise the run controls and "Altro".
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Theme.Space.s) { toolbarButtons(model.toolbarButtons) }
+                compactToolbar
+            }
+        }
+        .padding(.vertical, Theme.Space.s)
+        .padding(.horizontal, Theme.Space.l)
+        .background(Theme.Color.surface)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Theme.Color.border).frame(height: Theme.Layout.hairline)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("vm-toolbar")
+    }
+
+    private func toolbarButtons(_ buttons: [VMWindowModel.ToolbarButton]) -> some View {
+        ForEach(buttons, id: \.action) { button in
+            NidoButton(verbatim: VMWindowModel.label(for: button.action, isFullScreen: window.isFullScreen),
+                       kind: button.kind) { perform(button.action) }
+                .disabled(!button.isEnabled)
+                .accessibilityIdentifier("vm-\(button.action)")
+        }
+    }
+
+    private var compactToolbar: some View {
+        let split = VMWindowModel.compactSplit(model.toolbarButtons)
+        return HStack(spacing: Theme.Space.s) {
+            toolbarButtons(split.visible)
+            if !split.more.isEmpty {
+                Menu {
+                    ForEach(split.more, id: \.action) { button in
+                        Button(VMWindowModel.label(for: button.action, isFullScreen: window.isFullScreen)) {
+                            perform(button.action)
+                        }
+                        .disabled(!button.isEnabled)
+                        .accessibilityIdentifier("vm-\(button.action)")
+                    }
+                } label: {
+                    Text("More")
+                }
+                .menuStyle(.button)
+                .menuIndicator(.hidden)
+                .buttonStyle(NidoButtonStyle(kind: .secondary))
+                .fixedSize()
+                .disabled(split.more.allSatisfy { !$0.isEnabled })
+                .accessibilityIdentifier("vm-more")
+            }
+        }
+    }
+
+    private var badge: some View {
+        let (status, label): (NidoStatusBadge.Status, String?) = if model.isSuspending {
+            (.suspended, String(localized: "Suspending"))
+        } else if model.isSnapshotting, model.state == .paused {
+            // A live snapshot pauses the VM for a few seconds while its state is saved.
+            (.paused, String(localized: "Snapshot in progress"))
+        } else if model.state == .stopped, model.isSuspended {
+            (.suspended, nil)
+        } else {
+            switch model.state {
+        case .starting: (.starting, nil)
+        case .running: (.running, nil)
+        case .pausing: (.paused, String(localized: "Pausing"))
+        case .paused: (.paused, nil)
+        case .resuming: (.starting, String(localized: "Resuming"))
+        case .stopping: (.starting, String(localized: "Stopping"))
+        case .stopped: (.stopped, nil)
+        case .error: (.error, nil)
+            }
+        }
+        return NidoStatusBadge(status: status, verbatim: label)
+            .accessibilityIdentifier("vm-state")
+    }
+
+    /// What the start left out (a shared folder missing on the Mac…); the full text on hover.
+    private var warningLabel: some View {
+        let text = model.warnings.joined(separator: "\n")
+        return Text(verbatim: model.warnings.count == 1
+                    ? model.warnings[0] : String(localized: "\(model.warnings.count) warnings at startup"))
+            .font(.nido(Theme.TypeSize.caption, .semibold))
+            .foregroundStyle(Theme.Color.statusPaused)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .help(text)
+            .accessibilityLabel(text)
+            .accessibilityIdentifier("vm-warnings")
+    }
+}
+
+/// A title bar accessory below the title bar (`.bottom`) that hosts SwiftUI content. In full
+/// screen it shows only while macOS reveals the title bar (`fullScreenMinHeight` 0).
+@MainActor
+enum TitlebarAccessory {
+    static func bottom(@ViewBuilder _ content: @escaping @MainActor () -> some View)
+        -> NSTitlebarAccessoryViewController {
+        let hosting = NSHostingView(rootView: Live(content: content))
+        // The height the content asks for, fixed: AppKit lays the accessory out by its frame
+        // (the width follows the title bar), and SwiftUI's own sizing must not fight it.
+        let size = hosting.fittingSize
+        hosting.sizingOptions = []
+        hosting.frame = NSRect(x: 0, y: 0, width: max(size.width, 1), height: size.height)
+        hosting.autoresizingMask = [.width]
+        let accessory = NSTitlebarAccessoryViewController()
+        accessory.layoutAttribute = .bottom
+        accessory.fullScreenMinHeight = 0
+        accessory.automaticallyAdjustsSize = false
+        accessory.view = hosting
+        return accessory
+    }
+
+    /// Calls the content in its own body, so it follows the observable models it reads.
+    private struct Live<Content: View>: View {
+        let content: @MainActor () -> Content
+        var body: some View { content() }
+    }
+}
+
 // MARK: - The NSWindow behind the view
 
 /// The window of a VM view: asks before closing while the VM runs, toggles and tracks full screen.
@@ -568,6 +598,17 @@ final class WindowBridge {
     private(set) var isFullScreen = false
     /// Asked when the user closes the window (close button, ⌘W): false keeps it open.
     @ObservationIgnored var shouldClose: () -> Bool = { true }
+    /// S11: the toolbar for full screen. In the window only from the end of the switch to full
+    /// screen to the start of the way back, never in the windowed title strip.
+    @ObservationIgnored var fullScreenAccessory: NSTitlebarAccessoryViewController? {
+        didSet {
+            guard oldValue !== fullScreenAccessory else { return }
+            if let oldValue { remove(oldValue) }
+            placeAccessory()
+        }
+    }
+    /// Whether the accessory belongs in the window now (full screen, not on the way out).
+    @ObservationIgnored private var showsAccessory = false
     @ObservationIgnored private weak var window: NSWindow?
     @ObservationIgnored private var closeGuard: CloseGuard?
     @ObservationIgnored private var observers: [any NSObjectProtocol] = []
@@ -582,12 +623,19 @@ final class WindowBridge {
     /// Test seams: whether a window is attached, and how many notification observers are live.
     var isAttached: Bool { window != nil }
     var observerCount: Int { observers.count }
+    /// Test seam: whether the full-screen accessory is in the window's title bar.
+    var hasAccessoryInWindow: Bool {
+        guard let window, let fullScreenAccessory else { return false }
+        return window.titlebarAccessoryViewControllers.contains { $0 === fullScreenAccessory }
+    }
 
     func attach(_ window: NSWindow) {
         if self.window !== window {
             detach()
             self.window = window
             isFullScreen = window.styleMask.contains(.fullScreen)
+            showsAccessory = isFullScreen
+            placeAccessory()
             #if DEBUG
                 // UI tests: `-NidoVMWindowWidth 640` opens the VM window that wide (XCUITest cannot
                 // drag the edge of this window), after SwiftUI has applied its default size.
@@ -605,9 +653,18 @@ final class WindowBridge {
             for (name, value) in [(NSWindow.didEnterFullScreenNotification, true),
                                   (NSWindow.didExitFullScreenNotification, false)] {
                 observers.append(center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
-                    MainActor.assumeIsolated { self?.isFullScreen = value }
+                    MainActor.assumeIsolated {
+                        self?.isFullScreen = value
+                        self?.showFullScreenAccessory(value)
+                    }
                 })
             }
+            // Out of the title bar before the window goes back: the windowed title strip must
+            // not show the toolbar during the animation.
+            observers.append(center.addObserver(forName: NSWindow.willExitFullScreenNotification, object: window,
+                                                queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.showFullScreenAccessory(false) }
+            })
             // The window is going away: let go of it at once (delegate, KVO, observers) rather
             // than when SwiftUI releases the view.
             observers.append(center.addObserver(forName: NSWindow.willCloseNotification, object: window,
@@ -630,6 +687,31 @@ final class WindowBridge {
         window?.close()
     }
 
+    private func showFullScreenAccessory(_ shows: Bool) {
+        showsAccessory = shows
+        placeAccessory()
+    }
+
+    /// Adds the accessory to the window's title bar or takes it out, as `showsAccessory` says.
+    /// The bridge keeps the controller, so taking it out while its button runs (“Esci da schermo
+    /// intero”) does not release it.
+    private func placeAccessory() {
+        guard let window, let accessory = fullScreenAccessory else { return }
+        let added = window.titlebarAccessoryViewControllers.contains { $0 === accessory }
+        if showsAccessory, !added {
+            window.addTitlebarAccessoryViewController(accessory)
+        } else if !showsAccessory, added {
+            remove(accessory)
+        }
+    }
+
+    private func remove(_ accessory: NSTitlebarAccessoryViewController) {
+        guard let window,
+              let index = window.titlebarAccessoryViewControllers.firstIndex(where: { $0 === accessory })
+        else { return }
+        window.removeTitlebarAccessoryViewController(at: index)
+    }
+
     /// Puts the guard in front of the window's current delegate, unless it is already there.
     private func armCloseGuard(on window: NSWindow) {
         guard window === self.window else { return }
@@ -646,6 +728,8 @@ final class WindowBridge {
         observers = []
         if let window, let closeGuard, window.delegate === closeGuard { window.delegate = closeGuard.forward }
         closeGuard = nil
+        if let fullScreenAccessory { remove(fullScreenAccessory) }
+        showsAccessory = false
         window = nil
     }
 }

@@ -2,6 +2,12 @@
 
 Le versioni di Nido, dalla più recente. L'app mostra la sezione della versione installata al primo avvio dopo un aggiornamento (menu Aiuto › Novità di Nido per rivederla).
 
+## [0.9.2] – 2026-11-16
+
+### Correzioni
+- **A schermo intero la barra della VM scende sotto la barra dei menu.** Quando porti il puntatore in cima allo schermo, macOS mostra la barra dei menu e la barra del titolo della finestra, e ora la barra di Nido compare sotto di loro, come nelle app di sistema. Prima, su uno schermo senza tacca (per esempio un monitor esterno), la barra dei menu la copriva e i suoi pulsanti, Esci da schermo intero compreso, non si potevano cliccare.
+- **Le note della 0.9.1 mostrano ogni carattere correttamente** in inglese e in tedesco.
+
 ## [0.9.1] – 2026-11-16
 
 ### Correzioni

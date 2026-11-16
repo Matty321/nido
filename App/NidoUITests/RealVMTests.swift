@@ -94,20 +94,10 @@ final class RealVMTests: XCTestCase {
         XCTAssertTrue(window.buttons["Pausa"].waitForExistence(timeout: 20))
         XCTAssertTrue(window.staticTexts["In esecuzione"].exists)
 
-        // Schermo intero: native full screen, toolbar hidden until the pointer reaches the top edge.
-        window.buttons["Schermo intero"].click()
-        XCTAssertTrue(window.buttons["Schermo intero"].waitForNonExistence(timeout: 10),
-                      "In schermo intero la barra deve nascondersi")
-        Thread.sleep(forTimeInterval: 2)  // the full-screen animation
-        let edge = window.descendants(matching: .any)["vm-fullscreen-edge"]
-        XCTAssertTrue(edge.waitForExistence(timeout: 5))
-        edge.hover()
-        let exit = window.buttons["Esci da schermo intero"]
-        XCTAssertTrue(exit.waitForExistence(timeout: 5), "La barra non compare dal bordo superiore")
-        snapshot(window, app: app, name: "real-vm-fullscreen")
-        exit.click()
-        XCTAssertTrue(window.buttons["Schermo intero"].waitForExistence(timeout: 10))
-        Thread.sleep(forTimeInterval: 2)
+        // Schermo intero is not driven here: in full screen the toolbar lives in the title bar
+        // that macOS slides down (VMWindowView S11), a window XCUITest's element tree does not
+        // list, and the hidden menu bar does not open its menus under XCUITest, so this test
+        // could not leave full screen. VMWindowTests covers entering it and closing from it.
 
         // Closing the window while the VM runs asks first; Annulla keeps it running.
         window.click()

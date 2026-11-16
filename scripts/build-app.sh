@@ -74,6 +74,14 @@ sh scripts/fetch-gvproxy.sh
 swift build -c release --product nido --arch arm64
 cli_binary="$(swift build -c release --product nido --arch arm64 --show-bin-path)/nido"
 
+# Spotlight skips folders named *.noindex: App/build is a link to App/build.noindex, so the
+# development builds of Nido do not show up next to the installed app when searching for it.
+if [[ ! -L App/build ]]; then
+    rm -rf App/build
+    ln -s build.noindex App/build
+fi
+mkdir -p App/build.noindex
+
 check() {
     local configuration="$1"
     local app="App/build/Build/Products/$configuration/Nido.app"

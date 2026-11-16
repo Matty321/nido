@@ -2,6 +2,12 @@
 
 Toutes les versions de Nido, de la plus récente à la plus ancienne. À la première ouverture après une mise à jour, Nido affiche les nouveautés de la version installée (pour les relire, choisissez Aide › Nouveautés de Nido).
 
+## [0.9.2] – 2026-11-16
+
+### Corrections
+- **En plein écran, la barre de la VM descend sous la barre des menus.** Quand vous amenez le pointeur en haut de l’écran, macOS affiche la barre des menus et la barre de titre de la fenêtre, et la barre de Nido apparaît désormais en dessous, comme dans les apps du système. Avant, sur un écran sans encoche (un moniteur externe, par exemple), la barre des menus la recouvrait et ses boutons, Quitter le mode plein écran compris, ne pouvaient pas être cliqués.
+- **Les notes de la 0.9.1 affichent chaque caractère correctement** en anglais et en allemand.
+
 ## [0.9.1] – 2026-11-16
 
 ### Corrections

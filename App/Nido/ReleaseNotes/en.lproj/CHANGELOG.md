@@ -2,6 +2,12 @@
 
 Every Nido release, newest first. The first time Nido opens after an update, it shows the notes for the installed version (choose Help › What’s New in Nido to read them again).
 
+## [0.9.2] – 2026-11-16
+
+### Fixes
+- **In full screen, the VM’s toolbar comes down below the menu bar.** When you move the pointer to the top of the screen, macOS shows the menu bar and the window’s title bar, and Nido’s toolbar now appears under them, as in the system’s apps. Before, on a screen without a notch (an external display, for example), the menu bar covered it and its buttons, Exit Full Screen included, couldn’t be clicked.
+- **The 0.9.1 notes show every character correctly** in English and German.
+
 ## [0.9.1] – 2026-11-16
 
 ### Fixes
@@ -9,7 +15,7 @@ Every Nido release, newest first. The first time Nido opens after an update, it 
 - **When the first start can’t authorize Nido’s key**, the password field appears in **Settings › Agent** right away, and the note in the VM’s window goes away after 30 seconds.
 - **If the key is authorized but the Keychain refuses the password**, the setup goes on and tells you, instead of failing.
 - **The password goes only to the `ssh` that Nido itself started**, and an install that stopped halfway no longer leaves its password in the Keychain.
-- **Copy to the VM’s clipboard is turned off when it can’t work**, and says why, for example when the VM isnât running in Nido.
+- **Copy to the VM’s clipboard is turned off when it can’t work**, and says why, for example when the VM isn’t running in Nido.
 - **Terminal Access** has the right steps for a VM created with an account; the New VM wizard checks the account once you stop typing; `nido start` prints nothing more after the VM stops.
 
 ## [0.9.0] – 2026-11-15
