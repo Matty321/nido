@@ -21,6 +21,42 @@ public enum AgentSupport {
         return password.value
     }
 
+    /// What `replaceUnusablePassword` did.
+    public enum PasswordRepair: Equatable, Sendable {
+        /// The stored item is usable, missing, or unreadable for another reason: nothing to say.
+        case unchanged
+        /// The unusable item was replaced: the line for standard output.
+        case replaced(String)
+        /// The item stays unusable (no terminal, nothing typed, the Keychain refused the new
+        /// one): the line for standard error.
+        case warning(String)
+    }
+
+    /// After `nido agent setup` ended ready. A key that already works means the setup never read
+    /// the stored password, so an unusable item would stay unnoticed: it is replaced with the
+    /// password `ask` gets (once, at the terminal; nil without one). The password is never
+    /// printed. A setup that worked stays a success whatever this says.
+    public static func replaceUnusablePassword(
+        vm: String, id: UUID, store: any GuestPasswordStore,
+        ask: (@Sendable () async -> GuestPassword?)?
+    ) async -> PasswordRepair {
+        do {
+            _ = try store.read(vm: id)
+            return .unchanged
+        } catch GuestPasswordStoreError.unusableItem {
+            let unusable = GuestPasswordStoreError.unusableItem.errorDescription ?? ""
+            guard let ask, let password = await ask() else { return .warning(unusable) }
+            do {
+                try store.save(password, vm: id)
+            } catch {
+                return .warning(L10n.string("The password stored for \(vm) couldn’t be replaced: \(CLISupport.message(for: error))"))
+            }
+            return .replaced(L10n.string("The password stored for \(vm) was replaced."))
+        } catch {
+            return .unchanged
+        }
+    }
+
     /// What `nido act <vm> …` does: send an action to the VM's owner (and maybe copy the
     /// screenshot it saved), or sleep on this side.
     public enum Invocation: Equatable, Sendable {

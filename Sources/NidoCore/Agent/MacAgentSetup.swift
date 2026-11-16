@@ -23,6 +23,9 @@ public enum MacAgentSetupEvent: Equatable, Sendable {
     case error(String)
     /// Nido's key was authorized in the guest with the account's password.
     case keyAuthorized
+    /// Nido's key was authorized with a password the user gave, but saving that password in the
+    /// Keychain failed (the reason in words): the setup goes on, the key works.
+    case passwordNotSaved(String)
     /// Both permissions are granted: the agent works.
     case ready
 
@@ -38,6 +41,8 @@ public enum MacAgentSetupEvent: Equatable, Sendable {
         case .reopening: MacAgentInstaller.WaitEvent.reopening.line(vm: vm)
         case .error(let message): message
         case .keyAuthorized: L10n.string("Nido’s key is now authorized in \(vm).")
+        case .passwordNotSaved(let reason):
+            L10n.string("The key is authorized, but the password couldn’t be saved in the Keychain: \(reason)")
         case .ready: MacAgentInstaller.WaitEvent.ready.line(vm: vm)
         }
     }
@@ -211,7 +216,7 @@ public struct MacAgentSetup: Sendable {
     ///   - describe: an error in words, for the `.error` event of a failed reopen.
     ///   - surface: who runs it, for the words of the timeout's `.error` event.
     ///   - passwords, vmID: the stored password of the guest's account, used to authorize Nido's key
-    ///     when ssh refuses it.
+    ///     when ssh refuses it. Required: a store chosen by default could hide the real Keychain.
     ///   - askpass: the `nido` binary in askpass mode (`Askpass.executable()`); nil when missing.
     ///   - askPassword: asks the user for the password when none is stored, or once when the
     ///     stored one is refused; nil never asks.
@@ -228,7 +233,7 @@ public struct MacAgentSetup: Sendable {
         sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
         describe: @escaping @Sendable (any Error) -> String = { $0.localizedDescription },
         surface: Surface = .cli,
-        passwords: any GuestPasswordStore = MemoryGuestPasswordStore(),
+        passwords: any GuestPasswordStore,
         vmID: UUID? = nil,
         askpass: URL? = nil,
         askPassword: (@Sendable () async -> GuestPassword?)? = nil,
@@ -302,19 +307,18 @@ public struct MacAgentSetup: Sendable {
 
     /// The key was refused: authorize it with the account's password. A password the user just
     /// typed comes first; then the stored one, and when the guest refuses it the user is asked once
-    /// (`askPassword`); with none stored, the user is asked. A password the user gave is saved
-    /// only once it worked; a refused one leaves the stored password as it was. A password refused
-    /// by a FileVault-locked guest is the login hint.
+    /// (`askPassword`); with none stored (or an unusable item, `readStored`), the user is asked. A
+    /// password the user gave is saved only once it worked; a refused one leaves the stored
+    /// password as it was. A password refused by a FileVault-locked guest is the login hint.
     private func authorizeKey(
         refused: any Error, helper: AgentAnswer, onEvent: @Sendable (MacAgentSetupEvent) -> Void
     ) async throws {
         if let typedPassword {
             try await authorize(with: typedPassword, refused: refused, helper: helper)
-            try passwords.save(typedPassword, vm: vmID)
-            onEvent(.keyAuthorized)
+            keep(typedPassword, onEvent: onEvent)
             return
         }
-        if let stored = try passwords.read(vm: vmID) {
+        if let stored = try readStored() {
             do {
                 try await authorize(with: stored, refused: refused, helper: helper)
                 onEvent(.keyAuthorized)
@@ -322,8 +326,7 @@ public struct MacAgentSetup: Sendable {
             } catch let rejected as GuestSSHError {
                 guard case .passwordRejected = rejected, let asked = await askPassword?() else { throw rejected }
                 try await authorize(with: asked, refused: refused, helper: helper)
-                try passwords.save(asked, vm: vmID)
-                onEvent(.keyAuthorized)
+                keep(asked, onEvent: onEvent)
                 return
             }
         }
@@ -331,8 +334,30 @@ public struct MacAgentSetup: Sendable {
             throw Self.loginHint(for: refused, helper: helper, vm: vm) ?? MacAgentSetupError.passwordNeeded(vm)
         }
         try await authorize(with: asked, refused: refused, helper: helper)
-        try passwords.save(asked, vm: vmID)
-        onEvent(.keyAuthorized)
+        keep(asked, onEvent: onEvent)
+    }
+
+    /// The stored password. An unusable item (`GuestPasswordStoreError.unusableItem`) reads as
+    /// none when the user can be asked: the password that works then replaces it (`keep`). With
+    /// nobody to ask, the item's error is the failure, never "no password".
+    private func readStored() throws -> GuestPassword? {
+        do {
+            return try passwords.read(vm: vmID)
+        } catch GuestPasswordStoreError.unusableItem where askPassword != nil {
+            return nil
+        }
+    }
+
+    /// After `password` authorized the key: saves it for next time and says so. A failed save
+    /// does not fail the setup (the key is authorized and works): `.passwordNotSaved` instead of
+    /// `.keyAuthorized`.
+    private func keep(_ password: GuestPassword, onEvent: @Sendable (MacAgentSetupEvent) -> Void) {
+        do {
+            try passwords.save(password, vm: vmID)
+            onEvent(.keyAuthorized)
+        } catch {
+            onEvent(.passwordNotSaved(describe(error)))
+        }
     }
 
     /// One authorization with `password`: a refusal by a FileVault-locked guest is the login

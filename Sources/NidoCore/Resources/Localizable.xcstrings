@@ -23287,6 +23287,144 @@
           }
         }
       }
+    },
+    "The password stored for this VM can’t be used: enter it again in the VM’s Settings › Agent or with nido agent setup" : {
+      "comment" : "The Keychain item of a macOS VM's account password holds no usable password (not text, empty, too long); Settings › Agent is the app's VM settings pane, nido agent setup is a command.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das für diese VM gespeicherte Passwort kann nicht verwendet werden: Gib es in den Einstellungen › Agent der VM oder mit nido agent setup erneut ein"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The password stored for this VM can’t be used: enter it again in the VM’s Settings › Agent or with nido agent setup"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La contraseña guardada para esta VM no se puede usar: introdúcela de nuevo en Ajustes › Agente de la VM o con nido agent setup"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le mot de passe enregistré pour cette VM est inutilisable : saisissez-le à nouveau dans Réglages › Agent de la VM ou avec nido agent setup"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La password salvata per questa VM non si può usare: inseriscila di nuovo in Impostazioni › Agente della VM o con nido agent setup"
+          }
+        }
+      }
+    },
+    "The password stored for %@ was replaced." : {
+      "comment" : "nido agent setup: the unusable Keychain item of the account password was replaced with the one just typed; %@ is the VM name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das für %@ gespeicherte Passwort wurde ersetzt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The password stored for %@ was replaced."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se ha reemplazado la contraseña guardada para %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le mot de passe enregistré pour %@ a été remplacé."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La password salvata per %@ è stata sostituita."
+          }
+        }
+      }
+    },
+    "The password stored for %@ couldn’t be replaced: %@" : {
+      "comment" : "nido agent setup: the Keychain refused the password typed to replace an unusable item; the first %@ is the VM name, the second the error.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das für %@ gespeicherte Passwort konnte nicht ersetzt werden: %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The password stored for %@ couldn’t be replaced: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se ha podido reemplazar la contraseña guardada para %@: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de remplacer le mot de passe enregistré pour %@ : %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non è stato possibile sostituire la password salvata per %@: %@"
+          }
+        }
+      }
+    },
+    "The key is authorized, but the password couldn’t be saved in the Keychain: %@" : {
+      "comment" : "nido agent setup / Settings › Agent: Nido's key was authorized in the macOS VM with the typed password, but saving that password in the Keychain failed (the reason follows).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Schlüssel ist autorisiert, aber das Passwort konnte nicht im Schlüsselbund gesichert werden: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La clave está autorizada, pero no se ha podido guardar la contraseña en el llavero: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La clé est autorisée, mais le mot de passe n’a pas pu être enregistré dans le trousseau : %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La chiave è autorizzata, ma non è stato possibile salvare la password nel Portachiavi: %@"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

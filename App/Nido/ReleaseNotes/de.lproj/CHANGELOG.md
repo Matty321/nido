@@ -2,6 +2,16 @@
 
 Alle Versionen von Nido, die neueste zuerst. Beim ersten Öffnen nach einem Update zeigt Nido die Neuerungen der installierten Version (unter Hilfe › Neue Funktionen in Nido kannst du sie erneut lesen).
 
+## [0.9.1] – 2026-11-16
+
+### Fehlerbehebungen
+- **Ein unlesbares VM-Passwort gilt nicht mehr als fehlendes Passwort.** **Einstellungen › Agent** zeigt das Feld, um es neu einzugeben, und `nido agent setup` fragt danach; beim Klonen oder Starten einer solchen VM weist Nido dich dorthin.
+- **Wenn der erste Start Nidos Schlüssel nicht autorisieren kann**, erscheint das Passwortfeld sofort in **Einstellungen › Agent**, und der Hinweis im VM-Fenster verschwindet nach 30 Sekunden.
+- **Ist der Schlüssel autorisiert, aber der Schlüsselbund lehnt das Passwort ab**, läuft die Einrichtung weiter und sagt es dir, statt zu scheitern.
+- **Das Passwort geht nur an das `ssh`, das Nido selbst gestartet hat**, und eine abgebrochene Installation lässt ihr Passwort nicht mehr im Schlüsselbund zurück.
+- **In die Zwischenablage der VM kopieren ist deaktiviert, wenn es nicht funktionieren kann**, und nennt den Grund, etwa wenn die VM nicht in Nido lÃ¤uft.
+- **Zugriff über Terminal** zeigt die richtigen Schritte für eine mit Account erstellte VM; der Assistent für neue VMs prüft den Account, sobald du aufhörst zu tippen; `nido start` gibt nach dem Stoppen der VM nichts mehr aus.
+
 ## [0.9.0] – 2026-11-15
 
 ### Ein Mac für Agenten

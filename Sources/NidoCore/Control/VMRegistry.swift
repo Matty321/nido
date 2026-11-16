@@ -57,20 +57,25 @@ public actor VMRegistry {
     private let paths: NidoPaths
     private let now: @Sendable () -> Date
     private let changeTime: @Sendable (URL) -> Date?
+    private let passwords: (any GuestPasswordStore)?
 
-    /// `now` and `changeTime` are injectable so tests can control the tombstone age.
+    /// `passwords` is where a crashed macOS installation left its account password, removed with
+    /// its staging folder: required, as `MacAgentSetup`'s, so no default store is ever touched by
+    /// accident; nil touches no store. `now` and `changeTime` are injectable so tests can control
+    /// the tombstone age.
     public init(
-        paths: NidoPaths, now: @escaping @Sendable () -> Date = { Date() },
+        paths: NidoPaths, passwords: (any GuestPasswordStore)?, now: @escaping @Sendable () -> Date = { Date() },
         changeTime: @escaping @Sendable (URL) -> Date? = VMBundle.statChangeTime
     ) {
         self.paths = paths
         self.now = now
         self.changeTime = changeTime
+        self.passwords = passwords
     }
 
     /// Summaries sorted by name (case-insensitive). Also sweeps old orphan tombstones, best effort.
     public func summaries() throws -> [VMSummary] {
-        VMBundle.sweepOrphanTombstones(paths: paths, now: now(), changeTime: changeTime)
+        VMBundle.sweepOrphanTombstones(paths: paths, now: now(), changeTime: changeTime, passwords: passwords)
         let rows = try VMBundle.list(paths: paths).map { bundle -> VMSummary in
             let holder = BundleLock.holder(bundle)
             guard let config = try? bundle.readConfig() else {

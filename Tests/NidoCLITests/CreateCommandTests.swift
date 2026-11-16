@@ -269,6 +269,36 @@ private final class Sink: Sendable {
         #expect(CLISupport.provisionedStartFollowUp(sentProvisioning: true, agentAccess: false) == .loggedIn)
     }
 
+    /// The setup task of `nido start` is cancelled and awaited when the VM stops: a task that
+    /// ends on cancellation is waited for (nothing prints after the VM is gone); one that ignores
+    /// it is given up after the bound, not waited for forever.
+    @Test func setupTaskIsCancelledAndAwaited() async throws {
+        let ended = Mutex(false)
+        let polite = Task<Void, Never> {
+            while !Task.isCancelled { try? await Task.sleep(for: .milliseconds(5)) }
+            try? await Task.sleep(for: .milliseconds(50))
+            ended.withLock { $0 = true }
+        }
+        #expect(await CLISupport.cancelAndWait(polite, within: .seconds(5)))
+        #expect(polite.isCancelled)
+        #expect(ended.withLock { $0 })
+
+        // Ignores cancellation, waiting on a thread of its own (not on the cooperative pool).
+        let stubborn = Task<Void, Never> {
+            await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
+                Thread {
+                    usleep(600_000)
+                    done.resume()
+                }.start()
+            }
+        }
+        let start = ContinuousClock.now
+        #expect(await CLISupport.cancelAndWait(stubborn, within: .milliseconds(200)) == false)
+        #expect(start.duration(to: .now) < .seconds(1))
+
+        #expect(await CLISupport.cancelAndWait(nil, within: .seconds(5)))
+    }
+
     @Test func macResourcesDefaultsLimitsAndMinimums() {
         // Defaults: 4 CPU, 8 GiB.
         var r = CLISupport.macResources(

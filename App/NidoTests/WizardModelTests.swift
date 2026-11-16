@@ -1271,14 +1271,17 @@ final class MacWizardTests {
     func makeModel(installer: FakeMacInstaller = FakeMacInstaller(), store: MacInstallStore = MacInstallStore(),
                    physicalMemory: UInt64 = 32 << 30, hostCores: Int = 8,
                    sshUser: String = "agente", downloader: FakeMacImageDownloader? = nil,
-                   hostMajor: Int = 27) throws -> WizardModel {
+                   hostMajor: Int = 27, accountValidationDelay: Duration = .milliseconds(1),
+                   accountValidator: (@Sendable (String, String, GuestPassword) throws -> Void)? = nil) throws -> WizardModel {
         let key = tmp.appendingPathComponent("id_ed25519.pub")
         try Data(validPublicKey.utf8).write(to: key)
         let local = tmp.appendingPathComponent("base.raw")
         return WizardModel(
             registry: FakeRegistry(), images: .localFile(local), creator: FakeCreator(), defaultKeyURL: key,
             physicalMemory: physicalMemory, hostCores: hostCores, macInstaller: installer, installs: store,
-            macImageDownloader: downloader, defaultSSHUser: sshUser, hostMajor: hostMajor)
+            macImageDownloader: downloader, defaultSSHUser: sshUser, hostMajor: hostMajor,
+            accountValidationDelay: accountValidationDelay,
+            accountValidator: accountValidator ?? { try MacFirstBoot.validate(fullName: $0, username: $1, password: $2) })
     }
 
     /// Sistema (macOS) → Immagine macOS → Risorse → Accesso → Riepilogo, with the IPSW checked.
@@ -1549,12 +1552,110 @@ final class MacWizardTests {
         model.choosesOwnPassword = true
         model.accountPassword = "abc"
         model.accountPasswordAgain = "abc"
+        // macOS's own check waits for the typing to settle (or Next).
+        model.validateAccountNow()
         #expect(model.accountError != nil)
         #expect(!model.isNextEnabled)
         model.accountPassword = "abcd"
         model.accountPasswordAgain = "abcd"
+        model.validateAccountNow()
         #expect(model.accountError == nil)
         #expect(model.isNextEnabled)
+    }
+
+    /// macOS's check of the account runs when the typing settles, not at every keystroke.
+    @Test func accountValidationWaitsForTheTypingToSettle() async throws {
+        let calls = Mutex(0)
+        let installer = FakeMacInstaller()
+        installer.answer(info27())
+        let model = try makeModel(
+            installer: installer, accountValidationDelay: .milliseconds(150),
+            accountValidator: { _, _, _ in calls.withLock { $0 += 1 } })
+        try await runToAccess(model)
+        for name in ["A", "Ag", "Age", "Agen", "Agente"] { model.accountFullName = name }
+        model.choosesOwnPassword = true
+        for password in ["a", "ab", "abc", "abcd", "abcde"] {
+            model.accountPassword = password
+            model.accountPasswordAgain = password
+        }
+        // Nothing yet: every change restarted the wait.
+        #expect(calls.withLock { $0 } == 0)
+        for _ in 0..<100 where calls.withLock({ $0 }) == 0 { try await Task.sleep(for: .milliseconds(20)) }
+        #expect(calls.withLock { $0 } == 1)
+        // Next asks again for what is typed now, whatever the wait says.
+        model.accountPassword = "abcdef"
+        model.accountPasswordAgain = "abcdef"
+        await model.next()
+        #expect(model.step == .summary)
+        #expect(calls.withLock { $0 } >= 2)
+    }
+
+    /// A refusal by macOS, caught only by Next, stops Next.
+    @Test func nextChecksTheAccountEvenBeforeTheWaitEnds() async throws {
+        struct Refused: Error, LocalizedError { var errorDescription: String? { "refused by macOS" } }
+        let installer = FakeMacInstaller()
+        installer.answer(info27())
+        let model = try makeModel(
+            installer: installer, accountValidationDelay: .seconds(3600), accountValidator: { _, _, _ in throw Refused() })
+        try await runToAccess(model)
+        model.accountFullName = "Agente Nido"
+        #expect(model.accountError == nil, "not asked yet")
+        await model.next()
+        #expect(model.step == .access)
+        #expect(model.accountError == "refused by macOS")
+    }
+
+    /// A 27 image chosen first, the account filled, then a 26 image instead: the account is not
+    /// offered and none is sent (nor the agent switch).
+    @Test func swappingA27ImageFor26SendsNoAccount() async throws {
+        let installer = FakeMacInstaller()
+        installer.answer(info27())
+        let model = try makeModel(installer: installer)
+        try await runToAccess(model)
+        model.accountFullName = "Agente Nido"
+        model.agentAccess = true
+        #expect(model.offersAccount)
+        model.back(); model.back()
+        #expect(model.step == .download)
+        installer.answer(MacImageInfo(buildVersion: "26A1", version: "26.6", minimumCPUCount: 2,
+                                      minimumMemoryBytes: 4 << 30, hardwareModel: Data([1, 2, 3])))
+        await model.chooseIPSW(try ipsw())
+        #expect(!model.offersAccount)
+        #expect(model.accountError == nil)
+        await model.next(); await model.next(); await model.next()
+        #expect(model.step == .summary)
+        let run = Task { await model.next() }
+        await installer.waitUntilInstalling()
+        let request = try #require(installer.requests.first)
+        #expect(request.account == nil)
+        #expect(!request.agentAccess)
+        run.cancel()
+    }
+
+    /// Going back and forth through the account step keeps the password the user saw, and it is
+    /// the one that reaches the request.
+    @Test func backAndNextKeepTheGeneratedPassword() async throws {
+        let installer = FakeMacInstaller()
+        installer.answer(info27())
+        let model = try makeModel(installer: installer)
+        try await runToAccess(model)
+        model.accountFullName = "Agente Nido"
+        let shown = model.generatedPassword
+        await model.next()
+        #expect(model.step == .summary)
+        model.back()
+        #expect(model.step == .access)
+        #expect(model.generatedPassword == shown)
+        model.back(); model.back()
+        #expect(model.step == .download)
+        await model.next(); await model.next(); await model.next()
+        #expect(model.step == .summary)
+        #expect(model.generatedPassword == shown)
+        let run = Task { await model.next() }
+        await installer.waitUntilInstalling()
+        let request = try #require(installer.requests.first)
+        #expect(request.account?.password.value == shown)
+        run.cancel()
     }
 
     @Test func noAccountWhenDeclined() async throws {
@@ -1902,7 +2003,7 @@ final class MacWizardTests {
         try Data(validPublicKey.utf8).write(to: key)
         let store = MacInstallStore()
         let model = WizardModel(
-            registry: VMRegistry(paths: paths), images: .localFile(tmp.appendingPathComponent("unused.raw")),
+            registry: VMRegistry(paths: paths, passwords: nil), images: .localFile(tmp.appendingPathComponent("unused.raw")),
             creator: FakeCreator(), defaultKeyURL: key, macInstaller: LiveMacVMInstaller(paths: paths),
             installs: store, defaultSSHUser: "agente")
         var created: [String] = []
@@ -1936,7 +2037,7 @@ final class MacWizardTests {
         #expect(config.guest == .macos)
         #expect(config.osVersion == info.version)
         #expect(config.sshUser == "agente")
-        let summary = try #require(try await VMRegistry(paths: paths).summaries().first)
+        let summary = try #require(try await VMRegistry(paths: paths, passwords: nil).summaries().first)
         #expect(LibraryModel.system(of: summary) == "macOS \(info.version)")
         let leftovers = try FileManager.default.contentsOfDirectory(atPath: paths.root.path)
             .filter { $0.hasPrefix(".creating-") }

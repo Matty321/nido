@@ -31,7 +31,7 @@ private struct TemplateEnv {
                 sshPublicKeyPath: keyURL.path))
     }
 
-    func cloner() -> VMCloner { VMCloner(paths: paths, runner: SystemProcessRunner()) }
+    func cloner() -> VMCloner { VMCloner(paths: paths, runner: SystemProcessRunner(), passwords: MemoryGuestPasswordStore()) }
 
     func makeTemplate() throws {
         try VMControl.editConfig(bundle, owner: .cliOperation) {
@@ -188,8 +188,8 @@ struct TemplateTests {
     @Test func summaryShowsTemplate() async throws {
         let env = try TemplateEnv()
         defer { env.cleanup() }
-        #expect(try await VMRegistry(paths: env.paths).summaries().map(\.isTemplate) == [false])
+        #expect(try await VMRegistry(paths: env.paths, passwords: nil).summaries().map(\.isTemplate) == [false])
         try env.makeTemplate()
-        #expect(try await VMRegistry(paths: env.paths).summaries().map(\.isTemplate) == [true])
+        #expect(try await VMRegistry(paths: env.paths, passwords: nil).summaries().map(\.isTemplate) == [true])
     }
 }

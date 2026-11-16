@@ -59,10 +59,14 @@ struct VMSettingsRoot: View {
                 agent = AgentSettingsModel(
                     bundle: bundle, config: config,
                     isRunning: { settings?.isLocked ?? true },
+                    runsInApp: { sessions.liveState(of: name) == .running },
                     status: AgentSettingsModel.liveStatus(bundle: bundle, config: config),
                     setup: AgentSettingsModel.liveSetup(bundle: bundle, passwords: environment.guestPasswords),
                     passwords: environment.guestPasswords, authenticator: environment.ownerAuthenticator,
                     isWindowSettingUp: { sessions.isSettingUpAgent(name) },
+                    windowAsksForPassword: { sessions.firstRunAsksForPassword(name) },
+                    windowRequestHandled: { sessions.firstRunPasswordHandled(name) },
+                    onOpened: { sessions.agentSettingsOpened(name) },
                     // Only this app's own session reaches the guest's clipboard (never the
                     // control socket of `nido act` and agents).
                     copyToVM: { text, seconds in await sessions.copyToGuestClipboard(name, text: text, clearAfter: seconds) },

@@ -2320,6 +2320,185 @@
         }
       }
     },
+    "Couldn’t copy the password: %@" : {
+      "comment" : "%@ is the error.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passwort kann nicht kopiert werden: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se ha podido copiar la contraseña: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de copier le mot de passe : %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile copiare la password: %@"
+          }
+        }
+      }
+    },
+    "In the VM, press ⌘V. The VM’s clipboard is cleared in %lld seconds." : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Drücke in der VM ⌘V. Die Zwischenablage der VM wird in %lld Sekunde geleert."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Drücke in der VM ⌘V. Die Zwischenablage der VM wird in %lld Sekunden geleert."
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "In the VM, press ⌘V. The VM’s clipboard is cleared in %lld second."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "In the VM, press ⌘V. The VM’s clipboard is cleared in %lld seconds."
+                }
+              }
+            }
+          }
+        },
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "En la VM, pulsa ⌘V. El portapapeles de la VM se vacía en %lld segundo."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "En la VM, pulsa ⌘V. El portapapeles de la VM se vacía en %lld segundos."
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Dans la VM, appuyez sur ⌘V. Le presse-papiers de la VM est vidé dans %lld seconde."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Dans la VM, appuyez sur ⌘V. Le presse-papiers de la VM est vidé dans %lld secondes."
+                }
+              }
+            }
+          }
+        },
+        "it" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Nella VM, premi ⌘V. Gli appunti della VM vengono svuotati tra %lld secondo."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Nella VM, premi ⌘V. Gli appunti della VM vengono svuotati tra %lld secondi."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Nido authorizes its key by itself on the first start; use this panel only if that failed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido autorisiert seinen Schlüssel beim ersten Start selbst: Nutze dieses Fenster nur, wenn das fehlgeschlagen ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido autoriza su clave por sí solo en el primer arranque: usa este panel solo si no ha funcionado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido autorise lui-même sa clé au premier démarrage : n’utilisez ce panneau que si cela a échoué."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido autorizza la sua chiave da solo al primo avvio: usa questo pannello solo se non è riuscito."
+          }
+        }
+      }
+    },
+    "Restart the VM to turn on agent access" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starte die VM neu, um den Agent-Zugriff zu aktivieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reinicia la VM para activar el acceso del agente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redémarrez la VM pour activer l’accès de l’agent"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riavvia la VM per attivare l’accesso dell’agente"
+          }
+        }
+      }
+    },
     "%@’s egress.json is replaced with the base list (%@)." : {
       "comment" : "The VM’s name, then the base list’s domains separated by commas.",
       "localizations" : {
@@ -4630,6 +4809,91 @@
         }
       }
     },
+    "Start the VM in Nido to copy the password into it" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starte die VM in Nido, um das Passwort hineinzukopieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inicia la VM en Nido para copiar la contraseña en ella"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Démarrez la VM dans Nido pour y copier le mot de passe"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avvia la VM in Nido per copiarci la password"
+          }
+        }
+      }
+    },
+    "The VM runs outside this app: start it in Nido to copy the password into it" : {
+      "comment" : "Settings › Agent: the VM runs under nido start (another process), so the password can't be copied to its clipboard.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die VM läuft außerhalb dieser App: Starte sie in Nido, um das Passwort hineinzukopieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La VM se está ejecutando fuera de esta app: iníciala en Nido para copiar la contraseña en ella"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La VM s’exécute en dehors de cette app : démarrez-la dans Nido pour y copier le mot de passe"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La VM è in esecuzione fuori da questa app: avviala in Nido per copiarci la password"
+          }
+        }
+      }
+    },
+    "Turn on agent access to copy the password into the VM" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiviere den Agent-Zugriff, um das Passwort in die VM zu kopieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activa el acceso del agente para copiar la contraseña en la VM"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activez l’accès de l’agent pour copier le mot de passe dans la VM"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attiva l’accesso dell’agente per copiare la password nella VM"
+          }
+        }
+      }
+    },
     "/var/log/nido-provision.log in %@ · last lines, read over SSH" : {
       "localizations" : {
         "de" : {
@@ -6641,35 +6905,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Copia negli appunti della VM"
-          }
-        }
-      }
-    },
-    "Couldn’t copy the password to the VM: %@" : {
-      "comment" : "%@ is the error.",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passwort kann nicht in die VM kopiert werden: %@"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No se ha podido copiar la contraseña a la VM: %@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossible de copier le mot de passe dans la VM : %@"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossibile copiare la password nella VM: %@"
           }
         }
       }
@@ -12485,34 +12720,6 @@
         }
       }
     },
-    "In the VM, press ⌘V. The VM’s clipboard is cleared in 60 seconds." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drücke in der VM ⌘V. Die Zwischenablage der VM wird in 60 Sekunden geleert."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "En la VM, pulsa ⌘V. El portapapeles de la VM se vacía en 60 segundos."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dans la VM, appuyez sur ⌘V. Le presse-papiers de la VM est vidé dans 60 secondes."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nella VM, premi ⌘V. Gli appunti della VM vengono svuotati tra 60 secondi."
-          }
-        }
-      }
-    },
     "IPSW file" : {
       "localizations" : {
         "de" : {
@@ -14968,6 +15175,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nido Agent n’est pas encore prêt : voir Réglages › Agent."
+          }
+        }
+      }
+    },
+    "The password stored for this VM can’t be used: enter it in Settings › Agent." : {
+      "comment" : "The VM window's strip: the first-run setup found the Keychain item of the account password unusable.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das für diese VM gespeicherte Passwort kann nicht verwendet werden: Gib es in Einstellungen › Agent ein."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La contraseña guardada para esta VM no se puede usar: introdúcela en Ajustes › Agente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le mot de passe enregistré pour cette VM est inutilisable : saisissez-le dans Réglages › Agent."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La password salvata per questa VM non si può usare: inseriscila in Impostazioni › Agente."
           }
         }
       }
@@ -27852,6 +28088,34 @@
         }
       }
     },
+    "Wait for the setup to finish" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warte, bis die Einrichtung abgeschlossen ist"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espera a que termine la configuración"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attendez la fin de la configuration"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attendi la fine della configurazione"
+          }
+        }
+      }
+    },
     "Waiting" : {
       "localizations" : {
         "de" : {
@@ -27876,6 +28140,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "In attesa"
+          }
+        }
+      }
+    },
+    "Waiting for Nido Agent in the VM" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warte auf Nido Agent in der VM"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esperando a Nido Agent en la VM"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En attente de Nido Agent dans la VM"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In attesa di Nido Agent nella VM"
           }
         }
       }

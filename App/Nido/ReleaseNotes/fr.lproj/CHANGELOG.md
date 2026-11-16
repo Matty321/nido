@@ -2,6 +2,16 @@
 
 Toutes les versions de Nido, de la plus récente à la plus ancienne. À la première ouverture après une mise à jour, Nido affiche les nouveautés de la version installée (pour les relire, choisissez Aide › Nouveautés de Nido).
 
+## [0.9.1] – 2026-11-16
+
+### Corrections
+- **Un mot de passe de VM illisible n’est plus pris pour un mot de passe absent.** **Réglages › Agent** affiche le champ pour le saisir à nouveau et `nido agent setup` le demande ; cloner ou démarrer cette VM vous y renvoie.
+- **Quand le premier démarrage ne peut pas autoriser la clé de Nido**, le champ du mot de passe apparaît aussitôt dans **Réglages › Agent** et l’avis dans la fenêtre de la VM disparaît après 30 secondes.
+- **Si la clé est autorisée mais que le trousseau refuse le mot de passe**, la configuration continue et vous le signale, au lieu d’échouer.
+- **Le mot de passe va seulement au `ssh` lancé par Nido**, et une installation interrompue ne laisse plus son mot de passe dans le trousseau.
+- **Copier dans le presse-papiers de la VM est désactivé quand cela ne peut pas fonctionner** et dit pourquoi, par exemple quand la VM ne tourne pas dans Nido.
+- **Accès depuis Terminal** affiche les bonnes étapes pour une VM créée avec un compte ; l’assistant de nouvelle VM vérifie le compte quand vous arrêtez de taper ; `nido start` n’affiche plus rien après l’arrêt de la VM.
+
 ## [0.9.0] – 2026-11-15
 
 ### Un Mac pour les agents

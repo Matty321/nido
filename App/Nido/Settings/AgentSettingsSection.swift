@@ -23,6 +23,10 @@ struct AgentSettingsSection: View {
             if let error = model.errorMessage {
                 NidoNotice(kind: .error, verbatim: error, identifier: "agent-error")
             }
+            // The key works, only the Keychain refused the password: not a failed setup.
+            if let notice = model.passwordNotSavedNotice {
+                NidoNotice(kind: .warning, verbatim: notice, identifier: "agent-password-not-saved")
+            }
             if model.agentAccess { helper }
             // The stored password is shown with agent access off too.
             passwordRows
@@ -33,6 +37,7 @@ struct AgentSettingsSection: View {
             model.leave()
         }
         .task {
+            model.opened()
             // The helper changes state in the guest (a permission allowed, a login): look again
             // every 3 seconds while the pane is visible.
             while !Task.isCancelled {
@@ -97,7 +102,7 @@ extension AgentSettingsSection {
     /// The account's password: a field when the setup asks for it, and "Show password" (after
     /// Touch ID) when one is stored, agent access on or off.
     @ViewBuilder fileprivate var passwordRows: some View {
-        if model.agentAccess, model.needsPassword {
+        if model.needsPassword {
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 Text("Account password")
                     .font(.nido(Theme.TypeSize.body, .semibold))
@@ -148,16 +153,33 @@ extension AgentSettingsSection {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("agent-password-value")
             }
+            if let reason = model.copyDisabledReason {
+                Text(verbatim: reason)
+                    .font(.nido(Theme.TypeSize.caption))
+                    .foregroundStyle(Theme.Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("agent-password-copy-reason")
+            }
             if let notice = model.copyNotice {
                 NidoNotice(kind: .info, verbatim: notice, identifier: "agent-password-copied")
             }
+        }
+        // The Keychain could not say whether a password is stored: why, on its own line.
+        if let note = model.passwordStateNote {
+            NidoNotice(kind: .error, verbatim: note, identifier: "agent-password-state")
         }
     }
 
     private func submit() {
         let text = typedPassword
-        typedPassword = ""
         guard !text.isEmpty else { return }
+        // A setup runs: the text stays in the field, the pane says to wait.
+        guard model.canSubmitPassword else {
+            model.noteSetupBusy()
+            return
+        }
+        typedPassword = ""
         Task { await model.submitPassword(text) }
     }
 }

@@ -52,13 +52,16 @@ struct AgentCommand: ParsableCommand {
             let config = try bundle.readConfig()
             let name = vmName.rawValue
             let ready: Bool
+            let askPassword = isatty(0) != 0 ? Self.terminalPassword(user: config.sshUser ?? "nido", vm: name) : nil
             do {
                 let setup = try MacAgentSetup.live(
                     bundle: bundle, config: config, surface: .cli, describe: { CLISupport.message(for: $0) },
-                    askPassword: isatty(0) != 0 ? Self.terminalPassword(user: config.sshUser ?? "nido", vm: name) : nil)
+                    askPassword: askPassword)
                 ready = try await setup.run { event in
                     switch event {
                     case .error(let line): Terminal.error(line)
+                    // A warning: the setup goes on.
+                    case .passwordNotSaved: Terminal.error(event.line(vm: name))
                     default: print(event.line(vm: name))
                     }
                 }
@@ -66,6 +69,15 @@ struct AgentCommand: ParsableCommand {
                 throw AgentSupport.cliError(error)
             }
             if !ready { throw ExitCode.failure }
+            // A key that already worked: the setup never read the stored password. An unusable
+            // item is replaced now (asked once at the terminal), or told; the setup stays a success.
+            switch await AgentSupport.replaceUnusablePassword(
+                vm: name, id: config.id, store: KeychainGuestPasswordStore(), ask: askPassword)
+            {
+            case .unchanged: break
+            case .replaced(let line): print(line)
+            case .warning(let line): Terminal.error(line)
+            }
         }
 
         /// Asks for the account's password on the terminal (no echo; `readpassphrase` reads from

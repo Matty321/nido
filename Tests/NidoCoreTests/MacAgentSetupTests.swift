@@ -129,8 +129,8 @@ import Testing
     }
 
     /// `login` is what the guest's login-state script prints; `open` the status of `open`;
-    /// `key` makes every command fail as a refused key.
-    /// `refusals` makes the first n commands fail as a refused key, then they work.
+    /// `key` makes every command fail as a refused key; `refusals` makes only the first n
+    /// commands fail as a refused key, then they work.
     private func rig(
         login: String = "filevault=off\nautologin=\n", open: Int32 = 0, key: Bool = false, refusals: Int = 0
     ) throws -> Rig {
@@ -158,6 +158,7 @@ import Testing
         now: @escaping @Sendable () -> ContinuousClock.Instant = { ContinuousClock.now },
         sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
         surface: MacAgentSetup.Surface = .cli,
+        describe: @escaping @Sendable (any Error) -> String = { $0.localizedDescription },
         reachFn: (@Sendable () throws -> MacAgentSetup.SSHReach)? = nil,
         passwords: any GuestPasswordStore = MemoryGuestPasswordStore(),
         askpass: URL? = URL(fileURLWithPath: "/usr/bin/true"),
@@ -169,7 +170,7 @@ import Testing
         MacAgentSetup(
             bundle: rig.fx.bundle, config: try rig.fx.bundle.readConfig(), ssh: try rig.fx.ssh(rig.runner),
             client: client, bundledApp: rig.app, reach: reachFn ?? { reach }, timeout: timeout, now: now,
-            sleep: sleep, surface: surface, passwords: passwords, vmID: try rig.fx.bundle.readConfig().id,
+            sleep: sleep, describe: describe, surface: surface, passwords: passwords, vmID: try rig.fx.bundle.readConfig().id,
             askpass: askpass, askPassword: askPassword, typedPassword: typedPassword,
             waitForRemoteLogin: waitForRemoteLogin, authorize: authorize)
     }
@@ -436,6 +437,84 @@ import Testing
         #expect(try store2.read(vm: id2) == old)
     }
 
+    /// A store whose `save` fails (a Keychain that refuses the item).
+    private final class UnsavableStore: GuestPasswordStore, @unchecked Sendable {
+        let saves = Mutex(0)
+        func read(vm: UUID) throws -> GuestPassword? { nil }
+        func save(_ password: GuestPassword, vm: UUID) throws {
+            saves.withLock { $0 += 1 }
+            throw GuestPasswordStoreError.keychain(-25308)
+        }
+        func delete(vm: UUID) throws {}
+    }
+
+    /// A store whose stored item is no usable password (`GuestPasswordStoreError.unusableItem`);
+    /// `save` replaces it.
+    private final class UnusableItemStore: GuestPasswordStore, @unchecked Sendable {
+        let saved = Mutex<GuestPassword?>(nil)
+        func read(vm: UUID) throws -> GuestPassword? {
+            if let password = saved.withLock({ $0 }) { return password }
+            throw GuestPasswordStoreError.unusableItem
+        }
+        func save(_ password: GuestPassword, vm: UUID) throws { saved.withLock { $0 = password } }
+        func delete(vm: UUID) throws {}
+    }
+
+    /// An unusable stored item is no dead end: with someone to ask, the user is asked and the
+    /// password that worked replaces the item; with nobody to ask, the item's error is the failure.
+    @Test func unusableStoredItemAsksForThePassword() async throws {
+        let p = try pw()
+        let r = try rig(refusals: 1); defer { r.cleanup() }
+        let store = UnusableItemStore()
+        let asked = Mutex(0)
+        let used = Mutex<[GuestPassword]>([])
+        let events = Events()
+        let ready = try await setup(
+            r, client: Status([helper(), helper(granted: true)]), sleep: { _ in }, passwords: store,
+            askPassword: { asked.withLock { $0 += 1 }; return p },
+            authorize: { password, _ in used.withLock { $0.append(password) } }
+        ).run { events.add($0) }
+        #expect(ready)
+        #expect(asked.withLock { $0 } == 1)
+        #expect(used.withLock { $0 } == [p])
+        #expect(store.saved.withLock { $0 } == p)
+        #expect(events.all.contains(.keyAuthorized))
+
+        let r2 = try rig(refusals: 1); defer { r2.cleanup() }
+        await #expect(throws: GuestPasswordStoreError.unusableItem) {
+            _ = try await setup(
+                r2, client: Status([helper()]), sleep: { _ in }, passwords: UnusableItemStore(),
+                authorize: { _, _ in }
+            ).run { _ in }
+        }
+    }
+
+    /// The key got authorized but the typed or asked password could not be kept: told as such,
+    /// and the setup goes on (the key works, the password is only for next time).
+    @Test func unsavedPasswordAfterAuthorizationIsNotAFailure() async throws {
+        for typed in [true, false] {
+            let r = try rig(refusals: 1); defer { r.cleanup() }
+            let store = UnsavableStore()
+            let events = Events()
+            let p = try pw()
+            let ready = try await setup(
+                r, client: Status([helper(), helper(granted: true)]), sleep: { _ in },
+                describe: { _ in "the Keychain is locked" }, passwords: store,
+                askPassword: typed ? nil : { @Sendable in p }, typedPassword: typed ? p : nil, authorize: { _, _ in }
+            ).run { events.add($0) }
+            #expect(ready)
+            #expect(store.saves.withLock { $0 } == 1)
+            #expect(events.all.contains(.passwordNotSaved("the Keychain is locked")))
+            #expect(!events.all.contains(.keyAuthorized))
+            #expect(events.all.last == .ready)
+        }
+    }
+
+    @Test(.italian) func unsavedPasswordLine() {
+        #expect(MacAgentSetupEvent.passwordNotSaved("motivo").line(vm: "gs")
+            == "La chiave è autorizzata, ma non è stato possibile salvare la password nel Portachiavi: motivo")
+    }
+
     /// Once a command with Nido's key worked, the Terminal Access panel stops opening by itself
     /// (`VMConfig.sshSucceeded`), as after `nido ssh`.
     @Test func keyLoginIsRecorded() async throws {
@@ -455,6 +534,24 @@ import Testing
         }
         #expect(try r2.fx.bundle.readConfig().sshSucceeded != true)
         #expect(try r3.fx.bundle.readConfig().sshSucceeded != true)
+    }
+
+    /// The authorization worked but the guest refuses the key again on the retry: the refusal is
+    /// the failure (nothing loops, nothing asks twice), and the setup does not report ready.
+    @Test func keyRefusedAgainAfterAuthorizingFails() async throws {
+        let r = try rig(refusals: 2); defer { r.cleanup() }
+        let used = Mutex(0)
+        let asked = Mutex(0)
+        await #expect(throws: GuestSSHError.self) {
+            _ = try await setup(
+                r, client: Status([helper()]), sleep: { _ in },
+                askPassword: { asked.withLock { $0 += 1 }; return try? self.pw() },
+                authorize: { _, _ in used.withLock { $0 += 1 } }
+            ).run { _ in }
+        }
+        #expect(used.withLock { $0 } == 1)
+        #expect(asked.withLock { $0 } == 1)
+        #expect(try r.fx.bundle.readConfig().sshSucceeded != true)
     }
 
     @Test func rejectedPasswordOnLockedGuestIsLoginHint() async throws {

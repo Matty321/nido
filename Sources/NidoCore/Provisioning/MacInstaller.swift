@@ -186,7 +186,10 @@ public struct MacInstaller: Sendable {
             try Task.checkCancellation()
             // The password is in the Keychain before the long installation, keyed by the new id: a
             // Keychain that refuses it ends the creation now, not after 20 minutes. Until the
-            // rename no VM has that id; any later failure removes it again (below).
+            // rename no VM has that id; any later failure removes it again (below). The save is
+            // synchronous and `savedPassword` is set right after it: no cancellation point sits
+            // between them, so the cleanup below never misses an item this call stored. Keep it
+            // that way (no `await` or `checkCancellation` between the two lines).
             if let account = r.account {
                 try environment.passwords.save(account.password, vm: config.id)
                 savedPassword = true

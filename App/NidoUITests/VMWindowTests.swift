@@ -156,7 +156,8 @@ final class VMWindowTests: XCTestCase {
         let exit = window.buttons["Esci da schermo intero"]
         XCTAssertTrue(exit.waitForExistence(timeout: 5))
         exit.click()
-        XCTAssertTrue(window.buttons["Schermo intero"].waitForExistence(timeout: 10))
+        // 30 s: leaving full screen is slow inside a VM (UI tests run in one).
+        XCTAssertTrue(window.buttons["Schermo intero"].waitForExistence(timeout: 30))
         Thread.sleep(forTimeInterval: 2)
         window.typeKey("w", modifierFlags: .command)
         XCTAssertTrue(sheet.waitForExistence(timeout: 5))

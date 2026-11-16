@@ -20,7 +20,9 @@ import Observation
 ///   (`revealPassword`) and is forgotten when the pane goes away (`leave`). Never logged.
 /// - "Copy to the VM’s clipboard" (`copyPasswordToVM`) puts the stored password, after the same
 ///   confirmation, on the guest's clipboard through Nido Agent (the VM shares no clipboard with
-///   the Mac, whose own clipboard is never touched); Nido Agent clears it after 60 seconds.
+///   the Mac, whose own clipboard is never touched); Nido Agent clears it after
+///   `AgentHost.clipboardClearSeconds`. The button needs the VM to run in this app and the helper
+///   to answer; otherwise it is disabled with its reason (`copyDisabledReason`).
 @MainActor
 @Observable
 final class AgentSettingsModel {
@@ -46,6 +48,8 @@ final class AgentSettingsModel {
     enum PasswordState: Equatable {
         case none
         case stored
+        /// The Keychain could not say (an error, shown in `passwordStateNote`): never read as `none`.
+        case unknown
     }
 
     let name: String
@@ -63,12 +67,22 @@ final class AgentSettingsModel {
     private(set) var needsRestart = false
     /// The setup needs the account's password (none stored, or the stored one was refused).
     private(set) var needsPassword = false
+    /// The stored item cannot be used (`GuestPasswordStoreError.unusableItem`, from a read of the
+    /// pane or from the setup): the field stays, agent access on or off, until a typed password
+    /// replaces it.
+    private(set) var itemUnusable = false
     private(set) var passwordState: PasswordState = .none
+    /// Why the password state is unknown (the Keychain error), on its own line: the switch and a
+    /// setup clear `errorMessage`, not this.
+    private(set) var passwordStateError: String?
     /// The password, shown in place after the owner confirmed, until the pane goes away.
     private(set) var shownPassword: String?
     /// Said after the password went to the VM's clipboard, until the clipboard is cleared.
     private(set) var copyNotice: String?
     private(set) var isCopyingPassword = false
+    /// A password that worked but could not be kept in the Keychain (a non-fatal notice of the
+    /// last setup, in words): the key is authorized all the same.
+    private(set) var passwordNotSavedNotice: String?
 
     @ObservationIgnored private let vmID: UUID
     @ObservationIgnored private let passwords: any GuestPasswordStore
@@ -76,17 +90,30 @@ final class AgentSettingsModel {
     @ObservationIgnored private var passwordStateLoaded = false
     @ObservationIgnored private let bundle: VMBundle
     @ObservationIgnored private let isRunning: @MainActor () -> Bool
+    /// Whether the VM runs in this app (only its session reaches the guest's clipboard).
+    @ObservationIgnored private let runsInApp: @MainActor () -> Bool
+    /// The VM's window failed its first-run setup for want of (or a refused) password.
+    @ObservationIgnored private let windowAsksForPassword: @MainActor () -> Bool
+    /// The helper is ready, or this pane ran its own setup: the window's request is spent.
+    @ObservationIgnored private let windowRequestHandled: @MainActor () -> Void
+    /// The pane opened (the window's failure strip has done its job).
+    @ObservationIgnored private let onOpened: @MainActor () -> Void
     @ObservationIgnored private let status: @Sendable () async -> AgentAnswer
     @ObservationIgnored private let setup: Setup
     @ObservationIgnored private let isWindowSettingUp: @MainActor () -> Bool
     @ObservationIgnored private let copyToVM: CopyToVM
     /// Takes `copyNotice` away once the guest's clipboard is cleared.
     @ObservationIgnored private var copyNoticeTask: Task<Void, Never>?
+    /// Waits the clipboard's clearing time before the notice goes (a seam for tests).
+    @ObservationIgnored private let copyNoticeSleep: @Sendable (Duration) async -> Void
     @ObservationIgnored private let bundledVersion: @Sendable () -> String?
     @ObservationIgnored private let onConfigurationChanged: @MainActor () -> Void
     /// The shipped version, looked up once (it checks the bundle's signature): nil inside means not found.
     @ObservationIgnored private var cachedBundledVersion: String??
-    @ObservationIgnored private var installTask: Task<Void, Never>?
+    @ObservationIgnored private var installTask: Task<Bool, Never>?
+    /// The running setup stored the typed password (`.keyAuthorized` after a typed password: it
+    /// is saved before that event, `MacAgentSetup.keep`).
+    @ObservationIgnored private var typedPasswordStored = false
     /// Bumped by each write of the switch: a `refresh` that read `config.json` before it keeps
     /// nothing of what it read.
     @ObservationIgnored private var accessWrites = 0
@@ -107,17 +134,23 @@ final class AgentSettingsModel {
     init(
         bundle: VMBundle, config: VMConfig,
         isRunning: @escaping @MainActor () -> Bool,
+        runsInApp: (@MainActor () -> Bool)? = nil,
         status: @escaping @Sendable () async -> AgentAnswer,
         setup: @escaping Setup,
         bundledVersion: @escaping @Sendable () -> String? = AgentSettingsModel.shippedVersion,
         passwords: any GuestPasswordStore = MemoryGuestPasswordStore(),
         authenticator: any OwnerAuthenticator = LocalOwnerAuthenticator(),
         isWindowSettingUp: @escaping @MainActor () -> Bool = { false },
+        windowAsksForPassword: @escaping @MainActor () -> Bool = { false },
+        windowRequestHandled: @escaping @MainActor () -> Void = {},
+        onOpened: @escaping @MainActor () -> Void = {},
         copyToVM: @escaping CopyToVM = { _, _ in .failure(.notRunning, "") },
+        copyNoticeSleep: @escaping @Sendable (Duration) async -> Void = { try? await Task.sleep(for: $0) },
         onConfigurationChanged: @escaping @MainActor () -> Void = {}
     ) {
         self.isWindowSettingUp = isWindowSettingUp
         self.copyToVM = copyToVM
+        self.copyNoticeSleep = copyNoticeSleep
         self.bundle = bundle
         vmID = config.id
         self.passwords = passwords
@@ -126,6 +159,10 @@ final class AgentSettingsModel {
         agentAccess = config.agentAccess == true
         helperState = config.agentAccess == true ? .notRunning : .off
         self.isRunning = isRunning
+        self.runsInApp = runsInApp ?? isRunning
+        self.windowAsksForPassword = windowAsksForPassword
+        self.windowRequestHandled = windowRequestHandled
+        self.onOpened = onOpened
         self.status = status
         self.setup = setup
         self.bundledVersion = bundledVersion
@@ -164,12 +201,45 @@ final class AgentSettingsModel {
         }
     }
 
+    /// The line under the password rows while the Keychain cannot say whether one is stored.
+    var passwordStateNote: String? { passwordState == .unknown ? passwordStateError : nil }
+
     /// "Show password" is offered whenever a password is stored, agent access on or off (the
     /// wizard and `nido create` say Settings › Agent shows it).
     var showsStoredPassword: Bool { passwordState == .stored }
 
-    /// "Copy to the VM’s clipboard" needs the VM running and a stored password.
-    var canCopyPasswordToVM: Bool { isRunning() && passwordState == .stored && !isCopyingPassword }
+    /// Whether the helper answers (any state that has a version): the clipboard request reaches it.
+    private var helperAnswers: Bool {
+        switch helperState {
+        case .ready, .waitingForPermissions, .outdated: true
+        default: false
+        }
+    }
+
+    /// "Copy to the VM’s clipboard" needs a stored password, the VM running in this app (only its
+    /// session reaches the guest's clipboard) and the helper answering.
+    var canCopyPasswordToVM: Bool {
+        passwordState == .stored && !isCopyingPassword && runsInApp() && !needsRestart && helperAnswers
+    }
+
+    /// Why "Copy to the VM’s clipboard" is disabled, in one line; nil when it is enabled, while a
+    /// copy is under way, or when no password is stored (the button is not there then).
+    var copyDisabledReason: String? {
+        guard passwordState == .stored, !canCopyPasswordToVM, !isCopyingPassword else { return nil }
+        if !runsInApp() {
+            // Running under `nido start` (another process): only this app's session reaches the
+            // guest's clipboard.
+            return isRunning()
+                ? String(localized: "The VM runs outside this app: start it in Nido to copy the password into it")
+                : String(localized: "Start the VM in Nido to copy the password into it")
+        }
+        if needsRestart { return String(localized: "Restart the VM to turn on agent access") }
+        switch helperState {
+        case .off: return String(localized: "Turn on agent access to copy the password into the VM")
+        case .notAnswering, .waitingForLogin: return helperLine
+        default: return String(localized: "Waiting for Nido Agent in the VM")
+        }
+    }
 
     /// The VM's window is setting Nido Agent up after a provisioned start: the pane starts no
     /// second setup meanwhile.
@@ -182,7 +252,8 @@ final class AgentSettingsModel {
         agentAccess && isRunning() && !isInstalling && helperState != .notRunning && !isWindowSettingUp()
     }
 
-    /// "Authorize" runs the setup with the typed password: not while a setup runs.
+    /// "Authorize" runs the setup with the typed password: not while a setup runs (the field keeps
+    /// the text and says so, `submitPassword`).
     var canSubmitPassword: Bool { !isInstalling && !isWindowSettingUp() }
 
     /// The guest has no helper or an old one: the button is the main action.
@@ -221,7 +292,8 @@ final class AgentSettingsModel {
         needsRestart = false
         if !on {
             cancelInstall()
-            needsPassword = false
+            // An unusable stored item still needs the typed password.
+            needsPassword = itemUnusable
             helperState = .off
         } else {
             helperState = .notRunning
@@ -247,6 +319,8 @@ final class AgentSettingsModel {
             needsRestart = false
             return
         }
+        // The window's first-run setup lacked the password: the field is there at once.
+        if windowAsksForPassword() { needsPassword = true }
         guard isRunning() else {
             helperState = .notRunning
             needsRestart = false
@@ -264,7 +338,16 @@ final class AgentSettingsModel {
         guard agentAccess, !isInstalling, writes == accessWrites else { return }
         if let restart = Self.needsRestart(after: answer, running: isRunning()) { needsRestart = restart }
         if let state = Self.state(for: answer, bundledVersion: bundled) { helperState = state }
+        // Ready by any path (CLI, window, this pane): nothing asks for the password any more.
+        if case .ready = helperState {
+            // An unusable stored item still needs the typed password.
+            if !itemUnusable { needsPassword = false }
+            windowRequestHandled()
+        }
     }
+
+    /// The pane appeared: the window's failure strip has done its job.
+    func opened() { onOpened() }
 
     /// Installs Nido Agent in the guest and waits until it is allowed (`MacAgentSetup`).
     func install() async {
@@ -280,13 +363,31 @@ final class AgentSettingsModel {
         errorMessage = nil
         fileVaultAdvice = nil
         needsPassword = false
+        passwordNotSavedNotice = nil
+        typedPasswordStored = false
+        // This pane's own setup answers the window's request.
+        windowRequestHandled()
         let task = Task { await runSetup(typed: typed) }
         installTask = task
-        await task.value
+        let endedReady = await task.value
         installTask = nil
         isInstalling = false
-        // The setup may have saved the typed password (only once it worked).
-        if typed != nil { await reloadPasswordState() }
+        // The setup stored the typed password: it replaced an unusable item, whatever happened
+        // after (a later step may have failed).
+        if typed != nil, typedPasswordStored { itemUnusable = false }
+        // The key already worked, so the setup never needed (nor saved) the typed password: it
+        // replaces the unusable item here, once the setup ended ready (never after a Keychain
+        // refusal the setup reported).
+        if let typed, itemUnusable, !typedPasswordStored, passwordNotSavedNotice == nil, endedReady,
+            errorMessage == nil
+        {
+            await savePassword(typed)
+        }
+        // Still unusable (no typed password, or one the setup did not need): the field stays.
+        if itemUnusable { needsPassword = true }
+        // The setup may have saved the typed password (only once it worked); an unknown state
+        // is asked again (the Keychain may answer now).
+        if typed != nil || passwordState == .unknown { await reloadPasswordState() }
         await refresh()
     }
 
@@ -303,22 +404,77 @@ final class AgentSettingsModel {
     /// Whether an item exists, asked without its data (`contains`): no Keychain prompt.
     private func reloadPasswordState() async {
         let (passwords, vmID) = (passwords, vmID)
-        let stored = await Task.detached { (try? passwords.contains(vm: vmID)) == true }.value
+        let result = await Task.detached { Result { try passwords.contains(vm: vmID) } }.value
         passwordStateLoaded = true
-        passwordState = stored ? .stored : .none
+        switch result {
+        case .success(let stored):
+            passwordState = stored ? .stored : .none
+            passwordStateError = nil
+        case .failure(let error):
+            passwordState = .unknown
+            passwordStateError = Self.readFailure(error)
+            markUnusable(error)
+        }
+    }
+
+    /// A Keychain error is never "no password": it is shown, the state stays unknown. An item
+    /// Nido cannot use asks for the password again (the field of the pane).
+    private func passwordReadFailed(_ error: any Error) {
+        errorMessage = Self.readFailure(error)
+        markUnusable(error)
+    }
+
+    nonisolated private static func readFailure(_ error: any Error) -> String {
+        String(localized: "Couldn’t read the password: \(error.localizedDescription)", comment: "%@ is the error.")
+    }
+
+    /// An unusable stored item (a read of the pane, or the setup's) asks for the password and
+    /// keeps the field until a typed password replaces it.
+    private func markUnusable(_ error: any Error) {
+        guard case GuestPasswordStoreError.unusableItem = error else { return }
+        needsPassword = true
+        itemUnusable = true
     }
 
     /// "Authorize": runs the setup again with the typed password, which `MacAgentSetup` tries
     /// before the stored one and keeps in the Keychain only once it worked. An invalid password
     /// (empty, line breaks) runs nothing and says so.
     func submitPassword(_ text: String) async {
-        guard canSubmitPassword else { return }
+        guard canSubmitPassword else {
+            noteSetupBusy()
+            return
+        }
         guard let password = GuestPassword(text) else {
             errorMessage = String(localized: "The password isn’t valid: it can’t be empty or contain line breaks.")
             return
         }
         shownPassword = nil
+        // Agent access off: nothing to set up, the password is only kept for later.
+        guard agentAccess else {
+            await savePassword(password)
+            return
+        }
         await install(typed: password)
+    }
+
+    /// Keeps a typed password without running a setup (agent access is off).
+    private func savePassword(_ password: GuestPassword) async {
+        let (passwords, vmID) = (passwords, vmID)
+        do {
+            try await Task.detached { try passwords.save(password, vm: vmID) }.value
+        } catch {
+            errorMessage = String(localized: "Couldn’t save: \(error.localizedDescription)", comment: "%@ is the error.")
+            return
+        }
+        errorMessage = nil
+        needsPassword = false
+        itemUnusable = false
+        passwordState = .stored
+    }
+
+    /// A password submitted while a setup runs is refused: the field keeps its text and this says why.
+    func noteSetupBusy() {
+        errorMessage = String(localized: "Wait for the setup to finish")
     }
 
     /// "Show password": the stored password, only after the owner confirmed (Touch ID or the
@@ -332,7 +488,7 @@ final class AgentSettingsModel {
         do {
             value = try await Task.detached { try passwords.read(vm: vmID)?.value }.value
         } catch {
-            errorMessage = String(localized: "Couldn’t read the password: \(error.localizedDescription)", comment: "%@ is the error.")
+            passwordReadFailed(error)
             return nil
         }
         errorMessage = nil
@@ -360,7 +516,7 @@ final class AgentSettingsModel {
         do {
             password = try await Task.detached { try passwords.read(vm: vmID) }.value
         } catch {
-            errorMessage = String(localized: "Couldn’t read the password: \(error.localizedDescription)", comment: "%@ is the error.")
+            passwordReadFailed(error)
             return
         }
         guard let password else {
@@ -371,31 +527,34 @@ final class AgentSettingsModel {
         let answer = await copyToVM(password.value, seconds)
         guard answer.ok else {
             copyNotice = nil
-            errorMessage = Self.copyFailure(answer)
+            errorMessage = Self.copyFailure(answer, helper: helperState)
             return
         }
         errorMessage = nil
-        copyNotice = String(localized: "In the VM, press ⌘V. The VM’s clipboard is cleared in 60 seconds.")
+        copyNotice = String(localized: "In the VM, press ⌘V. The VM’s clipboard is cleared in \(seconds) seconds.")
         copyNoticeTask?.cancel()
-        copyNoticeTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(seconds))
+        copyNoticeTask = Task { [weak self, copyNoticeSleep] in
+            await copyNoticeSleep(.seconds(seconds))
             guard !Task.isCancelled else { return }
             self?.copyNotice = nil
         }
     }
 
     /// Why the password did not reach the VM's clipboard, in the pane's words. An older Nido Agent
-    /// does not know the request and answers `badRequest`.
-    nonisolated static func copyFailure(_ answer: AgentAnswer) -> String {
-        switch answer.error {
-        case .badRequest, .versionMismatch:
+    /// does not know the request and answers `badRequest`: that reads as "update" only when the
+    /// helper is known to be out of date (any other `badRequest` is a real error).
+    nonisolated static func copyFailure(_ answer: AgentAnswer, helper: HelperState) -> String {
+        var outdated = false
+        if case .outdated = helper { outdated = true }
+        return switch answer.error {
+        case .badRequest where outdated, .versionMismatch:
             String(localized: "Update Nido Agent to use this.")
         case .notRunning:
             String(localized: "The VM must run in this app to receive the password.")
         case .notReady:
             String(localized: "Nido Agent doesn’t answer: log in to the VM in its window, or install it.")
         default:
-            String(localized: "Couldn’t copy the password to the VM: \(answer.message ?? answer.error?.rawValue ?? "")",
+            String(localized: "Couldn’t copy the password: \(answer.message ?? answer.error?.rawValue ?? "")",
                    comment: "%@ is the error.")
         }
     }
@@ -413,7 +572,9 @@ final class AgentSettingsModel {
         installTask?.cancel()
     }
 
-    private func runSetup(typed: GuestPassword?) async {
+    /// Runs the setup and shows how it ended; true when it ended ready (no failure, not
+    /// cancelled).
+    private func runSetup(typed: GuestPassword?) async -> Bool {
         let (stream, continuation) = AsyncStream.makeStream(of: MacAgentSetupEvent.self)
         let consumer = Task { @MainActor in
             for await event in stream { handle(event) }
@@ -431,6 +592,7 @@ final class AgentSettingsModel {
         } catch {
             failure = Self.message(for: error)
             if Self.asksForPassword(error) { needsPassword = true }
+            markUnusable(error)
         }
         continuation.finish()
         // The events come first, then how it ended.
@@ -442,6 +604,7 @@ final class AgentSettingsModel {
         } else if !ready, !Task.isCancelled {
             errorMessage = String(localized: "Nido Agent isn’t ready. See the messages below.")
         }
+        return ready && !cancelled && failure == nil && !Task.isCancelled
     }
 
     /// A failure of the setup in the pane's words (`MacAgentSetupError` names the pane's controls).
@@ -450,10 +613,12 @@ final class AgentSettingsModel {
         return (error as? any LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 
-    /// The failure the password field answers: none stored, or the stored one refused.
+    /// The failure the password field answers: none stored, the stored one refused, or a stored
+    /// item that is no usable password.
     nonisolated static func asksForPassword(_ error: any Error) -> Bool {
         if case MacAgentSetupError.passwordNeeded = error { return true }
         if case GuestSSHError.passwordRejected = error { return true }
+        if case GuestPasswordStoreError.unusableItem = error { return true }
         return false
     }
 
@@ -464,7 +629,12 @@ final class AgentSettingsModel {
         case .fileVaultAdvice(let advice): fileVaultAdvice = advice
         case .logIn: helperState = .waitingForLogin
         case .grantPermissions: helperState = .waitingForPermissions
-        case .installed, .alreadyCurrent, .keptNewer, .reopening, .error, .keyAuthorized, .ready: break
+        // A password that worked but could not be kept: a non-fatal notice (the key is authorized,
+        // the setup goes on; the password state is read again after a typed password).
+        case .passwordNotSaved: passwordNotSavedNotice = event.line(vm: name)
+        case .keyAuthorized: typedPasswordStored = true
+        case .installed, .alreadyCurrent, .keptNewer, .reopening, .error, .ready:
+            break
         }
     }
 

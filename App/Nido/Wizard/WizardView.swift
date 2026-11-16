@@ -356,7 +356,7 @@ struct WizardView: View {
             if model.offersAccount {
                 macAccountSection
             } else {
-                            NidoNotice(kind: .info, title: "Nido keeps no password unless you later let it authorize its key with the account password (Settings › Agent).",
+                NidoNotice(kind: .info, title: "Nido keeps no password unless you later let it authorize its key with the account password (Settings › Agent).",
                            detail: "After Setup Assistant, turn on Remote Login in macOS: the Terminal Access panel in the VM’s window guides you.",
                            identifier: "mac-password-notice")
             }

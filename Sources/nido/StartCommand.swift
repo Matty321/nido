@@ -109,6 +109,9 @@ struct StartCommand: AsyncParsableCommand {
                 continuation.resume(returning: state)
             }
         }
+        // The setup has nothing to do any more: cancelled and waited for (bounded), so it prints
+        // nothing after the VM is gone.
+        _ = await CLISupport.cancelAndWait(setupTask, within: CLISupport.setupTaskStopLimit)
         agentServer?.stop()
         // The machine is gone: the relay delivers its last events (stderr lines, egress.log)
         // before the process exits, waited for off the main actor.
@@ -133,7 +136,9 @@ struct StartCommand: AsyncParsableCommand {
     }
 
     /// After a start that sent provisioning (`VMSession.sentProvisioning`): the follow-up line and,
-    /// with agent access on, the setup task (nil otherwise). It never blocks the VM; an error is one line.
+    /// with agent access on, the setup task (nil otherwise). It never blocks the VM; an error is one
+    /// line. The caller cancels and awaits it when the VM stops (`CLISupport.cancelAndWait`): once
+    /// cancelled it prints nothing.
     @MainActor
     private static func followProvisionedStart(session: VMSession, bundle: VMBundle, vm: String) -> Task<Void, Never>? {
         let config = try? bundle.readConfig()
@@ -154,12 +159,19 @@ struct StartCommand: AsyncParsableCommand {
                         bundle: bundle, config: config, surface: .cli, describe: { CLISupport.message(for: $0) },
                         waitForRemoteLogin: .seconds(600))
                     _ = try await setup.run { event in
+                        // Cancelled: the VM stopped, nothing more to say.
+                        guard !Task.isCancelled else { return }
                         switch event {
                         case .error(let line): Terminal.error(line)
+                        // A warning: the setup goes on.
+                        case .passwordNotSaved: Terminal.error(event.line(vm: vm))
                         default: print(event.line(vm: vm))
                         }
                     }
                 } catch is CancellationError {
+                    return
+                } catch where Task.isCancelled {
+                    // Stopped with the VM (e.g. ssh killed): not a failure of the setup.
                     return
                 } catch let error as MacAgentSetupError {
                     Terminal.error(AgentSupport.cliError(error).localizedDescription)

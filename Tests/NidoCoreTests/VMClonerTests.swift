@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import CryptoKit
 import Foundation
+import Synchronization
 import Testing
 import Virtualization
 @testable import NidoCore
@@ -380,7 +381,7 @@ private struct InjectedFailure: Error {}
         }
         let env = try CloneEnv()
         defer { env.cleanup() }
-        let cloner = VMCloner(paths: env.paths, runner: FailingRunner(), environment: .init())
+        let cloner = VMCloner(paths: env.paths, runner: FailingRunner(), passwords: MemoryGuestPasswordStore(), environment: .init())
         await #expect(throws: NidoError.processFailed(executable: "/usr/bin/hdiutil", status: 1)) {
             try await cloner.clone(try VMName("sorgente"), as: try VMName("copia"), owner: .cli)
         }
@@ -653,6 +654,65 @@ private struct InjectedFailure: Error {}
         #expect(config.id != sourceID)
         #expect(try passwords.read(vm: config.id) == GuestPassword("s3cret"))
         #expect(try passwords.read(vm: sourceID) == GuestPassword("s3cret"))
+    }
+
+    /// Records the saves and deletes; reads come from the wrapped memory store.
+    private final class RecordingStore: GuestPasswordStore, @unchecked Sendable {
+        let inner = MemoryGuestPasswordStore()
+        let saved = Mutex<[UUID]>([])
+        let deleted = Mutex<[UUID]>([])
+        func read(vm: UUID) throws -> GuestPassword? { try inner.read(vm: vm) }
+        func save(_ password: GuestPassword, vm: UUID) throws {
+            try inner.save(password, vm: vm)
+            saved.withLock { $0.append(vm) }
+        }
+        func delete(vm: UUID) throws {
+            try inner.delete(vm: vm)
+            deleted.withLock { $0.append(vm) }
+        }
+    }
+
+    /// The clone's own Keychain item is saved just before the rename; a clone that does not
+    /// complete from there on (here: the staging folder is gone at the rename) removes it again,
+    /// and never touches the source's item.
+    @Test func cloneFailureAfterTheCopyRemovesTheCopiedPassword() async throws {
+        let fixture = try MacFixture()
+        defer { fixture.cleanup() }
+        let store = RecordingStore()
+        let sourceID = try fixture.bundle.readConfig().id
+        try store.save(try #require(GuestPassword("s3cret")), vm: sourceID)
+        store.saved.withLock { $0.removeAll() }
+        let root = fixture.paths.root
+        var environment = VMCloner.Environment()
+        environment.faultInjection = { step in
+            guard step == .readyToRename else { return }
+            for entry in try FileManager.default.contentsOfDirectory(atPath: root.path)
+            where entry.contains(".cloning-") {
+                try FileManager.default.removeItem(at: root.appendingPathComponent(entry))
+            }
+        }
+        // The rename of the vanished staging folder: ENOENT.
+        await #expect(throws: POSIXError(.ENOENT)) {
+            try await cloner(fixture, environment, passwords: store)
+                .clone(try VMName("mac"), as: try VMName("copia"), owner: .cli)
+        }
+        let copied = store.saved.withLock { $0 }
+        #expect(copied.count == 1 && copied != [sourceID])
+        #expect(store.deleted.withLock { $0 } == copied)
+        #expect(try store.read(vm: sourceID) == GuestPassword("s3cret"))
+        #expect(try rootEntries(fixture) == ["mac.nidovm"])
+    }
+
+    /// A macOS VM with no stored password (created before 0.9, or the item deleted) clones fine,
+    /// and the clone has no item either.
+    @Test func macCloneWithoutStoredPasswordSucceeds() async throws {
+        let fixture = try MacFixture()
+        defer { fixture.cleanup() }
+        let store = RecordingStore()
+        let clone = try await cloner(fixture, passwords: store)
+            .clone(try VMName("mac"), as: try VMName("copia"), owner: .cli)
+        #expect(store.saved.withLock { $0 }.isEmpty)
+        #expect(try store.read(vm: try clone.readConfig().id) == nil)
     }
 
     private func rootEntries(_ fixture: MacFixture) throws -> [String] {

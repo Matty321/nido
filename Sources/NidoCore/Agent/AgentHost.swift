@@ -47,6 +47,11 @@ public enum AgentHost {
     /// it after `clearAfter` seconds unless something else was copied in the guest meanwhile. The
     /// Mac's own clipboard is never touched, and the text is never logged nor put in the answer.
     /// An older Nido Agent answers `badRequest`.
+    ///
+    /// This path skips the agent-access check (`VMConfig.agentAccess`) on purpose: the check
+    /// guards what an outside client (an MCP agent) may do through the control socket, and the
+    /// owner of the VM at the Mac is not one. It still needs a running session with a vsock
+    /// device; without one the answer is `notRunning`.
     @MainActor
     public static func setClipboard(_ text: String, clearAfter: Int, session: VMSession) async -> AgentAnswer {
         let client = AgentClient(channel: VsockGuestChannel(session: session))

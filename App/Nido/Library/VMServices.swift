@@ -47,16 +47,18 @@ protocol VMCloning: Sendable {
 /// blocking; the copy and the seed build run off the main actor.
 struct LiveVMCloner: VMCloning {
     let paths: NidoPaths
+    /// Where a macOS clone's account password is copied (`AppEnvironment.guestPasswords`).
+    let passwords: any GuestPasswordStore
 
     @concurrent
     func clone(_ source: VMName, as target: VMName) async throws -> [String] {
-        try await VMCloner(paths: paths, runner: SystemProcessRunner())
+        try await VMCloner(paths: paths, runner: SystemProcessRunner(), passwords: passwords)
             .cloneReportingNotes(source, as: target, owner: .app).cloneNotes
     }
 
     @concurrent
     func createFromTemplate(_ template: VMName, as target: VMName) async throws {
-        _ = try await VMCloner(paths: paths, runner: SystemProcessRunner())
+        _ = try await VMCloner(paths: paths, runner: SystemProcessRunner(), passwords: passwords)
             .createFromTemplate(template, as: target, sshKeyPath: nil, owner: .app)
     }
 }

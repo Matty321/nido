@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import Foundation
+import Synchronization
 import Testing
 import Virtualization
 @testable import NidoCore
@@ -111,5 +112,80 @@ import Virtualization
         c = try base()
         c.guest = .linux
         #expect(!MacFirstBoot.needsPassword(config: c, hostMajor: 27))
+    }
+
+    /// The start's plan: a Linux VM never reads `config.json` again nor the Keychain; a macOS VM
+    /// reads both, and a read error is thrown (never a plain start that shows Setup Assistant).
+    @Test func startPlanReadsOnlyForAMacGuest() throws {
+        let store = MemoryGuestPasswordStore()
+        let config = try base()
+        let password = try #require(GuestPassword("abcde-fghjk"))
+        try store.save(password, vm: config.id)
+        struct Unreadable: Error {}
+        let reads = Mutex(0)
+        let linux = try VMSession.firstBootPlan(
+            stateGuest: .linux, readConfig: { reads.withLock { $0 += 1 }; throw Unreadable() },
+            passwords: store, hostMajor: 27)
+        #expect(linux == nil)
+        #expect(reads.withLock { $0 } == 0)
+
+        let plan = try VMSession.firstBootPlan(
+            stateGuest: .macos, readConfig: { reads.withLock { $0 += 1 }; return config },
+            passwords: store, hostMajor: 27)
+        #expect(plan?.password == password)
+        #expect(reads.withLock { $0 } == 1)
+        #expect(throws: Unreadable.self) {
+            _ = try VMSession.firstBootPlan(
+                stateGuest: .macos, readConfig: { throw Unreadable() }, passwords: store, hostMajor: 27)
+        }
+    }
+
+    /// Counts reads; `result` is what a read answers.
+    private final class ReadingStore: GuestPasswordStore, @unchecked Sendable {
+        let reads = Mutex(0)
+        let result: Result<GuestPassword?, any Error>
+        init(_ result: Result<GuestPassword?, any Error>) { self.result = result }
+        func read(vm: UUID) throws -> GuestPassword? {
+            reads.withLock { $0 += 1 }
+            return try result.get()
+        }
+        func save(_ password: GuestPassword, vm: UUID) throws {}
+        func delete(vm: UUID) throws {}
+    }
+
+    /// A Keychain that refuses the read ends the start (`VMSession.start()` throws it): never a
+    /// plain start that would show Setup Assistant.
+    @Test func startPlanThrowsWhenTheStoreThrows() throws {
+        let store = ReadingStore(.failure(GuestPasswordStoreError.keychain(-25293)))
+        #expect(throws: GuestPasswordStoreError.keychain(-25293)) {
+            _ = try VMSession.firstBootPlan(
+                stateGuest: .macos, readConfig: { try self.base() }, passwords: store, hostMajor: 27)
+        }
+        #expect(store.reads.withLock { $0 } == 1)
+    }
+
+    /// The Keychain is asked only when a plan could exist: not on a host before 27, not once the
+    /// provisioning was sent, not for a VM with no account of Nido's.
+    @Test func startPlanSkipsTheStoreWhenNoPlanIsPossible() throws {
+        let store = ReadingStore(.failure(GuestPasswordStoreError.keychain(-25293)))
+        var sent = try base()
+        sent.macProvisioningSent = true
+        var noAccount = try base()
+        noAccount.macAccountFullName = nil
+        for (config, host) in [(try base(), 26), (sent, 27), (noAccount, 27)] {
+            let plan = try VMSession.firstBootPlan(
+                stateGuest: .macos, readConfig: { config }, passwords: store, hostMajor: host)
+            #expect(plan == nil)
+        }
+        #expect(store.reads.withLock { $0 } == 0)
+    }
+
+    /// No stored password: no plan and no error (the VM starts plain).
+    @Test func startPlanWithNoStoredPasswordIsNil() throws {
+        let store = ReadingStore(.success(nil))
+        let plan = try VMSession.firstBootPlan(
+            stateGuest: .macos, readConfig: { try self.base() }, passwords: store, hostMajor: 27)
+        #expect(plan == nil)
+        #expect(store.reads.withLock { $0 } == 1)
     }
 }

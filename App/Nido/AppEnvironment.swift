@@ -155,7 +155,6 @@ final class AppEnvironment {
         let paths = NidoPaths(root: root)
         self.paths = paths
         self.showsReleaseNotes = root == NidoPaths.defaultRoot()
-        self.registry = VMRegistry(paths: paths)
         var updates = showsReleaseNotes ? UpdateController(paths: paths) : nil
         #if DEBUG
             if isDebug, arguments.contains(Self.updatesPreviewFlag) {
@@ -265,6 +264,9 @@ final class AppEnvironment {
             }
         #endif
         self.guestPasswords = guestPasswords
+        // Its sweep removes the password of a crashed installation: from the same store (never
+        // the real Keychain for a test root).
+        self.registry = VMRegistry(paths: paths, passwords: guestPasswords)
         ownerAuthenticator = authenticator
         if let poster {
             egress = EgressMonitor(paths: paths, poster: poster, authenticator: authenticator, defaults: egressDefaults)

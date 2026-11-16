@@ -46,7 +46,18 @@ public protocol ProcessRunner: Sendable {
         onStdout: (@Sendable (Data) -> Void)?
     ) throws -> ProcessResult
 
-    /// Like the previous one, with the child's stdin read from `stdinFile` (from its current
+    /// Like the previous one, with `onLaunch` handed the child's pid once it started (before
+    /// its output is read; never called when it could not start). Only `SystemProcessRunner`
+    /// launches a process: the default runs the previous variant and never calls `onLaunch`, which
+    /// is meant for the tests' runners; it stops a debug build when handed an `onLaunch` (a runner
+    /// that would drop the pid must implement this variant).
+    func run(
+        executable: URL, arguments: [String], stdin: Data?, timeout: TimeInterval, maxOutput: Int,
+        cancellation: ProcessCancellation?, environment: [String: String],
+        onLaunch: (@Sendable (pid_t) -> Void)?, onStdout: (@Sendable (Data) -> Void)?
+    ) throws -> ProcessResult
+
+    /// Like the cancellable variant, with the child's stdin read from `stdinFile` (from its current
     /// offset to its end) instead of a buffer in memory: for inputs too large to hold in RAM or to
     /// map (a file truncated under a mapping is a SIGBUS). `SystemProcessRunner` copies it in
     /// chunks of `SystemProcessRunner.stdinChunkSize`; the default reads it whole and runs the `Data` variant, which
@@ -117,6 +128,22 @@ extension ProcessRunner {
     }
 
     public func run(
+        executable: URL, arguments: [String], stdin: Data?, timeout: TimeInterval, maxOutput: Int,
+        cancellation: ProcessCancellation?, environment: [String: String],
+        onLaunch: (@Sendable (pid_t) -> Void)?, onStdout: (@Sendable (Data) -> Void)?
+    ) throws -> ProcessResult {
+        // A runner that launches a process and leaves this default in place would never name
+        // its child: every caller that needs the pid (the askpass peer check) would then fail.
+        // Such a runner must implement this variant; a test runner that needs no pid passes nil.
+        if onLaunch != nil {
+            assertionFailure("\(Self.self) drops onLaunch: a runner that launches processes implements run(…onLaunch:…)")
+        }
+        return try run(
+            executable: executable, arguments: arguments, stdin: stdin, timeout: timeout, maxOutput: maxOutput,
+            cancellation: cancellation, environment: environment, onStdout: onStdout)
+    }
+
+    public func run(
         executable: URL, arguments: [String], stdinFile: FileHandle, timeout: TimeInterval, maxOutput: Int,
         cancellation: ProcessCancellation?
     ) throws -> ProcessResult {
@@ -168,6 +195,17 @@ public struct SystemProcessRunner: ProcessRunner {
     }
 
     public func run(
+        executable: URL, arguments: [String], stdin: Data?, timeout: TimeInterval, maxOutput: Int,
+        cancellation: ProcessCancellation?, environment: [String: String],
+        onLaunch: (@Sendable (pid_t) -> Void)?, onStdout: (@Sendable (Data) -> Void)?
+    ) throws -> ProcessResult {
+        try launch(
+            executable: executable, arguments: arguments, input: stdin.map(Input.data) ?? .none, timeout: timeout,
+            maxOutput: maxOutput, cancellation: cancellation, onStdout: onStdout, extraEnvironment: environment,
+            onLaunch: onLaunch)
+    }
+
+    public func run(
         executable: URL, arguments: [String], stdinFile: FileHandle, timeout: TimeInterval, maxOutput: Int,
         cancellation: ProcessCancellation?
     ) throws -> ProcessResult {
@@ -186,7 +224,7 @@ public struct SystemProcessRunner: ProcessRunner {
     private func launch(
         executable: URL, arguments: [String], input: Input, timeout: TimeInterval, maxOutput: Int,
         cancellation: ProcessCancellation?, onStdout: (@Sendable (Data) -> Void)?,
-        extraEnvironment: [String: String] = [:]
+        extraEnvironment: [String: String] = [:], onLaunch: (@Sendable (pid_t) -> Void)? = nil
     ) throws -> ProcessResult {
         let path = executable.path
         guard path.hasPrefix("/"), FileManager.default.isExecutableFile(atPath: path) else {
@@ -211,6 +249,8 @@ public struct SystemProcessRunner: ProcessRunner {
         do { try process.run() } catch {
             throw NidoError.processFailed(executable: path, status: -1)
         }
+        // At once: the pid names this child until it exits and is reaped.
+        onLaunch?(process.processIdentifier)
         // Everything that can block runs on a thread of its own: a block on a global queue can
         // wait forever for a worker thread when the callers (e.g. Swift concurrency tasks) block
         // every thread of the pool in here.

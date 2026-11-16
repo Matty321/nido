@@ -25,6 +25,9 @@ final class TerminalAccessModel {
     private(set) var keyProblem: String?
     /// The account `nido ssh` logs in as (`VMConfig.sshUser`, `nido` when unset).
     private(set) var sshUser = "nido"
+    /// Nido sent the guest its account (`VMConfig.macProvisioningSent`): Remote Login is on and
+    /// Nido authorizes its key by itself, so the panel is only the way out of a failure.
+    private(set) var isProvisioned = false
     private(set) var isTyping = false
     /// After a successful "Digita nella VM".
     private(set) var typingMessage: String?
@@ -55,10 +58,19 @@ final class TerminalAccessModel {
 
     var title: String { String(localized: "Terminal Access") }
     var intro: String {
-        String(localized: "To use \(name.rawValue) with nido ssh, once, after Setup Assistant. These steps need no password.")
+        if isProvisioned {
+            return String(localized: "Nido authorizes its key by itself on the first start; use this panel only if that failed.")
+        }
+        return String(localized: "To use \(name.rawValue) with nido ssh, once, after Setup Assistant. These steps need no password.")
     }
     var steps: [Step] {
-        [Step(number: 1, title: String(localized: "Complete Setup Assistant"),
+        if isProvisioned {
+            // No Setup Assistant to finish and Remote Login already on.
+            return [Step(number: 1, title: String(localized: "Authorize your key"),
+                         detail: String(localized: "Open Terminal in the VM, then click Type in VM: Nido types the command with your public key. You can also type it yourself.")),
+                    Step(number: 2, title: String(localized: "Connect from the Mac"), detail: String(localized: "In Terminal on the Mac:"))]
+        }
+        return [Step(number: 1, title: String(localized: "Complete Setup Assistant"),
               detail: String(localized: "Create the account \(sshUser): it’s the name nido ssh uses. You can change it in the VM’s settings.")),
          Step(number: 2, title: String(localized: "Turn on Remote Login"),
               detail: String(localized: "In the VM: System Settings › General › Sharing › Remote Login.")),
@@ -91,6 +103,7 @@ final class TerminalAccessModel {
         let bundle = VMBundle(url: paths.bundleURL(for: name))
         let config = try? bundle.readConfig()
         sshUser = config?.sshUser ?? "nido"
+        isProvisioned = config?.macProvisioningSent == true
         sshSucceeded = config?.sshSucceeded == true
         guestLayoutID = config?.guestKeyboardLayoutID
         // `PrivateFile` (no symlink, this user's regular file), at most 16 KiB, opened

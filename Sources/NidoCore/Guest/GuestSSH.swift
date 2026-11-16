@@ -253,10 +253,10 @@ public struct GuestSSH: Sendable {
     private let runner: ProcessRunner
     private let resolveSSH: @Sendable (VMBundle) throws -> SSHEndpoint
     private let callerEnvironment: [String: String]
-    /// Which process may fetch the password from `authorizeNidoKey`'s askpass socket: the
-    /// askpass child of the ssh this process starts. Tests replace it (their fetch comes from the
-    /// test process itself).
-    var askpassPeerCheck: @Sendable (pid_t) -> Bool = AskpassServer.isAskpassOfOurSSH
+    /// Which process may fetch the password from `authorizeNidoKey`'s askpass socket, given the
+    /// peer's pid and the pid of the ssh that call launched (nil until it started): that ssh's
+    /// askpass child. Tests replace it (their fetch comes from the test process itself).
+    var askpassPeerCheck: @Sendable (pid_t, pid_t?) -> Bool = AskpassServer.isAskpass(_:ofSSH:)
 
     public init(
         bundle: VMBundle, config: VMConfig, runner: ProcessRunner,
@@ -447,9 +447,11 @@ public struct GuestSSH: Sendable {
         let stdin = Data((key + "\n").utf8)
         let result = try await launch(arguments: arguments, timeout: .seconds(30)) {
             runner, arguments, seconds, cancellation in
+            // The socket answers only the askpass child of this very ssh.
             try runner.run(
                 executable: Self.ssh, arguments: arguments, stdin: stdin, timeout: seconds, maxOutput: 1 << 16,
-                cancellation: cancellation, environment: environment, onStdout: nil)
+                cancellation: cancellation, environment: environment, onLaunch: { server.expect(ssh: $0) },
+                onStdout: nil)
         }
         if !result.timedOut, result.status == 255,
             String(decoding: result.stderr, as: UTF8.self).contains("Permission denied")

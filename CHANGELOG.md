@@ -2,6 +2,16 @@
 
 Every Nido release, newest first. The first time Nido opens after an update, it shows the notes for the installed version (choose Help › What’s New in Nido to read them again).
 
+## [0.9.1] – 2026-11-16
+
+### Fixes
+- **A VM password that can’t be read is no longer taken for a missing one.** **Settings › Agent** shows the field to enter it again, and `nido agent setup` asks for it; cloning or starting such a VM points you there.
+- **When the first start can’t authorize Nido’s key**, the password field appears in **Settings › Agent** right away, and the note in the VM’s window goes away after 30 seconds.
+- **If the key is authorized but the Keychain refuses the password**, the setup goes on and tells you, instead of failing.
+- **The password goes only to the `ssh` that Nido itself started**, and an install that stopped halfway no longer leaves its password in the Keychain.
+- **Copy to the VM’s clipboard is turned off when it can’t work**, and says why, for example when the VM isnât running in Nido.
+- **Terminal Access** has the right steps for a VM created with an account; the New VM wizard checks the account once you stop typing; `nido start` prints nothing more after the VM stops.
+
 ## [0.9.0] – 2026-11-15
 
 ### A Mac for Agents

@@ -43,7 +43,8 @@ public struct GuestPassword: Sendable, Equatable, CustomStringConvertible, Custo
 
 /// Where the Mac keeps the guest account password of each VM (one item per VM id).
 public protocol GuestPasswordStore: Sendable {
-    /// The stored password, or nil when there is none.
+    /// The stored password, or nil when there is none. A store that cannot read the item, or
+    /// reads one that is no usable password, throws (`GuestPasswordStoreError`): never nil.
     func read(vm: UUID) throws -> GuestPassword?
     /// Whether a password is stored, without reading it (the Keychain asks no confirmation for
     /// that).
@@ -62,13 +63,25 @@ extension GuestPasswordStore {
 /// A Keychain failure: only the `OSStatus`, never the password.
 public enum GuestPasswordStoreError: Error, Equatable, Sendable, LocalizedError {
     case keychain(OSStatus)
+    /// The stored item is no password Nido can use (not UTF-8, empty, a line break, too long):
+    /// an error, never "no password" nor a silently repaired one.
+    case unusableItem
 
     public var errorDescription: String? {
         switch self {
         case .keychain(let status):
-            let message = SecCopyErrorMessageString(status, nil) as String? ?? "unknown"
-            return L10n.string("Keychain error \(String(status)): \(message)")
+            return Self.keychainDescription(status, systemMessage: SecCopyErrorMessageString(status, nil) as String?)
+        case .unusableItem:
+            return L10n.string(
+                "The password stored for this VM can’t be used: enter it again in the VM’s Settings › Agent or with nido agent setup")
         }
+    }
+
+    /// The text of `.keychain(status)`: the system's message, or "unknown error" in the user's
+    /// language when the system has none.
+    static func keychainDescription(_ status: OSStatus, systemMessage: String?) -> String {
+        let message = systemMessage ?? L10n.string("unknown error")
+        return L10n.string("Keychain error \(String(status)): \(message)")
     }
 }
 
@@ -100,8 +113,16 @@ public struct KeychainGuestPasswordStore: GuestPasswordStore {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess else { throw GuestPasswordStoreError.keychain(status) }
-        guard let data = result as? Data else { return nil }
-        return GuestPassword(String(decoding: data, as: UTF8.self))
+        return try Self.decode(result)
+    }
+
+    /// The password in the data `SecItemCopyMatching` returned: `.unusableItem` when it is no
+    /// data, not valid UTF-8, or a value `GuestPassword` refuses.
+    static func decode(_ result: CFTypeRef?) throws -> GuestPassword {
+        guard let data = result as? Data, let text = String(validating: data, as: UTF8.self),
+            let password = GuestPassword(text)
+        else { throw GuestPasswordStoreError.unusableItem }
+        return password
     }
 
     /// Asks only for the item's attributes, never its data: no "allow" prompt of the Keychain.

@@ -63,13 +63,13 @@ public struct VMCloner: Sendable {
     }
 
     public init(
-        paths: NidoPaths, runner: ProcessRunner, passwords: any GuestPasswordStore = KeychainGuestPasswordStore()
+        paths: NidoPaths, runner: ProcessRunner, passwords: any GuestPasswordStore
     ) {
         self.init(paths: paths, runner: runner, passwords: passwords, environment: Environment())
     }
 
     init(
-        paths: NidoPaths, runner: ProcessRunner, passwords: any GuestPasswordStore = KeychainGuestPasswordStore(),
+        paths: NidoPaths, runner: ProcessRunner, passwords: any GuestPasswordStore,
         environment: Environment
     ) {
         self.paths = paths

@@ -20,7 +20,7 @@ struct AgentSettingsModelTests {
         return (bundle, config, root)
     }
 
-    private func status(version: String = "1.0.0", recording: Bool = true, accessibility: Bool = true) -> AgentAnswer {
+    private nonisolated func status(version: String = "1.0.0", recording: Bool = true, accessibility: Bool = true) -> AgentAnswer {
         AgentAnswer(
             ok: true,
             status: AgentStatus(
@@ -29,19 +29,23 @@ struct AgentSettingsModelTests {
     }
 
     private func model(
-        _ bundle: VMBundle, _ config: VMConfig, running: Bool = false,
+        _ bundle: VMBundle, _ config: VMConfig, running: Bool = false, runsInApp: Bool? = nil,
         setup: @escaping AgentSettingsModel.Setup = { _, _ in true },
         passwords: any GuestPasswordStore = MemoryGuestPasswordStore(),
         authenticator: any OwnerAuthenticator = FakeAuthenticator(answer: true),
         status: @escaping @Sendable () async -> AgentAnswer = { .failure(.notRunning, "") },
         windowSetsUp: @escaping @MainActor () -> Bool = { false },
+        windowAsks: @escaping @MainActor () -> Bool = { false },
+        windowHandled: @escaping @MainActor () -> Void = {},
         copyToVM: @escaping AgentSettingsModel.CopyToVM = { _, _ in .failure(.notRunning, "") },
+        copyNoticeSleep: @escaping @Sendable (Duration) async -> Void = { _ in try? await Task.sleep(for: .seconds(3600)) },
         onChanged: @escaping @MainActor () -> Void = {}
     ) -> AgentSettingsModel {
         AgentSettingsModel(
-            bundle: bundle, config: config, isRunning: { running }, status: status,
+            bundle: bundle, config: config, isRunning: { running }, runsInApp: { runsInApp ?? running }, status: status,
             setup: setup, bundledVersion: { "1.0.0" }, passwords: passwords, authenticator: authenticator,
-            isWindowSettingUp: windowSetsUp, copyToVM: copyToVM, onConfigurationChanged: onChanged)
+            isWindowSettingUp: windowSetsUp, windowAsksForPassword: windowAsks, windowRequestHandled: windowHandled,
+            copyToVM: copyToVM, copyNoticeSleep: copyNoticeSleep, onConfigurationChanged: onChanged)
     }
 
     // MARK: - The account password
@@ -223,17 +227,46 @@ struct AgentSettingsModelTests {
         let store = MemoryGuestPasswordStore()
         try store.save(try #require(GuestPassword("s3cret")), vm: config.id)
         let clipboard = ClipboardRecorder()
-        let model = model(bundle, config, running: true, passwords: store, copyToVM: clipboard.send)
+        let model = model(bundle, config, running: true, passwords: store, status: { self.status() }, copyToVM: clipboard.send)
         await model.refresh()
         #expect(model.canCopyPasswordToVM)
         await model.copyPasswordToVM()
         #expect(clipboard.calls.map(\.text) == ["s3cret"])
-        #expect(clipboard.calls.map(\.clearAfter) == [60])
+        #expect(clipboard.calls.map(\.clearAfter) == [AgentHost.clipboardClearSeconds])
         #expect(model.errorMessage == nil)
-        #expect(model.copyNotice == String(localized: "In the VM, press ⌘V. The VM’s clipboard is cleared in 60 seconds."))
+        // The seconds in the notice are the ones the clipboard is cleared after.
+        let seconds = AgentHost.clipboardClearSeconds
+        #expect(model.copyNotice == String(localized: "In the VM, press ⌘V. The VM’s clipboard is cleared in \(seconds) seconds."))
+        #expect(model.copyNotice?.contains("\(seconds)") == true)
         // Never shown in the pane on the way.
         #expect(model.shownPassword == nil)
         model.leave()
+        #expect(model.copyNotice == nil)
+    }
+
+    /// The notice goes once the guest's clipboard is cleared (the injected clock waits that many
+    /// seconds).
+    @Test func copyNoticeGoesWhenTheClipboardIsCleared() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = MemoryGuestPasswordStore()
+        try store.save(try #require(GuestPassword("s3cret")), vm: config.id)
+        let (gate, release) = AsyncStream.makeStream(of: Void.self)
+        let waited = Mutex<[Duration]>([])
+        let model = model(
+            bundle, config, running: true, passwords: store, status: { self.status() },
+            copyToVM: ClipboardRecorder().send,
+            copyNoticeSleep: { duration in
+                waited.withLock { $0.append(duration) }
+                for await _ in gate { break }
+            })
+        await model.refresh()
+        await model.copyPasswordToVM()
+        #expect(model.copyNotice != nil)
+        for _ in 0..<50 where waited.withLock({ $0.isEmpty }) { await Task.yield() }
+        #expect(waited.withLock { $0 } == [.seconds(AgentHost.clipboardClearSeconds)])
+        release.yield()
+        for _ in 0..<200 where model.copyNotice != nil { await Task.yield() }
         #expect(model.copyNotice == nil)
     }
 
@@ -244,10 +277,27 @@ struct AgentSettingsModelTests {
         let store = MemoryGuestPasswordStore()
         try store.save(try #require(GuestPassword("s3cret")), vm: config.id)
         let clipboard = ClipboardRecorder(answer: .failure(.badRequest, "could not read the request: unknown op 'setClipboard'"))
-        let model = model(bundle, config, running: true, passwords: store, copyToVM: clipboard.send)
+        let model = model(bundle, config, running: true, passwords: store, status: { self.status(version: "0.9.0") },
+                          copyToVM: clipboard.send)
+        await model.refresh()
+        #expect(model.helperState == .outdated("0.9.0"))
         await model.copyPasswordToVM()
         #expect(model.errorMessage == String(localized: "Update Nido Agent to use this."))
         #expect(model.copyNotice == nil)
+    }
+
+    /// A `badRequest` from a helper that is up to date is a real error, not a call to update.
+    @Test func copyToVMBadRequestFromACurrentHelperIsGeneric() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = MemoryGuestPasswordStore()
+        try store.save(try #require(GuestPassword("s3cret")), vm: config.id)
+        let clipboard = ClipboardRecorder(answer: .failure(.badRequest, "text too long"))
+        let model = model(bundle, config, running: true, passwords: store, status: { self.status() }, copyToVM: clipboard.send)
+        await model.refresh()
+        #expect(model.helperState == .ready("1.0.0"))
+        await model.copyPasswordToVM()
+        #expect(model.errorMessage == String(localized: "Couldn’t copy the password: \("text too long")"))
     }
 
     /// The VM gone, the helper not answering, a Keychain error: each is told, nothing is sent
@@ -289,9 +339,338 @@ struct AgentSettingsModelTests {
         let stopped = model(bundle, config, running: false, passwords: store)
         await stopped.refresh()
         #expect(!stopped.canCopyPasswordToVM)
-        let running = model(bundle, config, running: true, passwords: store)
+        let running = model(bundle, config, running: true, passwords: store, status: { self.status() })
         await running.refresh()
         #expect(running.canCopyPasswordToVM)
+        #expect(running.copyDisabledReason == nil)
+    }
+
+    /// Open in another process (`nido start`) or not running: not this app's session, so no button.
+    /// The reason says the VM runs outside this app, or to start it in Nido when it is stopped.
+    @Test func copyToVMDisabledWhenTheVMRunsElsewhere() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = MemoryGuestPasswordStore()
+        try store.save(try #require(GuestPassword("s3cret")), vm: config.id)
+        let elsewhere = model(bundle, config, running: true, runsInApp: false, passwords: store, status: { self.status() })
+        await elsewhere.refresh()
+        #expect(elsewhere.helperState == .ready("1.0.0"))
+        #expect(!elsewhere.canCopyPasswordToVM)
+        #expect(elsewhere.copyDisabledReason
+            == String(localized: "The VM runs outside this app: start it in Nido to copy the password into it"))
+
+        let stopped = model(bundle, config, running: false, passwords: store)
+        await stopped.refresh()
+        #expect(!stopped.canCopyPasswordToVM)
+        #expect(stopped.copyDisabledReason == String(localized: "Start the VM in Nido to copy the password into it"))
+    }
+
+    /// A VM started before agent access was turned on has no agent socket: restart it.
+    @Test func copyToVMDisabledUntilARestart() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = MemoryGuestPasswordStore()
+        try store.save(try #require(GuestPassword("s3cret")), vm: config.id)
+        let model = model(bundle, config, running: true, passwords: store, status: { .failure(.notRunning, "") })
+        await model.refresh()
+        #expect(model.needsRestart)
+        #expect(!model.canCopyPasswordToVM)
+        #expect(model.copyDisabledReason == String(localized: "Restart the VM to turn on agent access"))
+    }
+
+    /// A helper that does not answer: no button, the pane's own line says what to do.
+    @Test func copyToVMDisabledWhenTheHelperDoesNotAnswer() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = MemoryGuestPasswordStore()
+        try store.save(try #require(GuestPassword("s3cret")), vm: config.id)
+        let model = model(bundle, config, running: true, passwords: store, status: { .failure(.notReady, "") })
+        await model.refresh()
+        #expect(!model.canCopyPasswordToVM)
+        #expect(model.copyDisabledReason == model.helperLine)
+    }
+
+    // MARK: - 0.9.1 polish
+
+    /// The window's first-run setup lacked the password: the field is there when the pane opens.
+    @Test func windowFailureShowsThePasswordField() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = model(bundle, config, running: true, status: { .failure(.notReady, "") }, windowAsks: { true })
+        #expect(!model.needsPassword)
+        await model.refresh()
+        #expect(model.needsPassword)
+    }
+
+    /// Ready by any path (the CLI, the window, this pane) takes the field away, and tells the
+    /// window its request is spent.
+    @Test func helperReadyClearsThePasswordRequest() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let asks = Mutex(true)
+        let handled = Mutex(0)
+        let answer = Mutex(AgentAnswer.failure(.notReady, ""))
+        let model = model(
+            bundle, config, running: true, status: { answer.withLock { $0 } },
+            windowAsks: { asks.withLock { $0 } }, windowHandled: { handled.withLock { $0 += 1 }; asks.withLock { $0 = false } })
+        await model.refresh()
+        #expect(model.needsPassword)
+        // `nido agent setup` finished meanwhile.
+        answer.withLock { $0 = self.status() }
+        await model.refresh()
+        #expect(model.helperState == .ready("1.0.0"))
+        #expect(!model.needsPassword)
+        #expect(handled.withLock { $0 } >= 1)
+        // Later states do not bring the field back.
+        answer.withLock { $0 = self.status(recording: false) }
+        await model.refresh()
+        #expect(!model.needsPassword)
+    }
+
+    /// The pane's own setup answers the window's request.
+    @Test func ownSetupSpendsTheWindowRequest() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let handled = Mutex(0)
+        let model = model(bundle, config, running: true, windowHandled: { handled.withLock { $0 += 1 } })
+        await model.submitPassword("hunter2")
+        #expect(handled.withLock { $0 } >= 1)
+    }
+
+    /// Return while a setup runs is refused: it says so (the field keeps its text).
+    @Test func submitWhileASetupRunsSaysToWait() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let calls = Mutex(0)
+        let model = model(bundle, config, running: true, setup: { _, _ in calls.withLock { $0 += 1 }; return true },
+                          windowSetsUp: { true })
+        #expect(!model.canSubmitPassword)
+        await model.submitPassword("hunter2")
+        #expect(calls.withLock { $0 } == 0)
+        #expect(model.errorMessage == String(localized: "Wait for the setup to finish"))
+    }
+
+    /// A Keychain error on the first read is shown, never "no password".
+    @Test func keychainErrorOnLoadIsShownNotNone() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingStore()
+        try store.save(try #require(GuestPassword("s3cret")), vm: config.id)
+        store.failsContains = true
+        let model = model(bundle, config, passwords: store)
+        await model.refresh()
+        #expect(model.passwordState == .unknown)
+        #expect(model.passwordState != .none)
+        #expect(model.passwordStateNote?.contains("-25308") == true)
+    }
+
+    /// The explanation of an unknown password state is its own line: the switch and a setup,
+    /// which clear `errorMessage`, do not take it away.
+    @Test func unknownPasswordStateKeepsItsExplanation() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingStore()
+        store.failsContains = true
+        let model = model(bundle, config, running: true, passwords: store, status: { .failure(.notReady, "") })
+        await model.refresh()
+        #expect(model.passwordState == .unknown)
+        await model.install()
+        #expect(model.passwordStateNote?.contains("-25308") == true)
+        await model.setAgentAccess(false)
+        #expect(model.errorMessage == nil)
+        #expect(model.passwordStateNote?.contains("-25308") == true)
+
+        // Once the Keychain answers again, the state is read again and the line goes.
+        store.failsContains = false
+        await model.setAgentAccess(true)
+        await model.install()
+        #expect(model.passwordState == .none)
+        #expect(model.passwordStateNote == nil)
+    }
+
+    /// The setup itself found the stored item unusable (the window's first start, `nido start`):
+    /// the field appears and stays, agent access on or off, until a typed password replaces it.
+    @Test func unusableItemFromTheSetupShowsTheField() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = model(bundle, config, running: true, setup: { _, _ in throw GuestPasswordStoreError.unusableItem })
+        await model.install()
+        #expect(model.needsPassword)
+        #expect(model.itemUnusable)
+        #expect(model.errorMessage == GuestPasswordStoreError.unusableItem.errorDescription)
+        await model.setAgentAccess(false)
+        #expect(model.needsPassword)
+    }
+
+    /// A typed password that the setup stored fixes the unusable item, even when the setup then
+    /// fails for another reason; one the Keychain refused does not.
+    @Test func storedTypedPasswordClearsTheUnusableItem() async throws {
+        for saved in [true, false] {
+            let (bundle, config, root) = try makeBundle(access: true)
+            defer { try? FileManager.default.removeItem(at: root) }
+            let store = CountingStore()
+            store.failsReads = true
+            store.readError = .unusableItem
+            let model = model(bundle, config, running: true, setup: { typed, onEvent in
+                guard let typed else { throw GuestPasswordStoreError.unusableItem }
+                // What `MacAgentSetup` does once the typed password worked.
+                if saved {
+                    try store.save(typed, vm: config.id)
+                    onEvent(.keyAuthorized)
+                } else {
+                    onEvent(.passwordNotSaved("Keychain error -25308"))
+                }
+                throw MacAgentSetupError.loginWindow("macos-agenti")
+            }, passwords: store, status: { .failure(.notReady, "") })
+            #expect(await model.revealPassword() == nil)
+            #expect(model.itemUnusable)
+            await model.submitPassword("fresh one")
+            #expect(model.errorMessage != nil)
+            #expect(model.itemUnusable == !saved, "saved \(saved)")
+            await model.setAgentAccess(false)
+            #expect(model.needsPassword == !saved, "saved \(saved)")
+        }
+    }
+
+    /// An item Nido cannot use asks for the password again, in the pane's field.
+    @Test func unusableItemAsksForThePasswordAgain() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingStore()
+        store.failsReads = true
+        store.readError = .unusableItem
+        let model = model(bundle, config, passwords: store)
+        #expect(!model.needsPassword)
+        #expect(await model.revealPassword() == nil)
+        #expect(model.needsPassword)
+        #expect(model.errorMessage?.contains(GuestPasswordStoreError.unusableItem.errorDescription ?? "?") == true)
+
+        let copy = self.model(bundle, config, running: true, passwords: store)
+        await copy.copyPasswordToVM()
+        #expect(copy.needsPassword)
+    }
+
+    /// Agent access off: an unusable item can still be replaced; the typed password is kept and
+    /// no setup runs.
+    @Test func unusableItemIsFixedWithAgentAccessOff() async throws {
+        let (bundle, config, root) = try makeBundle(access: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingStore()
+        store.failsReads = true
+        store.readError = .unusableItem
+        let calls = Mutex(0)
+        let model = model(bundle, config, setup: { _, _ in calls.withLock { $0 += 1 }; return true }, passwords: store)
+        #expect(!model.agentAccess)
+        #expect(await model.revealPassword() == nil)
+        #expect(model.needsPassword)
+        await model.submitPassword("fresh one")
+        #expect(calls.withLock { $0 } == 0)
+        #expect(!model.needsPassword)
+        #expect(model.errorMessage == nil)
+        #expect(model.passwordState == .stored)
+        store.failsReads = false
+        #expect(try store.read(vm: config.id)?.value == "fresh one")
+    }
+
+    /// Turning agent access off keeps the field while the stored item is unusable.
+    @Test func turningAccessOffKeepsTheFieldForAnUnusableItem() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingStore()
+        store.failsReads = true
+        store.readError = .unusableItem
+        let model = model(bundle, config, passwords: store)
+        #expect(await model.revealPassword() == nil)
+        await model.setAgentAccess(false)
+        #expect(!model.agentAccess)
+        #expect(model.needsPassword)
+    }
+
+    /// The helper getting ready does not take the field away while the stored item is unusable.
+    @Test func readyKeepsTheFieldWhileTheItemIsUnusable() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingStore()
+        store.failsReads = true
+        store.readError = .unusableItem
+        let ready = status()
+        let model = model(bundle, config, running: true, passwords: store, status: { ready })
+        #expect(await model.revealPassword() == nil)
+        await model.refresh()
+        #expect(model.helperState == .ready("1.0.0"))
+        #expect(model.needsPassword)
+    }
+
+    /// The key already works, so the setup never needs the typed password: with an unusable
+    /// stored item, a setup that ended ready keeps the typed one directly and the field goes.
+    /// A setup that did not end ready saves nothing.
+    @Test func typedPasswordReplacesAnUnusableItemWhenTheKeyWorks() async throws {
+        for endsReady in [true, false] {
+            let (bundle, config, root) = try makeBundle(access: true)
+            defer { try? FileManager.default.removeItem(at: root) }
+            let store = CountingStore()
+            store.failsReads = true
+            store.readError = .unusableItem
+            let ready = status()
+            let model = model(bundle, config, running: true, setup: { _, _ in endsReady },
+                              passwords: store, status: { ready })
+            #expect(await model.revealPassword() == nil)
+            #expect(model.needsPassword)
+            await model.submitPassword("fresh one")
+            store.failsReads = false
+            if endsReady {
+                #expect(try store.read(vm: config.id)?.value == "fresh one")
+                #expect(!model.itemUnusable)
+                #expect(!model.needsPassword)
+                #expect(model.errorMessage == nil)
+                #expect(model.passwordState == .stored)
+            } else {
+                #expect(try store.read(vm: config.id) == nil)
+                #expect(model.itemUnusable)
+                #expect(model.needsPassword)
+            }
+        }
+    }
+
+    /// Every disabled state of the copy button has a one-line reason.
+    @Test func copyToVMDisabledAlwaysSaysWhy() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = MemoryGuestPasswordStore()
+        try store.save(try #require(GuestPassword("s3cret")), vm: config.id)
+        let answers: [AgentAnswer] = [
+            .failure(.notRunning, ""), .failure(.notReady, ""), .failure(.agentAccessOff, ""), self.status(version: "1.0.0"),
+        ]
+        for answer in answers {
+            for inApp in [true, false] {
+                let model = model(bundle, config, running: true, runsInApp: inApp, passwords: store, status: { answer })
+                await model.refresh()
+                if !model.canCopyPasswordToVM {
+                    #expect(model.copyDisabledReason?.isEmpty == false, "\(model.helperState) inApp \(inApp)")
+                } else {
+                    #expect(model.copyDisabledReason == nil)
+                }
+            }
+        }
+        // Just after a start: the helper is not known yet.
+        let fresh = model(bundle, config, running: true, passwords: store, status: { .failure(.timeout, "") })
+        await fresh.refresh()
+        #expect(fresh.helperState == .notRunning)
+        #expect(fresh.copyDisabledReason == String(localized: "Waiting for Nido Agent in the VM"))
+    }
+
+    /// A password that worked but could not be kept: a notice, not a failed setup.
+    @Test func passwordNotSavedIsANonFatalNotice() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = model(bundle, config, running: true, setup: { _, onEvent in
+            onEvent(.keyAuthorized)
+            onEvent(.passwordNotSaved("Keychain error -25308"))
+            return true
+        })
+        await model.submitPassword("hunter2")
+        #expect(model.errorMessage == nil)
+        #expect(model.passwordNotSavedNotice?.contains("Keychain error -25308") == true)
     }
 
     /// While the VM's window sets Nido Agent up after a provisioned start, the pane does not start
@@ -601,16 +980,24 @@ private final class CountingStore: GuestPasswordStore, @unchecked Sendable {
     private var items: [UUID: GuestPassword] = [:]
     private var readCount = 0
     var failsReads = false
+    var failsContains = false
+    /// What a failing read throws (a Keychain status by default).
+    var readError: GuestPasswordStoreError = .keychain(-25293)
     var reads: Int { lock.withLock { readCount } }
 
     func read(vm: UUID) throws -> GuestPassword? {
         try lock.withLock {
             readCount += 1
-            if failsReads { throw GuestPasswordStoreError.keychain(-25293) }
+            if failsReads { throw readError }
             return items[vm]
         }
     }
-    func contains(vm: UUID) throws -> Bool { lock.withLock { items[vm] != nil } }
+    func contains(vm: UUID) throws -> Bool {
+        try lock.withLock {
+            if failsContains { throw GuestPasswordStoreError.keychain(-25308) }
+            return items[vm] != nil
+        }
+    }
     func save(_ password: GuestPassword, vm: UUID) throws { lock.withLock { items[vm] = password } }
     func delete(vm: UUID) throws { lock.withLock { items[vm] = nil } }
 }

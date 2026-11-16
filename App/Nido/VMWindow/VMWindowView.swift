@@ -109,7 +109,7 @@ struct VMWindowView: View {
                     // Over the strip, never in the layout: the screen keeps its size.
                     .overlay {
                         if let setup = model.firstRunSetup {
-                            FirstRunSetupStrip(state: setup)
+                            FirstRunSetupStrip(state: setup, notice: model.firstRunNotice)
                         } else if model.agentActive {
                             AgentBanner()
                         }

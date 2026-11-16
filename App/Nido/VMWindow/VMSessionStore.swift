@@ -116,6 +116,25 @@ final class VMSessionStore {
         return models[vmName]?.isSettingUpAgent ?? false
     }
 
+    /// True while the window's first-run setup failed for want of the account's password (none
+    /// stored, or refused): Settings › Agent shows its password field at once.
+    func firstRunAsksForPassword(_ name: String) -> Bool {
+        guard let vmName = try? VMName(name) else { return false }
+        return models[vmName]?.firstRunAsksForPassword ?? false
+    }
+
+    /// The helper is ready, or Settings › Agent ran its own setup: the window's request is spent.
+    func firstRunPasswordHandled(_ name: String) {
+        guard let vmName = try? VMName(name) else { return }
+        models[vmName]?.firstRunPasswordHandled()
+    }
+
+    /// Settings › Agent of `name` opened: the window's failure strip points there, so it goes.
+    func agentSettingsOpened(_ name: String) {
+        guard let vmName = try? VMName(name) else { return }
+        models[vmName]?.agentSettingsOpened()
+    }
+
     /// Settings › Agent "Copy to the VM’s clipboard": `text` to the guest's clipboard through the
     /// session of the VM running in this app (`VMWindowModel.copyToGuestClipboard`); `notRunning`
     /// when no window of this app runs it (another Nido or `nido start` holds it).

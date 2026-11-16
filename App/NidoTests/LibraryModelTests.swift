@@ -684,8 +684,8 @@ struct LibraryTemplateTests {
         _ = try source.updateConfig { $0.aiBridge = AIBridgePolicy(enabled: true, privacyAcknowledged: true) }
 
         let model = LibraryModel(
-            registry: VMRegistry(paths: paths), control: LiveVMControl(paths: paths),
-            cloner: LiveVMCloner(paths: paths), templates: LiveVMTemplates(paths: paths))
+            registry: VMRegistry(paths: paths, passwords: nil), control: LiveVMControl(paths: paths),
+            cloner: LiveVMCloner(paths: paths, passwords: MemoryGuestPasswordStore()), templates: LiveVMTemplates(paths: paths))
         await model.refresh()
         let vm = try #require(model.items.first { $0.name == "debian-ai" })
         await model.perform(.saveAsTemplate, on: vm)

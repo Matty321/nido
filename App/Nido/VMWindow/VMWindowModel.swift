@@ -247,6 +247,12 @@ final class VMWindowModel {
         if case .working = firstRunSetup { return true }
         return false
     }
+    /// A non-fatal notice of the first-run setup (the password worked but could not be kept in the
+    /// Keychain): the strip says it instead of "set up".
+    private(set) var firstRunNotice: String?
+    /// The first-run setup failed for want of the account's password (none stored, or refused):
+    /// Settings › Agent shows its password field at once, also after the strip is gone.
+    private(set) var firstRunAsksForPassword = false
     @ObservationIgnored private var firstRunTask: Task<Void, Never>?
     @ObservationIgnored private let firstRunSetupRunner:
         @Sendable (VMBundle, VMConfig, @escaping @Sendable (MacAgentSetupEvent) -> Void) async throws -> Bool
@@ -587,6 +593,16 @@ final class VMWindowModel {
     nonisolated static let firstRunWait: Duration = .seconds(600)
     /// How long "done" stays in the strip.
     static let firstRunDoneHold: Duration = .seconds(5)
+    /// How long a failure (or a notice) stays in the strip: it points to Settings › Agent.
+    static let firstRunFailedHold: Duration = .seconds(30)
+
+    /// Settings › Agent opened: the failure strip points there, so it goes.
+    func agentSettingsOpened() {
+        if case .failed = firstRunSetup { firstRunSetup = nil }
+    }
+
+    /// The helper is ready (any path), or Settings › Agent ran its own setup.
+    func firstRunPasswordHandled() { firstRunAsksForPassword = false }
 
     /// What `nido start` does after a provisioned start: sets Nido Agent up while the VM runs.
     /// It never blocks the window; the strip tells how it goes.
@@ -594,6 +610,8 @@ final class VMWindowModel {
         firstRunTask?.cancel()
         let vm = config.name.rawValue
         firstRunSetup = .working(String(localized: "Setting up Nido Agent in \(vm)…"))
+        firstRunNotice = nil
+        firstRunAsksForPassword = false
         // The VM reported running before the setup began: a panel that opened by itself goes.
         terminalAccess?.withdrawAutoShow()
         let runner = firstRunSetupRunner
@@ -601,11 +619,13 @@ final class VMWindowModel {
         let consumer = Task { @MainActor [weak self] in
             for await event in stream {
                 guard let self, case .working = self.firstRunSetup else { continue }
+                if case .passwordNotSaved = event { self.firstRunNotice = event.line(vm: vm) }
                 self.firstRunSetup = .working(event.line(vm: vm))
             }
         }
         firstRunTask = Task { [weak self, agentHoldSleep] in
             let outcome: FirstRunSetup
+            var failure: (any Error)?
             do {
                 let ready = try await runner(bundle, config) { continuation.yield($0) }
                 outcome = ready ? .done : .failed(String(localized: "Nido Agent isn’t ready yet: see Settings › Agent."))
@@ -614,30 +634,44 @@ final class VMWindowModel {
                 await consumer.value
                 return
             } catch {
+                failure = error
                 outcome = .failed(Self.firstRunFailure(for: error, vm: vm))
             }
             continuation.finish()
             await consumer.value
             guard !Task.isCancelled, let self else { return }
             self.firstRunSetup = outcome
+            if case .failed = outcome, Self.asksForPassword(error: failure) { self.firstRunAsksForPassword = true }
             // Opens only if Nido's key never reached the guest (the setup records when it did):
             // after a failure, the panel is the other way to authorize it.
             if self.state == .running { self.terminalAccess?.autoShow() }
-            guard outcome == .done else { return }
-            await agentHoldSleep(Self.firstRunDoneHold)
-            guard !Task.isCancelled, self.firstRunSetup == .done else { return }
+            // A clean "done" goes after 5 s; a failure or a notice stays 30 s (or until Settings ›
+            // Agent opens), as it points there.
+            let hold = outcome == .done && self.firstRunNotice == nil ? Self.firstRunDoneHold : Self.firstRunFailedHold
+            await agentHoldSleep(hold)
+            guard !Task.isCancelled, self.firstRunSetup == outcome else { return }
             self.firstRunSetup = nil
+            self.firstRunNotice = nil
         }
     }
 
-    /// The strip's words for a failed first-run setup: a password that is missing or refused
-    /// points to Settings › Agent, where it can be typed; anything else as the pane says it.
+    /// Whether the failure is the one Settings › Agent's password field answers.
+    nonisolated static func asksForPassword(error: (any Error)?) -> Bool {
+        guard let error else { return false }
+        return AgentSettingsModel.asksForPassword(error)
+    }
+
+    /// The strip's words for a failed first-run setup: a password that is missing, refused or
+    /// unusable points to Settings › Agent, where it can be typed; anything else as the pane says it.
     nonisolated static func firstRunFailure(for error: any Error, vm: String) -> String {
         if case MacAgentSetupError.passwordNeeded = error {
             return String(localized: "Nido needs the password of the account in \(vm) to authorize its key: enter it in Settings › Agent.")
         }
         if case GuestSSHError.passwordRejected = error {
             return String(localized: "\(vm) refused the stored password of its account: enter the current one in Settings › Agent.")
+        }
+        if case GuestPasswordStoreError.unusableItem = error {
+            return String(localized: "The password stored for this VM can’t be used: enter it in Settings › Agent.")
         }
         return AgentSettingsModel.message(for: error)
     }
@@ -647,6 +681,8 @@ final class VMWindowModel {
         firstRunTask?.cancel()
         firstRunTask = nil
         firstRunSetup = nil
+        firstRunNotice = nil
+        firstRunAsksForPassword = false
     }
 
     /// `MacAgentSetup.live` for `bundle`, waiting for Remote Login (a first boot takes minutes).

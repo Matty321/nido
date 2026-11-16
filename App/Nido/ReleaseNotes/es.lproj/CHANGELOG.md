@@ -2,6 +2,16 @@
 
 Todas las versiones de Nido, de la más reciente a la más antigua. La primera vez que Nido se abre tras una actualización, muestra las novedades de la versión instalada (para volver a verlas, elige Ayuda › Novedades de Nido).
 
+## [0.9.1] – 2026-11-16
+
+### Correcciones
+- **Una contraseña de la VM que no se puede leer ya no se toma por una contraseña ausente.** **Ajustes › Agent** muestra el campo para introducirla de nuevo y `nido agent setup` la pide; al clonar o iniciar esa VM, Nido te indica dónde hacerlo.
+- **Cuando el primer arranque no puede autorizar la clave de Nido**, el campo de la contraseña aparece enseguida en **Ajustes › Agent** y el aviso en la ventana de la VM desaparece a los 30 segundos.
+- **Si la clave está autorizada pero el llavero rechaza la contraseña**, la configuración continúa y te lo dice, en lugar de fallar.
+- **La contraseña va solo al `ssh` que Nido inició**, y una instalación interrumpida ya no deja su contraseña en el llavero.
+- **Copiar al portapapeles de la VM se desactiva cuando no puede funcionar** y dice por qué, por ejemplo cuando la VM no se está ejecutando en Nido.
+- **Acceso desde Terminal** muestra los pasos correctos para una VM creada con una cuenta; el asistente de nueva VM comprueba la cuenta cuando dejas de escribir; `nido start` ya no imprime nada después de detenerse la VM.
+
 ## [0.9.0] – 2026-11-15
 
 ### Un Mac para agentes

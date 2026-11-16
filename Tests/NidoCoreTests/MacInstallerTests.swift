@@ -422,7 +422,7 @@ private final class SpyPasswordStore: GuestPasswordStore, @unchecked Sendable {
         #expect(env.rootEntries().first?.hasPrefix(".creating-") == true)
         // The staging folder is never a VM of the library.
         #expect(try VMBundle.list(paths: env.paths).isEmpty)
-        #expect(try await VMRegistry(paths: env.paths).summaries().isEmpty)
+        #expect(try await VMRegistry(paths: env.paths, passwords: nil).summaries().isEmpty)
 
         task.cancel()
         let result = await task.result
@@ -510,7 +510,7 @@ private final class SpyPasswordStore: GuestPasswordStore, @unchecked Sendable {
         let crashed = env.paths.root.appendingPathComponent(".creating-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: crashed, withIntermediateDirectories: false)
         let now = Date()
-        let registry = VMRegistry(paths: env.paths, now: { now }) { url in
+        let registry = VMRegistry(paths: env.paths, passwords: nil, now: { now }) { url in
             if url.path.hasPrefix(fresh.path) { return now.addingTimeInterval(-60) }
             if url.path.hasPrefix(crashed.path) { return now.addingTimeInterval(-180) }
             return now.addingTimeInterval(-7200)
@@ -523,5 +523,92 @@ private final class SpyPasswordStore: GuestPasswordStore, @unchecked Sendable {
         #expect(entries.contains(fresh.lastPathComponent))
         #expect(entries.contains(inUse.lastPathComponent))
         #expect(entries.contains(foreign.lastPathComponent))
+    }
+
+    /// A crashed installation leaves its Keychain item (saved under the new VM's id before the
+    /// installation): the sweep that removes its `.creating-<uuid>` folder removes that item too,
+    /// read from the folder's `config.json`. An item of an existing VM, a folder still in use or
+    /// too recent, and a folder without `config.json` leave the Keychain alone.
+    @Test func sweptCreatingFolderTakesItsPasswordAlong() async throws {
+        let env = try InstallEnv()
+        defer { env.cleanup() }
+        try env.paths.ensureRoot()
+        let store = MemoryGuestPasswordStore()
+        let password = try #require(GuestPassword("abcde-fghjk-mnpqr-stuvw"))
+        func config(_ id: UUID, _ name: String) throws -> VMConfig {
+            VMConfig(
+                id: id, name: try VMName(name), guest: .macos, cpuCount: 2, memoryBytes: 4 * gib,
+                diskBytes: 64 * gib, macAddress: "02:00:00:00:00:0a")
+        }
+        func staging(_ id: UUID) throws -> URL {
+            let url = env.paths.root.appendingPathComponent(".creating-\(UUID().uuidString)")
+            try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
+            try VMBundle(url: url).writeConfigUnlocked(try config(id, "staged"))
+            return url
+        }
+        // An existing VM whose id a staging folder also names (a copied folder): never its item.
+        let existing = try VMBundle.create(config: try config(UUID(), "kept"), paths: env.paths)
+        let existingID = try existing.readConfig().id
+        let crashedID = UUID(), inUseID = UUID(), freshID = UUID()
+        for id in [existingID, crashedID, inUseID, freshID] { try store.save(password, vm: id) }
+        let crashed = try staging(crashedID)
+        let copied = try staging(existingID)
+        let inUse = try staging(inUseID)
+        let fresh = try staging(freshID)
+        let bare = env.paths.root.appendingPathComponent(".creating-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: bare, withIntermediateDirectories: false)
+        let lock = try BundleLock.acquire(VMBundle(url: inUse), owner: .cliOperation)
+        defer { lock.release() }
+
+        let now = Date()
+        let registry = VMRegistry(paths: env.paths, passwords: store, now: { now }, changeTime: { url in
+            url.path.hasPrefix(fresh.path) ? now.addingTimeInterval(-60) : now.addingTimeInterval(-600)
+        })
+        #expect(try await registry.summaries().map(\.name) == ["kept"])
+        let entries = env.rootEntries()
+        #expect(!entries.contains(crashed.lastPathComponent))
+        #expect(!entries.contains(copied.lastPathComponent))
+        #expect(!entries.contains(bare.lastPathComponent))
+        #expect(entries.contains(inUse.lastPathComponent))
+        #expect(entries.contains(fresh.lastPathComponent))
+        #expect(try store.read(vm: crashedID) == nil)
+        #expect(try store.read(vm: existingID) == password)
+        #expect(try store.read(vm: inUseID) == password)
+        #expect(try store.read(vm: freshID) == password)
+    }
+
+    /// The item goes before the folder: a removal that stops half-way (config.json gone, the
+    /// disk image left) must not leave an item whose id no later sweep can read.
+    @Test func sweptCreatingFolderDeletesTheItemFirst() async throws {
+        let env = try InstallEnv()
+        defer { env.cleanup() }
+        try env.paths.ensureRoot()
+        /// Records whether the staging folder was still there when its item was deleted.
+        final class OrderStore: GuestPasswordStore, @unchecked Sendable {
+            let folder = Mutex<URL?>(nil)
+            let deletes = Mutex<[(UUID, Bool)]>([])
+            func read(vm: UUID) throws -> GuestPassword? { nil }
+            func save(_ password: GuestPassword, vm: UUID) throws {}
+            func delete(vm: UUID) throws {
+                let present = folder.withLock { $0 }.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
+                deletes.withLock { $0.append((vm, present)) }
+            }
+        }
+        let store = OrderStore()
+        let id = UUID()
+        let staging = env.paths.root.appendingPathComponent(".creating-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: false)
+        try VMBundle(url: staging).writeConfigUnlocked(VMConfig(
+            id: id, name: try VMName("staged"), guest: .macos, cpuCount: 2, memoryBytes: 4 * gib,
+            diskBytes: 64 * gib, macAddress: "02:00:00:00:00:0b"))
+        store.folder.withLock { $0 = staging }
+        let now = Date()
+        _ = try await VMRegistry(
+            paths: env.paths, passwords: store, now: { now }, changeTime: { _ in now.addingTimeInterval(-600) }
+        ).summaries()
+        #expect(!env.rootEntries().contains(staging.lastPathComponent))
+        let deletes = store.deletes.withLock { $0 }
+        #expect(deletes.map(\.0) == [id])
+        #expect(deletes.map(\.1) == [true])
     }
 }

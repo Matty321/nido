@@ -10,7 +10,12 @@ final class ScriptedRunner: ProcessRunner, @unchecked Sendable {
         var environment: [String: String] = [:] }
     private let state = Mutex<[Call]>([])
     private let responder: @Sendable (Call) -> ProcessResult
-    init(_ responder: @escaping @Sendable (Call) -> ProcessResult) { self.responder = responder }
+    /// The pid handed to `onLaunch` (nil: never called, as a runner that launches nothing).
+    private let launchPID: pid_t?
+    init(launchPID: pid_t? = nil, _ responder: @escaping @Sendable (Call) -> ProcessResult) {
+        self.responder = responder
+        self.launchPID = launchPID
+    }
     var calls: [Call] { state.withLock { $0 } }
 
     func run(executable: URL, arguments: [String]) throws -> ProcessResult {
@@ -35,6 +40,17 @@ final class ScriptedRunner: ProcessRunner, @unchecked Sendable {
             environment: environment)
         state.withLock { $0.append(call) }
         return responder(call)
+    }
+
+    func run(
+        executable: URL, arguments: [String], stdin: Data?, timeout: TimeInterval, maxOutput: Int,
+        cancellation: ProcessCancellation?, environment: [String: String],
+        onLaunch: (@Sendable (pid_t) -> Void)?, onStdout: (@Sendable (Data) -> Void)?
+    ) throws -> ProcessResult {
+        if let launchPID { onLaunch?(launchPID) }
+        return try run(
+            executable: executable, arguments: arguments, stdin: stdin, timeout: timeout, maxOutput: maxOutput,
+            cancellation: cancellation, environment: environment, onStdout: onStdout)
     }
 }
 
@@ -277,6 +293,25 @@ struct GuestFixture {
 
     // MARK: - The real runner
 
+    /// `onLaunch` gets the pid of the child it started, before the child's output is read.
+    @Test func systemRunnerReportsTheLaunchedPID() throws {
+        let launched = Mutex<[pid_t]>([])
+        let out = try SystemProcessRunner().run(
+            executable: URL(fileURLWithPath: "/bin/sh"), arguments: ["-c", "echo $$"], stdin: nil, timeout: 10,
+            maxOutput: 1 << 10, cancellation: nil, environment: [:],
+            onLaunch: { pid in launched.withLock { $0.append(pid) } }, onStdout: nil)
+        let printed = String(decoding: out.stdout, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        #expect(launched.withLock { $0 }.map(String.init) == [printed])
+        // Not started: never called.
+        #expect(throws: (any Error).self) {
+            _ = try SystemProcessRunner().run(
+                executable: URL(fileURLWithPath: "/nonexistent/tool"), arguments: [], stdin: nil, timeout: 10,
+                maxOutput: 1 << 10, cancellation: nil, environment: [:],
+                onLaunch: { pid in launched.withLock { $0.append(pid) } }, onStdout: nil)
+        }
+        #expect(launched.withLock { $0 }.count == 1)
+    }
+
     @Test func systemRunnerFeedsStdinAndKillsOnTimeout() throws {
         let runner = SystemProcessRunner()
         let echoed = try runner.run(
@@ -376,7 +411,7 @@ extension GuestSSHTests {
     /// askpass child of an ssh started by this process).
     static func trusting(_ ssh: GuestSSH) -> GuestSSH {
         var ssh = ssh
-        ssh.askpassPeerCheck = { _ in true }
+        ssh.askpassPeerCheck = { _, _ in true }
         return ssh
     }
 
@@ -395,6 +430,81 @@ extension GuestSSHTests {
         }
         #expect(fetched.withLock { $0 } == false)
         #expect(error == .passwordNotDelivered)
+    }
+
+    /// The peer check gets the pid of the ssh this call launched (the runner's `onLaunch`), so
+    /// only that ssh's askpass child can pass the real check.
+    @Test func authorizeBindsTheCheckToItsSSH() async throws {
+        let fx = try macFixture(); defer { fx.cleanup() }
+        let seen = Mutex<[pid_t?]>([])
+        let runner = ScriptedRunner(launchPID: 4242) { call in
+            _ = try? Askpass.fetch(socketPath: call.environment[Askpass.socketVariable] ?? "")
+            return result(0)
+        }
+        var ssh = try fx.ssh(runner)
+        ssh.askpassPeerCheck = { _, launched in
+            seen.withLock { $0.append(launched) }
+            return launched == 4242
+        }
+        try await ssh.authorizeNidoKey(password: try #require(GuestPassword("pw")), askpass: Self.askpass)
+        #expect(seen.withLock { $0 } == [4242])
+    }
+
+    /// The fallback after `interpret` never names a key (none is used): not the askpass path, not
+    /// an empty one.
+    @Test func authorizeFailureNeverNamesAKey() async throws {
+        let fx = try macFixture(); defer { fx.cleanup() }
+        for stderr in [
+            "Load key \"/x\": invalid format", "no such identity: /x", "Permission denied (publickey).",
+            "Too many authentication failures",
+        ] {
+            let runner = ScriptedRunner { _ in result(255, err: stderr) }
+            do {
+                try await Self.trusting(fx.ssh(runner)).authorizeNidoKey(
+                    password: try #require(GuestPassword("pw")), askpass: Self.askpass)
+                Issue.record("expected an error")
+            } catch let error as GuestSSHError {
+                if case .keyUnavailable = error { Issue.record("\(stderr): \(error)") }
+            }
+        }
+    }
+
+    /// An invalid account name in `config.json` is refused as itself before ssh runs, not as
+    /// "unreachable".
+    @Test func authorizeKeepsTheAccountNameError() async throws {
+        let fx = try macFixture(); defer { fx.cleanup() }
+        try fx.bundle.updateConfig { $0.sshUser = "-oProxyCommand=x" }
+        let runner = ScriptedRunner { _ in result(0) }
+        let error = await #expect(throws: GuestSSHError.self) {
+            try await fx.ssh(runner).authorizeNidoKey(password: try #require(GuestPassword("pw")), askpass: Self.askpass)
+        }
+        #expect(error == .invalidIdentifier("-oProxyCommand=x"))
+        #expect(runner.calls.isEmpty)
+    }
+
+    /// `SSHArguments.passwordOnce` refusing the arguments (a `known_hosts` path ssh would read
+    /// differently) keeps its own error, not "unreachable", and runs nothing.
+    @Test func authorizeKeepsTheArgumentsError() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("nido-pct%\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let config = VMConfig(
+            id: UUID(), name: try VMName("mg"), guest: .macos, cpuCount: 2, memoryBytes: 4 << 30,
+            diskBytes: 20 << 30, macAddress: "02:00:00:00:00:02", sshUser: "agente")
+        let bundle = try VMBundle.create(config: config, paths: NidoPaths(root: root.appendingPathComponent("VMs")))
+        try Data((Self.nidoKey + " nido\n").utf8).write(to: bundle.authorizedKeyURL)
+        let runner = ScriptedRunner { _ in result(0) }
+        var ssh = GuestSSH(
+            bundle: bundle, config: config, runner: runner,
+            resolveSSH: { _ in SSHEndpoint(host: "192.168.64.9", port: 22) })
+        ssh.askpassPeerCheck = { _, _ in true }
+        do {
+            try await ssh.authorizeNidoKey(password: try #require(GuestPassword("pw")), askpass: Self.askpass)
+            Issue.record("expected an error")
+        } catch {
+            #expect(error as? NidoError == .unsafePath(bundle.knownHostsURL.path), "\(error)")
+        }
+        #expect(runner.calls.isEmpty)
     }
 
     @Test func authorizeRefusesALinuxGuest() async throws {

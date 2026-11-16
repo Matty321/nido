@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import Foundation
+import Security
 import Testing
 @testable import NidoCore
 
@@ -124,5 +125,58 @@ private let keychainAvailable: Bool = {
     @Test func keychainErrorIsNotMissing() {
         let description = GuestPasswordStoreError.keychain(-25293).errorDescription
         #expect(description?.contains("-25293") == true)
+    }
+
+    /// A status without a system message falls back to a localized "unknown error".
+    @Test(.italian) func keychainErrorWithoutMessageIsLocalized() {
+        #expect(GuestPasswordStoreError.keychainDescription(-25293, systemMessage: nil)
+            == "Errore del Portachiavi -25293: errore sconosciuto")
+        #expect(GuestPasswordStoreError.keychainDescription(-25293, systemMessage: "msg")
+            == "Errore del Portachiavi -25293: msg")
+    }
+
+    /// A stored item that is not valid UTF-8, or that `GuestPassword` refuses, is an error: never
+    /// "no password", never a silently repaired one.
+    @Test func unusableItemIsAnError() throws {
+        #expect(throws: GuestPasswordStoreError.unusableItem) {
+            _ = try KeychainGuestPasswordStore.decode(Data([0x70, 0xFF, 0xFE, 0x77]) as CFTypeRef)
+        }
+        for refused in ["", "pass\nword", "nul\0byte", String(repeating: "a", count: 1024)] {
+            #expect(throws: GuestPasswordStoreError.unusableItem) {
+                _ = try KeychainGuestPasswordStore.decode(Data(refused.utf8) as CFTypeRef)
+            }
+        }
+        #expect(throws: GuestPasswordStoreError.unusableItem) {
+            _ = try KeychainGuestPasswordStore.decode(nil)
+        }
+        #expect(throws: GuestPasswordStoreError.unusableItem) {
+            _ = try KeychainGuestPasswordStore.decode("not data" as CFString)
+        }
+        #expect(try KeychainGuestPasswordStore.decode(Data("pässwörd".utf8) as CFTypeRef) == GuestPassword("pässwörd"))
+    }
+
+    @Test(.italian) func unusableItemMessage() {
+        #expect(GuestPasswordStoreError.unusableItem.errorDescription
+            == "La password salvata per questa VM non si può usare: inseriscila di nuovo in Impostazioni › Agente della VM o con nido agent setup")
+    }
+
+    /// The same through the real Keychain: an item written by someone else with bytes that are no
+    /// password.
+    @Test(.enabled(if: keychainAvailable, "needs a login keychain the test process can write"))
+    func keychainUnusableItemThrows() throws {
+        let store = KeychainGuestPasswordStore(service: "\(testService).\(UUID().uuidString)")
+        let id = UUID()
+        defer { try? store.delete(vm: id) }
+        let add: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: store.service,
+            kSecAttrAccount as String: id.uuidString,
+            kSecValueData as String: Data([0x61, 0xC3, 0x28]),
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+        ]
+        #expect(SecItemAdd(add as CFDictionary, nil) == errSecSuccess)
+        #expect(throws: GuestPasswordStoreError.unusableItem) { _ = try store.read(vm: id) }
+        // Present, though unusable: `contains` does not read the data.
+        #expect(try store.contains(vm: id))
     }
 }

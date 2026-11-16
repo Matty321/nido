@@ -149,6 +149,21 @@ private let validKey = "ssh-ed25519 \(keyBody)"
         #expect(try passwords.read(vm: other) != nil)
     }
 
+    @Test func deleteAsyncRemovesTheGuestPassword() async throws {
+        let tmp = try makeTemp(); defer { try? FileManager.default.removeItem(at: tmp) }
+        let paths = NidoPaths(root: tmp)
+        let config = try makeConfig("idle")
+        let bundle = try VMBundle.create(config: config, paths: paths)
+        let passwords = MemoryGuestPasswordStore()
+        let other = UUID()
+        try passwords.save(try #require(GuestPassword("s3cret")), vm: config.id)
+        try passwords.save(try #require(GuestPassword("other")), vm: other)
+        try await VMControl.deleteVMAsync(try VMName("idle"), paths: paths, owner: .app, passwords: passwords)
+        #expect(!FileManager.default.fileExists(atPath: bundle.url.path))
+        #expect(try passwords.read(vm: config.id) == nil)
+        #expect(try passwords.read(vm: other) != nil)
+    }
+
     @Test func deleteRemovesStoppedVM() throws {
         let tmp = try makeTemp(); defer { try? FileManager.default.removeItem(at: tmp) }
         let paths = NidoPaths(root: tmp)

@@ -359,7 +359,7 @@ struct VMWindowModelTests {
         factory.configure = { $0.sentProvisioning = true }
         let model = VMWindowModel(
             name: try VMName("mac"), paths: root.paths, factory: factory,
-            agentHoldSleep: { _ in },
+            agentHoldSleep: { _ in try? await Task.sleep(for: .seconds(3600)) },
             firstRunSetup: { _, _, _ in throw MacAgentSetupError.passwordNeeded("mac") })
         await model.start()
         for _ in 0..<200 { await settle(); if case .failed = model.firstRunSetup { break } }
@@ -377,7 +377,7 @@ struct VMWindowModelTests {
         factory.configure = { $0.sentProvisioning = true }
         let model = VMWindowModel(
             name: try VMName("mac"), paths: root.paths, factory: factory,
-            agentHoldSleep: { _ in },
+            agentHoldSleep: { _ in try? await Task.sleep(for: .seconds(3600)) },
             firstRunSetup: { _, _, _ in throw GuestSSHError.passwordRejected(user: "agent", vm: "mac") })
         await model.start()
         for _ in 0..<200 { await settle(); if case .failed = model.firstRunSetup { break } }
@@ -421,6 +421,46 @@ struct VMWindowModelTests {
         await model.stop()
     }
 
+    /// A stop ends the first-run setup: its task is cancelled (the runner sees the cancellation),
+    /// the strip goes, and the late end of the cancelled run shows nothing. A new start runs a
+    /// new setup whose outcome is its own.
+    @Test func stopCancelsTheFirstRunSetupAndAStartReplacesIt() async throws {
+        let root = try macRoot(agentAccess: true)
+        let factory = FakeSessionFactory()
+        factory.configure = { $0.sentProvisioning = true }
+        let runs = Mutex(0)
+        let cancelled = Mutex<[Bool]>([])
+        let model = VMWindowModel(
+            name: try VMName("mac"), paths: root.paths, factory: factory,
+            agentHoldSleep: { _ in try? await Task.sleep(for: .seconds(3600)) },
+            firstRunSetup: { _, _, _ in
+                let run = runs.withLock { $0 += 1; return $0 }
+                if run == 1 {
+                    // Waits until cancelled, then reports whether it was.
+                    try? await Task.sleep(for: .seconds(3600))
+                    cancelled.withLock { $0.append(Task.isCancelled) }
+                    throw CancellationError()
+                }
+                return true
+            })
+        await model.start()
+        for _ in 0..<200 where runs.withLock({ $0 }) == 0 { await settle() }
+        guard case .working? = model.firstRunSetup else {
+            Issue.record("expected working, got \(String(describing: model.firstRunSetup))")
+            return
+        }
+        await model.stop()
+        for _ in 0..<200 where cancelled.withLock({ $0.isEmpty }) { await settle() }
+        #expect(cancelled.withLock { $0 } == [true])
+        #expect(model.firstRunSetup == nil)
+
+        await model.start()
+        for _ in 0..<200 where model.firstRunSetup != .done { await settle() }
+        #expect(runs.withLock { $0 } == 2)
+        #expect(model.firstRunSetup == .done)
+        await model.stop()
+    }
+
     /// A first-run setup that failed lets the panel open again: it is the other way to authorize
     /// the key.
     @Test func terminalPanelOpensAfterAFailedFirstRunSetup() async throws {
@@ -429,12 +469,143 @@ struct VMWindowModelTests {
         factory.configure = { $0.sentProvisioning = true }
         let model = VMWindowModel(
             name: try VMName("mac"), paths: root.paths, factory: factory,
-            agentHoldSleep: { _ in },
+            agentHoldSleep: { _ in try? await Task.sleep(for: .seconds(3600)) },
             firstRunSetup: { _, _, _ in throw MacAgentSetupError.passwordNeeded("mac") })
         let panel = try #require(model.terminalAccess)
         await model.start()
         for _ in 0..<200 { await settle(); if case .failed = model.firstRunSetup { break } }
         #expect(panel.isShown)
+        await model.stop()
+    }
+
+    /// The holds a first-run model asked for.
+    final class HoldLog: Sendable {
+        private let durations = Mutex<[Duration]>([])
+        func add(_ duration: Duration) { durations.withLock { $0.append(duration) } }
+        var list: [Duration] { durations.withLock { $0 } }
+        var isEmpty: Bool { list.isEmpty }
+    }
+
+    /// A first-run model whose holds (the 5 s "done", the 30 s failure) wait for `release()` and
+    /// record how long each asked for.
+    private func holdingModel(
+        _ root: TempRoot, run: @escaping @Sendable (VMBundle, VMConfig, @escaping @Sendable (MacAgentSetupEvent) -> Void) async throws -> Bool
+    ) throws -> (VMWindowModel, holds: HoldLog, release: () -> Void) {
+        let factory = FakeSessionFactory()
+        factory.configure = { $0.sentProvisioning = true }
+        let holds = HoldLog()
+        let (stream, continuation) = AsyncStream.makeStream(of: Void.self)
+        let model = VMWindowModel(
+            name: try VMName("mac"), paths: root.paths, factory: factory,
+            agentHoldSleep: { duration in
+                holds.add(duration)
+                for await _ in stream { break }
+            },
+            firstRunSetup: run)
+        return (model, holds, { continuation.yield() })
+    }
+
+    /// The failure strip points to Settings › Agent and goes after 30 s (the injected clock).
+    @Test func failedStripHidesAfter30Seconds() async throws {
+        let root = try macRoot(agentAccess: true)
+        let (model, holds, release) = try holdingModel(root) { _, _, _ in throw MacAgentSetupError.passwordNeeded("mac") }
+        await model.start()
+        for _ in 0..<200 where holds.isEmpty { await settle() }
+        guard case .failed(let text)? = model.firstRunSetup else {
+            Issue.record("expected failed, got \(String(describing: model.firstRunSetup))")
+            return
+        }
+        #expect(text.contains("Settings › Agent") || text.contains("Impostazioni"))
+        #expect(holds.list == [.seconds(30)])
+        release()
+        for _ in 0..<200 where model.firstRunSetup != nil { await settle() }
+        #expect(model.firstRunSetup == nil)
+        await model.stop()
+    }
+
+    /// Opening Settings › Agent takes the failure strip away at once; the password request stays.
+    @Test func failedStripGoesWhenSettingsAgentOpens() async throws {
+        let root = try macRoot(agentAccess: true)
+        let (model, holds, _) = try holdingModel(root) { _, _, _ in throw MacAgentSetupError.passwordNeeded("mac") }
+        await model.start()
+        for _ in 0..<200 where holds.isEmpty { await settle() }
+        guard case .failed? = model.firstRunSetup else {
+            Issue.record("expected failed, got \(String(describing: model.firstRunSetup))")
+            return
+        }
+        model.agentSettingsOpened()
+        #expect(model.firstRunSetup == nil)
+        #expect(model.firstRunAsksForPassword)
+        await model.stop()
+    }
+
+    /// Settings › Agent opening does not touch a strip that is not a failure.
+    @Test func settingsOpeningLeavesAWorkingStrip() async throws {
+        let root = try macRoot(agentAccess: true)
+        let (gate, open) = AsyncStream.makeStream(of: Void.self)
+        let (model, _, _) = try holdingModel(root) { _, _, _ in
+            for await _ in gate { break }
+            return true
+        }
+        await model.start()
+        for _ in 0..<20 { await settle() }
+        guard case .working? = model.firstRunSetup else {
+            Issue.record("expected working, got \(String(describing: model.firstRunSetup))")
+            return
+        }
+        model.agentSettingsOpened()
+        guard case .working? = model.firstRunSetup else {
+            Issue.record("working strip was removed")
+            return
+        }
+        open.yield()
+        await model.stop()
+    }
+
+    /// Only a missing or refused password asks Settings › Agent for its field; the helper getting
+    /// ready (or the pane's own setup) spends the request.
+    @Test(arguments: [
+        (MacAgentSetupError.passwordNeeded("mac") as any Error, true),
+        (GuestSSHError.passwordRejected(user: "agent", vm: "mac") as any Error, true),
+        (MacAgentSetupError.loginWindow("mac") as any Error, false),
+        (GuestPasswordStoreError.unusableItem as any Error, true),
+    ])
+    func firstRunFailureAsksForThePasswordOnlyWhenItIsMissing(error: any Error, asks: Bool) async throws {
+        let root = try macRoot(agentAccess: true)
+        let (model, holds, _) = try holdingModel(root) { _, _, _ in throw error }
+        #expect(!model.firstRunAsksForPassword)
+        await model.start()
+        for _ in 0..<200 where holds.isEmpty { await settle() }
+        #expect(model.firstRunAsksForPassword == asks)
+        model.firstRunPasswordHandled()
+        #expect(!model.firstRunAsksForPassword)
+        await model.stop()
+    }
+
+    /// An unusable stored item points to Settings › Agent, where its field is.
+    @Test func unusableItemStripPointsToSettings() {
+        let text = VMWindowModel.firstRunFailure(for: GuestPasswordStoreError.unusableItem, vm: "mac")
+        #expect(text == String(localized: "The password stored for this VM can’t be used: enter it in Settings › Agent."))
+        #expect(text != GuestPasswordStoreError.unusableItem.errorDescription)
+    }
+
+    /// A password that worked but could not be kept: the strip says it (a notice, not a failure).
+    @Test func passwordNotSavedShowsANoticeInTheStrip() async throws {
+        let root = try macRoot(agentAccess: true)
+        let (model, holds, release) = try holdingModel(root) { _, _, onEvent in
+            onEvent(.keyAuthorized)
+            onEvent(.passwordNotSaved("Keychain error -25308"))
+            return true
+        }
+        await model.start()
+        for _ in 0..<200 where holds.isEmpty { await settle() }
+        #expect(model.firstRunSetup == .done)
+        #expect(model.firstRunNotice?.contains("Keychain error -25308") == true)
+        // A notice stays as long as a failure would.
+        #expect(holds.list == [.seconds(30)])
+        release()
+        for _ in 0..<200 where model.firstRunSetup != nil { await settle() }
+        #expect(model.firstRunNotice == nil)
         await model.stop()
     }
 
@@ -1874,6 +2045,42 @@ struct MacWindowTests {
         #expect(!nonePanel.canType)
         #expect(nonePanel.keyProblem != nil)
         #expect(nonePanel.authorizeCommand.contains("<chiave>"))
+    }
+
+    /// A provisioned VM (Remote Login already on, Nido authorizes its key by itself): the panel
+    /// drops "after Setup Assistant" and the two steps that no longer apply.
+    @Test func terminalPanelOfAProvisionedVM() async throws {
+        let root = try macRoot()
+        let bundle = try VMBundle.open(try VMName("macos-agenti"), paths: root.paths)
+        _ = try bundle.updateConfig { $0.macProvisioningSent = true }
+        let panel = try #require(try model(root, FakeSessionFactory()).terminalAccess)
+        panel.reload()
+        #expect(panel.intro == String(localized: "Nido authorizes its key by itself on the first start; use this panel only if that failed."))
+        #expect(!panel.intro.contains("Assistant") && !panel.intro.contains("assistente"))
+        #expect(panel.steps.map(\.title) == ["Autorizza la tua chiave", "Collegati dal Mac"])
+        #expect(panel.steps.map(\.number) == [1, 2])
+        #expect(panel.authorizeCommand.contains(macKey))
+    }
+
+    /// Only a VM that was sent its account (`macProvisioningSent == true`) gets the short panel; one
+    /// without the flag (an older VM, or `false`) keeps the Setup Assistant text.
+    @Test(arguments: [true, false, nil] as [Bool?])
+    func terminalPanelBranchesOnProvisioning(sent: Bool?) async throws {
+        let root = try macRoot()
+        let bundle = try VMBundle.open(try VMName("macos-agenti"), paths: root.paths)
+        _ = try bundle.updateConfig { $0.macProvisioningSent = sent }
+        let panel = try #require(try model(root, FakeSessionFactory()).terminalAccess)
+        #expect(!panel.isProvisioned)
+        panel.reload()
+        #expect(panel.isProvisioned == (sent == true))
+        if sent == true {
+            #expect(panel.intro == String(localized: "Nido authorizes its key by itself on the first start; use this panel only if that failed."))
+            #expect(panel.steps.count == 2)
+        } else {
+            #expect(panel.intro == "Per usare macos-agenti con nido ssh, una volta sola dopo l'assistente iniziale. Questi passaggi non richiedono password.")
+            #expect(panel.steps.map(\.title) == [
+                "Completa l'assistente iniziale", "Attiva Login remoto", "Autorizza la tua chiave", "Collegati dal Mac"])
+        }
     }
 
     /// A key file that is a symlink, or a key over the length bound: never read or typed.

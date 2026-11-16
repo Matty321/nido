@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import Foundation
+import os
 
 /// A `.nidovm` bundle directory. See `docs/BUNDLE-FORMAT.md`.
 public struct VMBundle: Sendable {
@@ -361,15 +362,18 @@ public struct VMBundle: Sendable {
     /// `MacInstaller`) when neither they nor any entry in them changed in that time. A
     /// `.creating-<uuid>` directory whose `.lock` is held (an installation still running, here or
     /// in another process, maybe paused by a sleeping Mac) is never removed; with the lock free it
-    /// goes after `creatingUnlockedMaxAge` instead of the hour. Anything else in the root is left
-    /// alone.
+    /// goes after `creatingUnlockedMaxAge` instead of the hour, and with it, when `passwords` is
+    /// given, the Keychain item saved under the id in its `config.json` (never an id that a bundle
+    /// in the root uses, nor any when a bundle's `config.json` cannot be read). Anything else in
+    /// the root is left alone.
     /// The age is the `st_ctime` of the entry (`changeTime`, injectable for tests): `rename(2)`
     /// updates it, so it reflects when the bundle was tombstoned, whereas the directory's
     /// mtime/birthtime do not and could make an in-progress delete look old.
     /// Best effort: errors are ignored.
     public static func sweepOrphanTombstones(
         paths: NidoPaths, now: Date = Date(),
-        changeTime: (URL) -> Date? = VMBundle.statChangeTime
+        changeTime: (URL) -> Date? = VMBundle.statChangeTime,
+        passwords: (any GuestPasswordStore)? = nil
     ) {
         guard let entries = try? FileManager.default.contentsOfDirectory(atPath: paths.root.path)
         else { return }
@@ -388,6 +392,25 @@ public struct VMBundle: Sendable {
                 guard let changed = ([changeTime(url)].compactMap { $0 } + inside).max(),
                     now.timeIntervalSince(changed) > creatingUnlockedMaxAge
                 else { continue }
+                // The folder is dead (lock free, old enough): first the Keychain item the
+                // installation saved under the id of its `config.json` (`MacInstaller` saves it
+                // before the long installation), then the folder. The other way round, a removal
+                // that stopped after `config.json` would leave an item no later sweep can name.
+                // The folder goes whatever the Keychain answers: a hidden disk image must not stay.
+                if let passwords, let stagedID = (try? VMBundle(url: url).readConfig())?.id,
+                    !idMayBeInUse(stagedID, paths: paths)
+                {
+                    do {
+                        try passwords.delete(vm: stagedID)
+                    } catch {
+                        // The folder goes next, so no later sweep can name this item: it is orphaned and
+                        // only the user can remove it, in Keychain Access. The VM id (not a secret)
+                        // lets them find it; the password is never logged.
+                        Logger(subsystem: "io.gitlab.pichierri.Nido", category: "sweep").error(
+                            "Keychain item of VM \(stagedID.uuidString, privacy: .public) (dead staging folder) not deleted, remove it in Keychain Access: \(String(describing: error), privacy: .public)"
+                        )
+                    }
+                }
                 try? removeTombstone(at: url)
                 continue
             } else if isCloningName(entry) {
@@ -402,6 +425,17 @@ public struct VMBundle: Sendable {
             guard let changed, now.timeIntervalSince(changed) > tombstoneMaxAge else { continue }
             try? removeTombstone(at: url)
         }
+    }
+
+    /// True unless every bundle in the root has a readable `config.json` and none has `id`: the
+    /// Keychain item of a crashed installation is removed only when it can belong to no VM.
+    private static func idMayBeInUse(_ id: UUID, paths: NidoPaths) -> Bool {
+        guard let bundles = try? list(paths: paths) else { return true }
+        for bundle in bundles {
+            guard let config = try? bundle.readConfig() else { return true }
+            if config.id == id { return true }
+        }
+        return false
     }
 
     /// `st_ctime` from `lstat` (does not follow symlinks).

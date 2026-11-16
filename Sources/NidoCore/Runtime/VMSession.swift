@@ -290,11 +290,23 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
     /// The provisioning plan for this start, or nil. The Keychain is read only when every other
     /// condition holds; a Keychain error is thrown, never swallowed.
     private func firstBootPlan() throws -> MacProvisioningPlan? {
+        let bundleURL = bundleURL
+        return try Self.firstBootPlan(
+            stateGuest: stateConfig.guest, readConfig: { try VMBundle(url: bundleURL).readConfig() },
+            passwords: guestPasswords, hostMajor: ProcessInfo.processInfo.operatingSystemVersion.majorVersion)
+    }
+
+    /// `firstBootPlan()` with its reads injectable (tests). Only a macOS guest (the config the
+    /// session was built from) reads `config.json` again, for a `macProvisioningSent` written
+    /// since; a Linux VM is never provisioned this way and skips the read.
+    nonisolated static func firstBootPlan(
+        stateGuest: GuestOS, readConfig: () throws -> VMConfig, passwords: any GuestPasswordStore, hostMajor: Int
+    ) throws -> MacProvisioningPlan? {
+        guard stateGuest == .macos else { return nil }
         // A config read error is thrown: starting plain would silently give the user Setup Assistant.
-        let bundle = try VMBundle(url: bundleURL).readConfig()
-        let hostMajor = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
+        let bundle = try readConfig()
         guard MacFirstBoot.needsPassword(config: bundle, hostMajor: hostMajor) else { return nil }
-        let password = try guestPasswords.read(vm: bundle.id)
+        let password = try passwords.read(vm: bundle.id)
         return MacFirstBoot.plan(config: bundle, hostMajor: hostMajor, password: password)
     }
 
@@ -323,7 +335,10 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
             return
         }
         #endif
-        // Only reachable with an old compiler/OS, where needsPassword is already false.
+        // Dead in Nido's builds, kept so this compiles with any toolchain: a plan exists only when
+        // `MacFirstBoot.needsPassword` holds, which needs a macOS 27 host (so `#available` above
+        // is true). Only a build with a compiler older than 6.4 (no macOS 27 SDK) gets here with a
+        // plan: the VM then starts plain, with Setup Assistant, and `sentProvisioning` stays false.
         try await vm.start()
     }
 

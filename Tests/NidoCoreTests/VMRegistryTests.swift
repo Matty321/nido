@@ -28,7 +28,7 @@ import Testing
         let lock = try BundleLock.acquire(busy, owner: .app)
         defer { lock.release() }
 
-        let result = try await VMRegistry(paths: paths).summaries()
+        let result = try await VMRegistry(paths: paths, passwords: nil).summaries()
         #expect(result.map(\.name) == ["busy", "idle"])
         #expect(result[0].status == .running(.app))
         #expect(result[0].cpuCount == 4)
@@ -50,7 +50,7 @@ import Testing
             diskBytes: 64 << 30, macAddress: "02:00:00:00:00:02", sshUser: "agente", osVersion: "26.6")
         _ = try VMBundle.create(config: mac, paths: paths)
 
-        let result = try await VMRegistry(paths: paths).summaries()
+        let result = try await VMRegistry(paths: paths, passwords: nil).summaries()
         #expect(result.map(\.name) == ["linux", "mac"])
         #expect(result[0].guest == .linux)
         #expect(result[0].osVersion == nil)
@@ -64,7 +64,7 @@ import Testing
         let bundle = try makeVM("broken", in: paths)
         try Data("{ not json".utf8).write(to: bundle.configURL)
 
-        let result = try await VMRegistry(paths: paths).summaries()
+        let result = try await VMRegistry(paths: paths, passwords: nil).summaries()
         #expect(result.count == 1)
         #expect(result[0].name == "broken")
         #expect(result[0].status == .unreadable(running: nil))
@@ -83,7 +83,7 @@ import Testing
         let lock = try BundleLock.acquire(bundle, owner: .cli)
         defer { lock.release() }
 
-        let result = try await VMRegistry(paths: paths).summaries()
+        let result = try await VMRegistry(paths: paths, passwords: nil).summaries()
         #expect(result.map(\.status) == [.unreadable(running: .cli)])
     }
 
@@ -92,7 +92,7 @@ import Testing
         defer { try? FileManager.default.removeItem(at: paths.root) }
         try makeVM("beta", in: paths)
         try makeVM("Alpha", in: paths)
-        let result = try await VMRegistry(paths: paths).summaries()
+        let result = try await VMRegistry(paths: paths, passwords: nil).summaries()
         #expect(result.map(\.name) == ["Alpha", "beta"])
     }
 
@@ -113,7 +113,7 @@ import Testing
         // `other` is not a tombstone by name: it must survive even when old.
         try makeVM("kept", in: paths)
 
-        let result = try await VMRegistry(paths: paths, now: { now }, changeTime: changeTime).summaries()
+        let result = try await VMRegistry(paths: paths, passwords: nil, now: { now }, changeTime: changeTime).summaries()
         #expect(result.map(\.name) == ["kept"])
         #expect(!fm.fileExists(atPath: old.path))
         #expect(fm.fileExists(atPath: recent.path))
@@ -130,7 +130,7 @@ import Testing
             [.modificationDate: Date().addingTimeInterval(-5 * 3600)], ofItemAtPath: bundle.url.path)
         let tombstone = try bundle.moveToTombstone()
 
-        _ = try await VMRegistry(paths: paths).summaries()  // real clock, real ctime
+        _ = try await VMRegistry(paths: paths, passwords: nil).summaries()  // real clock, real ctime
         #expect(fm.fileExists(atPath: tombstone.path))
     }
 }

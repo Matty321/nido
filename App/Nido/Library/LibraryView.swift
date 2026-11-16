@@ -20,7 +20,7 @@ struct LibraryView: View {
         #endif
         _model = State(initialValue: LibraryModel(
             registry: environment.registry, control: LiveVMControl(paths: paths),
-            cloner: LiveVMCloner(paths: paths), templates: LiveVMTemplates(paths: paths),
+            cloner: LiveVMCloner(paths: paths, passwords: environment.guestPasswords), templates: LiveVMTemplates(paths: paths),
             stopAppVM: { name in await environment.sessions.stop(name) },
             resumeAppVM: { name in await environment.sessions.resume(name) },
             // A deleted VM's tint goes too: a new VM with its name starts from its own.
@@ -319,7 +319,7 @@ struct LibraryView: View {
         let images: WizardImageSource = environment.imageFile.map { .localFile($0) }
             ?? .catalog(CloudImageCatalog.debian13, store: environment.imageStore,
                         cacheRoot: environment.imageCacheRoot)
-        let creator = LiveVMCreator(paths: environment.paths)
+        let creator = LiveVMCreator(paths: environment.paths, passwords: environment.guestPasswords)
         var checkHeadroom: (@Sendable (UInt64) async -> MemoryHeadroom?)?
         if environment.checksMemoryHeadroom {
             checkHeadroom = { bytes in await creator.headroom(memoryBytes: bytes) }

@@ -2,9 +2,11 @@
 import Darwin
 import Foundation
 import NidoCore
+import Synchronization
 
-/// macOS guests on the command line: `create --ipsw`, `start --console`, `ssh`. The logic,
-/// testable without ArgumentParser.
+// macOS guests on the command line: `create --ipsw`, `start --console`, `ssh`. The logic,
+// testable without ArgumentParser.
+
 /// Where `create --account` takes the account's password from.
 public enum AccountPasswordSource: Sendable, Equatable {
     /// Nido generates it (`GuestPassword.generate`).
@@ -94,12 +96,15 @@ extension CLISupport {
     }
 
     /// Asks for a password on the terminal without echo (`readpassphrase` reads /dev/tty); nil when
-    /// there is no terminal. The buffer is zeroed after use.
+    /// there is no terminal. The buffer is zeroed after use with `memset_s`, which the compiler
+    /// may not drop.
     public static func readPassphrase(prompt: String) -> String? {
         var buffer = [CChar](repeating: 0, count: 1100)
-        defer { buffer.withUnsafeMutableBufferPointer { $0.update(repeating: 0) } }
+        defer { _ = buffer.withUnsafeMutableBytes { memset_s($0.baseAddress, $0.count, 0, $0.count) } }
         guard Darwin.readpassphrase(prompt, &buffer, buffer.count, RPP_REQUIRE_TTY) != nil else { return nil }
-        return String(cString: buffer)
+        // The returned `String` is a copy Swift cannot zero: unavoidable, it lives until the caller
+        // turns it into a `GuestPassword`.
+        return buffer.withUnsafeBufferPointer { String(cString: $0.baseAddress!) }
     }
 
     /// What `nido start` does after a start that sent guest provisioning.
@@ -114,6 +119,43 @@ extension CLISupport {
     public static func provisionedStartFollowUp(sentProvisioning: Bool, agentAccess: Bool?) -> ProvisionedStartFollowUp {
         guard sentProvisioning else { return .none }
         return agentAccess == true ? .setUpAgent : .loggedIn
+    }
+
+    /// How long `nido start` waits for its setup task once the VM stopped.
+    public static let setupTaskStopLimit: Duration = .seconds(5)
+
+    /// Cancels `task` and waits for it to end, at most `limit`: true when it ended (or there was
+    /// none), false when it is still running at the limit (it is then left alone). `nido start`
+    /// runs it for its setup task when the VM stops, so nothing prints after the VM is gone.
+    public static func cancelAndWait(_ task: Task<Void, Never>?, within limit: Duration) async -> Bool {
+        guard let task else { return true }
+        task.cancel()
+        let outcome = FirstOutcome()
+        return await withCheckedContinuation { continuation in
+            let timer = Task {
+                try? await Task.sleep(for: limit)
+                outcome.resume(continuation, with: false)
+            }
+            Task {
+                await task.value
+                // Resume first: a cancelled timer wakes at once and would answer false.
+                outcome.resume(continuation, with: true)
+                timer.cancel()
+            }
+        }
+    }
+
+    /// Resumes a continuation once: the first of the task's end and the time limit wins.
+    private final class FirstOutcome: Sendable {
+        private let done = Mutex(false)
+
+        func resume(_ continuation: CheckedContinuation<Bool, Never>, with value: Bool) {
+            let first = done.withLock { done -> Bool in
+                defer { done = true }
+                return !done
+            }
+            if first { continuation.resume(returning: value) }
+        }
     }
 
     /// CPU and memory of a new macOS VM: what the user asked, as is (the installer refuses values

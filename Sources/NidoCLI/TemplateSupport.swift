@@ -29,7 +29,7 @@ extension CLISupport {
         let templateName = try VMName(template)
         let targetName = try VMName(target)
         let keyURL = sshKey.map { URL(fileURLWithPath: $0) }
-        let created = try await VMCloner(paths: paths, runner: runner)
+        let created = try await VMCloner(paths: paths, runner: runner, passwords: KeychainGuestPasswordStore())
             .createFromTemplate(templateName, as: targetName, sshKeyPath: keyURL, owner: .cliOperation)
         return L10n.string("VM \(created.displayName) created from the template \(templateName.rawValue): new identity, no shared folders; CPU, memory and disk are the template’s.")
     }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import Foundation
 import NidoAgentKit
+import Synchronization
 import Testing
 @testable import NidoCLI
 @testable import NidoCore
@@ -295,5 +296,78 @@ import Testing
             try AgentSupport.copyScreenshot(from: source.path, to: dest.path)
         }
         #expect(try Data(contentsOf: dest) == Data([1, 2, 3]))
+    }
+
+    // MARK: - An unusable stored password after a ready setup
+
+    /// A store whose item is no usable password until `save` replaces it (or whose `save` fails).
+    private final class UnusableStore: GuestPasswordStore, @unchecked Sendable {
+        private let lock = NSLock()
+        private var saved: GuestPassword?
+        var readError: GuestPasswordStoreError? = .unusableItem
+        var failsSave = false
+        var stored: GuestPassword? { lock.withLock { saved } }
+        func read(vm: UUID) throws -> GuestPassword? {
+            try lock.withLock {
+                if let saved { return saved }
+                if let readError { throw readError }
+                return nil
+            }
+        }
+        func save(_ password: GuestPassword, vm: UUID) throws {
+            try lock.withLock {
+                if failsSave { throw GuestPasswordStoreError.keychain(-25308) }
+                saved = password
+            }
+        }
+        func delete(vm: UUID) throws {}
+    }
+
+    /// The key already works, so the setup never read the stored item: an unusable one is
+    /// replaced with the password asked once at the terminal; without a terminal, a warning.
+    @Test func unusableItemIsReplacedAfterAReadySetup() async throws {
+        let id = UUID()
+        let fresh = try #require(GuestPassword("fresh-one"))
+        let store = UnusableStore()
+        let asks = Mutex(0)
+        let replaced = await AgentSupport.replaceUnusablePassword(vm: "mac", id: id, store: store, ask: {
+            asks.withLock { $0 += 1 }
+            return fresh
+        })
+        #expect(replaced == .replaced("La password salvata per mac è stata sostituita."))
+        #expect(asks.withLock { $0 } == 1)
+        #expect(store.stored == fresh)
+
+        // No terminal, or nothing typed: the item's text, as a warning.
+        let unusable = GuestPasswordStoreError.unusableItem.errorDescription ?? "?"
+        #expect(await AgentSupport.replaceUnusablePassword(vm: "mac", id: id, store: UnusableStore(), ask: nil)
+            == .warning(unusable))
+        #expect(await AgentSupport.replaceUnusablePassword(vm: "mac", id: id, store: UnusableStore(), ask: { nil })
+            == .warning(unusable))
+
+        // The Keychain refuses the new one: said, not hidden.
+        let refusing = UnusableStore()
+        refusing.failsSave = true
+        guard case .warning(let line) = await AgentSupport.replaceUnusablePassword(
+            vm: "mac", id: id, store: refusing, ask: { fresh })
+        else {
+            Issue.record("expected a warning")
+            return
+        }
+        #expect(line.hasPrefix("Non è stato possibile sostituire la password salvata per mac:"))
+        #expect(line.contains("-25308"))
+
+        // A usable item, none, or another Keychain error: nothing asked, nothing said.
+        for readError in [nil, GuestPasswordStoreError.keychain(-25293)] as [GuestPasswordStoreError?] {
+            let other = UnusableStore()
+            other.readError = readError
+            #expect(await AgentSupport.replaceUnusablePassword(vm: "mac", id: id, store: other, ask: {
+                Issue.record("asked")
+                return fresh
+            }) == .unchanged)
+        }
+        let usable = UnusableStore()
+        try usable.save(fresh, vm: id)
+        #expect(await AgentSupport.replaceUnusablePassword(vm: "mac", id: id, store: usable, ask: nil) == .unchanged)
     }
 }

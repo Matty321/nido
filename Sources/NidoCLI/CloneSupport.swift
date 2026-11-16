@@ -18,7 +18,7 @@ extension CLISupport {
         let suspended = config.map(bundle.hasSuspendedState) ?? false
         let snapshots = (try? SnapshotStore(bundle: bundle).list().count) ?? 0
 
-        let result = try await VMCloner(paths: paths, runner: runner)
+        let result = try await VMCloner(paths: paths, runner: runner, passwords: KeychainGuestPasswordStore())
             .cloneReportingNotes(sourceName, as: targetName, owner: .cliOperation)
         let clone = result.bundle
         var lines: [String]

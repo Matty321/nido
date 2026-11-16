@@ -138,17 +138,36 @@ final class WizardModel: Identifiable {
     private(set) var macOfferSize: UInt64?
     private(set) var macOfferPartial: Int64 = 0
     /// The account the user creates in Setup Assistant: `nido ssh` logs in as it.
-    var sshUser: String
+    var sshUser: String {
+        didSet { if sshUser != oldValue { accountInputChanged() } }
+    }
     /// The account step (macOS 27 guests create it at the first start). By default Nido generates
     /// the password; "Choose my own password" shows two fields instead.
-    var accountFullName = ""
-    var accountPassword = ""
+    var accountFullName = "" {
+        didSet { if accountFullName != oldValue { accountInputChanged() } }
+    }
+    var accountPassword = "" {
+        didSet { if accountPassword != oldValue { accountInputChanged() } }
+    }
     var accountPasswordAgain = ""
-    var createsAccount = true
-    var choosesOwnPassword = false
+    var createsAccount = true {
+        didSet { if createsAccount != oldValue { accountInputChanged() } }
+    }
+    var choosesOwnPassword = false {
+        didSet { if choosesOwnPassword != oldValue { accountInputChanged() } }
+    }
     /// "Let an agent use this Mac (Nido Agent)" from the creation.
     var agentAccess = false
-    private(set) var generatedPassword = GuestPassword.generate().value
+    private(set) var generatedPassword = GuestPassword.generate().value {
+        didSet { if generatedPassword != oldValue { accountInputChanged() } }
+    }
+    /// What macOS refuses about the account (`MacFirstBoot.validate`), as of the last check: that
+    /// check runs when the name or password stops changing (`accountValidationDelay`) and on
+    /// Next, not at every keystroke.
+    private(set) var accountValidationError: String?
+    @ObservationIgnored private var accountValidationTask: Task<Void, Never>?
+    @ObservationIgnored private let accountValidationDelay: Duration
+    @ObservationIgnored private let accountValidator: @Sendable (String, String, GuestPassword) throws -> Void
     /// The host's major macOS version: the account step needs 27 (injected by the tests).
     private let hostMajor: Int
     /// The running installation (it lives in `installs`), nil before Crea e installa.
@@ -232,7 +251,13 @@ final class WizardModel: Identifiable {
          macInstaller: (any MacVMInstalling)? = nil, installs: MacInstallStore? = nil,
          macImageDownloader: (any MacImageDownloading)? = nil,
          defaultSSHUser: String = WizardModel.defaultSSHUser(), presetIPSW: URL? = nil,
-         hostMajor: Int = ProcessInfo.processInfo.operatingSystemVersion.majorVersion) {
+         hostMajor: Int = ProcessInfo.processInfo.operatingSystemVersion.majorVersion,
+         accountValidationDelay: Duration = .milliseconds(300),
+         accountValidator: @escaping @Sendable (String, String, GuestPassword) throws -> Void = {
+             try MacFirstBoot.validate(fullName: $0, username: $1, password: $2)
+         }) {
+        self.accountValidationDelay = accountValidationDelay
+        self.accountValidator = accountValidator
         self.hostMajor = hostMajor
         self.physicalMemory = physicalMemory
         self.macInstaller = macInstaller
@@ -611,6 +636,14 @@ final class WizardModel: Identifiable {
     /// account would leave a VM that never starts. The short name is checked by `sshUserError`.
     var accountError: String? {
         guard offersAccount, createsAccount else { return nil }
+        if let error = accountFieldError { return error }
+        guard sshUserError == nil, GuestPassword(choosesOwnPassword ? accountPassword : generatedPassword) != nil
+        else { return nil }
+        return accountValidationError
+    }
+
+    /// What the fields alone say (cheap, live): an empty or mismatched entry.
+    private var accountFieldError: String? {
         let fullName = accountFullName.trimmingCharacters(in: .whitespacesAndNewlines)
         if fullName.isEmpty {
             return String(localized: "Enter a full name")
@@ -622,19 +655,44 @@ final class WizardModel: Identifiable {
                 return String(localized: "This password can’t be used: it must be shorter than 1,024 bytes and have no line breaks.")
             }
         }
-        guard sshUserError == nil,
-            let password = GuestPassword(choosesOwnPassword ? accountPassword : generatedPassword)
-        else { return nil }
-        do {
-            try MacFirstBoot.validate(fullName: fullName, username: sshUser, password: password)
-        } catch {
-            return error.localizedDescription
-        }
         return nil
+    }
+
+    /// An input of the account changed: macOS's own check waits until it settles.
+    private func accountInputChanged() {
+        accountValidationTask?.cancel()
+        guard offersAccount, createsAccount else { return }
+        let delay = accountValidationDelay
+        accountValidationTask = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            self?.validateAccountNow()
+        }
+    }
+
+    /// Asks macOS about the account as it is now (Next, and the request, never trust an older
+    /// answer).
+    func validateAccountNow() {
+        accountValidationTask?.cancel()
+        accountValidationTask = nil
+        guard offersAccount, createsAccount, accountFieldError == nil, sshUserError == nil,
+            let password = GuestPassword(choosesOwnPassword ? accountPassword : generatedPassword)
+        else {
+            accountValidationError = nil
+            return
+        }
+        let fullName = accountFullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            try accountValidator(fullName, sshUser, password)
+            accountValidationError = nil
+        } catch {
+            accountValidationError = error.localizedDescription
+        }
     }
 
     /// The account of the request: nil when not offered, declined or not valid.
     private func accountRequest() -> MacAccountRequest? {
+        validateAccountNow()
         guard offersAccount, createsAccount, accountError == nil else { return nil }
         let typed = choosesOwnPassword ? accountPassword : generatedPassword
         guard let password = GuestPassword(typed) else { return nil }
@@ -1566,6 +1624,8 @@ final class WizardModel: Identifiable {
     // MARK: - Navigation
 
     func next() async {
+        // The account is checked as it is now, not as it was 300 ms ago.
+        if step == .access { validateAccountNow() }
         guard isNextEnabled, !isClosed else { return }
         switch step {
         case .system where isMac:

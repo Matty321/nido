@@ -35,6 +35,8 @@ struct AgentBanner: View {
 /// strip like `AgentBanner`, over the window's title strip. It takes no clicks.
 struct FirstRunSetupStrip: View {
     let state: VMWindowModel.FirstRunSetup
+    /// A non-fatal notice that replaces "set up" (the key works, the password was not kept).
+    var notice: String?
 
     var body: some View {
         HStack(spacing: Theme.Space.s) {
@@ -65,7 +67,7 @@ struct FirstRunSetupStrip: View {
     private var text: String {
         switch state {
         case .working(let line): line
-        case .done: String(localized: "Nido Agent is set up.")
+        case .done: notice ?? String(localized: "Nido Agent is set up.")
         case .failed(let message): message
         }
     }

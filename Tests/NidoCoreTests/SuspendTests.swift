@@ -362,13 +362,13 @@ final class FakeSuspendableMachine: SuspendableMachine {
         let env = try Env()
         defer { env.cleanup() }
         try env.suspend(hash: "h")
-        let summaries = try await VMRegistry(paths: env.paths).summaries()
+        let summaries = try await VMRegistry(paths: env.paths, passwords: nil).summaries()
         #expect(summaries.map(\.isSuspended) == [true])
         #expect(summaries.map(\.status) == [.stopped])
         // Running: the lock wins (a resumed VM whose state is being consumed).
         let lock = try BundleLock.acquire(env.bundle, owner: .cli)
         defer { lock.release() }
-        #expect(try await VMRegistry(paths: env.paths).summaries().map(\.isSuspended) == [false])
+        #expect(try await VMRegistry(paths: env.paths, passwords: nil).summaries().map(\.isSuspended) == [false])
     }
 
     // MARK: - nido stop --suspend

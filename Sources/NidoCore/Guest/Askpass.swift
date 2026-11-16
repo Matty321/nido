@@ -131,10 +131,11 @@ public enum Askpass {
 ///
 /// It lives in a 0700 directory of this user (`Askpass.defaultDirectory`) under a random name,
 /// is itself 0600, and answers **one** connection whose peer is this user (`getpeereid`) and is
-/// the askpass of an ssh this process started (`isAskpassOfOurSSH`, by the peer's pid from
-/// `LOCAL_PEERPID`): it stops listening and removes the socket, then writes the password's UTF-8
-/// bytes and hangs up. Any other connection is closed without an answer and does not use it up.
-/// Nobody connecting within `idleTimeout` also ends it. `close()` (idempotent, also run on
+/// the askpass child of the one ssh the caller launched for it (`expect(ssh:)`, checked by
+/// `isAskpass(_:ofSSH:)` with the peer's pid from `LOCAL_PEERPID`): it stops listening and
+/// removes the socket, then writes the password's UTF-8 bytes and hangs up. Before
+/// `expect(ssh:)` no peer passes. Any other connection is closed without an answer and does not
+/// use it up. Nobody connecting within `idleTimeout` also ends it. `close()` (idempotent, also run on
 /// deinit) removes the socket and forgets the password.
 public final class AskpassServer: Sendable {
     /// How long the socket waits for its one connection.
@@ -147,14 +148,16 @@ public final class AskpassServer: Sendable {
 
     public convenience init(password: GuestPassword, directory: URL = Askpass.defaultDirectory) throws {
         try self.init(
-            password: password, directory: directory, idleTimeout: Self.idleTimeout, peerCheck: Self.isAskpassOfOurSSH)
+            password: password, directory: directory, idleTimeout: Self.idleTimeout,
+            peerCheck: { peer, ssh in Self.isAskpass(peer, ofSSH: ssh) })
     }
 
     /// `init` with the idle timeout and the peer check injectable (tests: the real check refuses
-    /// the test process, which is no ssh's child).
+    /// the test process, which is no ssh's child). The check gets the peer's pid and the ssh named
+    /// by `expect(ssh:)`, nil until then.
     init(
         password: GuestPassword, directory: URL, idleTimeout: Duration = AskpassServer.idleTimeout,
-        peerCheck: @escaping @Sendable (pid_t) -> Bool
+        peerCheck: @escaping @Sendable (pid_t, pid_t?) -> Bool
     ) throws {
         try AgentControlServer.prepareDirectory(directory)
         let name = String(UInt64.random(in: .min ... .max), radix: 16) + ".sock"
@@ -206,6 +209,12 @@ public final class AskpassServer: Sendable {
 
     deinit { core.close() }
 
+    /// Names the ssh the caller launched (its pid, from the runner's `onLaunch`): only its
+    /// askpass child can get the password.
+    public func expect(ssh pid: pid_t) {
+        core.expect(ssh: pid)
+    }
+
     /// True once the one answer was written to a client: ssh's askpass got the password. False
     /// when nobody of this user fetched it (ssh never asked, or the askpass failed to connect).
     public var answered: Bool { core.answered }
@@ -218,12 +227,26 @@ public final class AskpassServer: Sendable {
 
     // MARK: - Peer check
 
-    /// True when `peer` (the process connected to the socket) is a child of a `/usr/bin/ssh`
-    /// whose own parent is this process: the askpass that ssh runs for its password prompt, and
-    /// not some other process of the same user that found the socket.
-    static func isAskpassOfOurSSH(_ peer: pid_t) -> Bool {
-        guard peer > 0, let ssh = parentPID(of: peer), ssh > 1, executablePath(of: ssh) == sshPath,
-            parentPID(of: ssh) == getpid()
+    /// True when `peer` (the process connected to the socket) is a child of `ssh`, the
+    /// `/usr/bin/ssh` the caller launched, itself a child of this process: the askpass that ssh
+    /// runs for its password prompt. Not another process of the same user that found the
+    /// socket, nor the askpass of another ssh this process runs. Nil `ssh` (not launched yet):
+    /// false.
+    ///
+    /// `LOCAL_PEERPID` is enough, no `LOCAL_PEERTOKEN` (audit token) is needed: the launched ssh
+    /// is our unreaped child while it runs, so its pid stays its own and only it can be the parent
+    /// of a process with that parent pid. A peer pid reused after the askpass exited would need
+    /// that ssh as its parent too; an ssh pid reused after ssh exited would need to be
+    /// `/usr/bin/ssh` and a child of this process, which only a launch of ours makes.
+    static func isAskpass(_ peer: pid_t, ofSSH ssh: pid_t?) -> Bool {
+        isAskpass(peer, ofSSH: ssh, ownPID: getpid(), parent: parentPID(of:), executable: executablePath(of:))
+    }
+
+    /// `isAskpass(_:ofSSH:)` with the process lookups injectable (tests).
+    static func isAskpass(
+        _ peer: pid_t, ofSSH ssh: pid_t?, ownPID: pid_t, parent: (pid_t) -> pid_t?, executable: (pid_t) -> String?
+    ) -> Bool {
+        guard peer > 0, let ssh, ssh > 1, parent(peer) == ssh, executable(ssh) == sshPath, parent(ssh) == ownPID
         else { return false }
         return true
     }
@@ -260,6 +283,8 @@ public final class AskpassServer: Sendable {
     private final class Core: Sendable {
         struct State {
             var password: GuestPassword?
+            /// The ssh whose askpass may connect (`expect(ssh:)`).
+            var ssh: pid_t?
             var closed = false
             var socketRemoved = false
             var answered = false
@@ -275,11 +300,12 @@ public final class AskpassServer: Sendable {
         private let socketID: (dev_t, ino_t)
         private let deadline: ContinuousClock.Instant
         private let ended = DispatchSemaphore(value: 0)
-        private let peerCheck: @Sendable (pid_t) -> Bool
+        private let peerCheck: @Sendable (pid_t, pid_t?) -> Bool
 
         init(
             password: GuestPassword, listenFD: Int32, wakeRead: Int32, wakeWrite: Int32, path: String,
-            socketID: (dev_t, ino_t), deadline: ContinuousClock.Instant, peerCheck: @escaping @Sendable (pid_t) -> Bool
+            socketID: (dev_t, ino_t), deadline: ContinuousClock.Instant,
+            peerCheck: @escaping @Sendable (pid_t, pid_t?) -> Bool
         ) {
             self.peerCheck = peerCheck
             self.state = Mutex(State(password: password))
@@ -289,6 +315,10 @@ public final class AskpassServer: Sendable {
             self.path = path
             self.socketID = socketID
             self.deadline = deadline
+        }
+
+        func expect(ssh pid: pid_t) {
+            state.withLock { $0.ssh = pid }
         }
 
         func close() {
@@ -358,7 +388,8 @@ public final class AskpassServer: Sendable {
             var uid: uid_t = 0
             var gid: gid_t = 0
             guard fcntl(connection, F_SETFD, FD_CLOEXEC) == 0, getpeereid(connection, &uid, &gid) == 0,
-                uid == getuid(), let pid = AskpassServer.peerPID(connection), peerCheck(pid),
+                uid == getuid(), let pid = AskpassServer.peerPID(connection),
+                peerCheck(pid, state.withLock { $0.ssh }),
                 Self.prepare(connection)
             else { return false }
             let password = state.withLock { s -> GuestPassword? in
