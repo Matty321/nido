@@ -45,7 +45,7 @@ struct SnapshotsModelTests {
     private func models(_ root: SnapshotRoot, _ factory: FakeSessionFactory = FakeSessionFactory())
         -> (VMWindowModel, SnapshotsModel)
     {
-        let window = VMWindowModel(name: try! VMName("debian-13"), paths: root.paths, factory: factory)
+        let window = VMWindowModel(name: try! VMName("debian-13"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         return (window, SnapshotsModel(window: window, bundle: root.bundle))
     }
 
@@ -286,7 +286,7 @@ struct SnapshotsModelTests {
     /// Quitting waits for snapshot work on a stopped VM (not a "live" model), and refuses new work.
     @Test func quitWaitsForSnapshotWork() async throws {
         let root = try SnapshotRoot()
-        let sessions = VMSessionStore(paths: root.paths, factory: FakeSessionFactory())
+        let sessions = VMSessionStore(paths: root.paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
         let window = sessions.model(for: try VMName("debian-13"))
         let gate = Gate()
         let work = Task { try await window.exclusive { await gate.wait() } }
@@ -318,7 +318,7 @@ struct SnapshotsModelTests {
     @Test func snapshotsWindowFollowsTheVMModel() async throws {
         let root = try SnapshotRoot()
         let factory = FakeSessionFactory()
-        let sessions = VMSessionStore(paths: root.paths, factory: factory)
+        let sessions = VMSessionStore(paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         let name = try VMName("debian-13")
         let window = sessions.snapshotsWindowOpened(name)
         let model = SnapshotsModel(window: window, bundle: root.bundle)
@@ -443,7 +443,7 @@ struct SnapshotsSuspendedTests {
     @Test func suspendedBundleShowsSospesa() async throws {
         let root = try SnapshotRoot()
         try suspend(root)
-        let window = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory())
+        let window = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
         #expect(window.isSuspended)
         let model = SnapshotsModel(window: window, bundle: root.bundle)
         await model.load()
@@ -454,7 +454,7 @@ struct SnapshotsSuspendedTests {
     /// S09 opened after the VM was suspended elsewhere (the model already existed).
     @Test func loadRereadsTheSuspendedState() async throws {
         let root = try SnapshotRoot()
-        let window = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory())
+        let window = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
         #expect(!window.isSuspended)
         try suspend(root)
         let model = SnapshotsModel(window: window, bundle: root.bundle)
@@ -466,7 +466,7 @@ struct SnapshotsSuspendedTests {
     @Test func snapshotOfTheSuspendedVMKeepsItsStateAndSaysSo() async throws {
         let root = try SnapshotRoot()
         try suspend(root)
-        let window = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory())
+        let window = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
         let model = SnapshotsModel(window: window, bundle: root.bundle)
         await model.load()
         model.beginCreate()
@@ -483,7 +483,7 @@ struct SnapshotsMinorTests {
     /// APP m5: Return with an empty name does nothing (the Crea button is disabled).
     @Test func emptyNameIsNotSubmitted() async throws {
         let root = try SnapshotRoot()
-        let window = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory())
+        let window = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
         let model = SnapshotsModel(window: window, bundle: root.bundle)
         await model.load()
         model.beginCreate()
@@ -498,7 +498,7 @@ struct SnapshotsMinorTests {
     /// CORE m6: restoring a suspended VM loses its saved state too: the sheet says so.
     @Test func restoreMessageOfASuspendedVMMentionsTheSession() async throws {
         let root = try SnapshotRoot()
-        let window = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory())
+        let window = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
         let model = SnapshotsModel(window: window, bundle: root.bundle)
         await model.load()
         model.beginCreate()

@@ -140,11 +140,16 @@ final class LiveSessionFactory: SessionFactory {
     /// Starts the relay of a controlled VM (`VMConfig.controlledNetwork`); never on the main
     /// actor (`startRelayOffMain`).
     private let startRelay: @Sendable (VMBundle, String) async throws -> EgressRelay
+    /// The account passwords each session reads for the first-boot provisioning
+    /// (`AppEnvironment.guestPasswords`): never the Keychain default of `VMSession`.
+    let passwords: any GuestPasswordStore
 
     init(
         imageCache: URL = ImageStore.defaultCacheRoot(), aiBridge: AIBridgeServices? = nil,
+        passwords: any GuestPasswordStore,
         startRelay: @escaping @Sendable (VMBundle, String) async throws -> EgressRelay = LiveSessionFactory.startRelayOffMain
     ) {
+        self.passwords = passwords
         self.imageCache = imageCache
         self.aiBridge = aiBridge
         self.startRelay = startRelay
@@ -167,7 +172,10 @@ final class LiveSessionFactory: SessionFactory {
         // A macOS guest has no serial console and never gets the AI bridge (Linux-only in M3b).
         guard config.guest == .linux else {
             // The session owns the relay from here, also when it throws.
-            return try VMSession(bundle: bundle, serialConsole: nil, display: nil, imageCache: imageCache, egressRelay: relay)
+            let session = try VMSession(
+                bundle: bundle, serialConsole: nil, display: nil, imageCache: imageCache, egressRelay: relay)
+            session.guestPasswords = passwords
+            return session
         }
         let console: SerialConsole
         do {
@@ -185,6 +193,7 @@ final class LiveSessionFactory: SessionFactory {
             console.close()
             throw error
         }
+        session.guestPasswords = passwords
         // A bundle whose bridge log cannot be opened runs without the bridge: the guest's shim
         // then answers 502 (never a bridge without its log). The window says so
         // (`VMSessionHandle.aiBridgeAttached`, `AIBridgeModel.attachWarning`).
@@ -362,16 +371,20 @@ final class VMWindowModel {
     @ObservationIgnored private let checkHeadroom: @Sendable (VMBundle) -> MemoryHeadroom?
 
     init(
-        name: VMName, paths: NidoPaths, factory: any SessionFactory, gracePeriod: Duration = VMWindowModel.gracePeriod,
+        name: VMName, paths: NidoPaths, factory: any SessionFactory, passwords: any GuestPasswordStore,
+        gracePeriod: Duration = VMWindowModel.gracePeriod,
         aiBridgeServices: AIBridgeServices? = nil, monitor: MonitorModel = MonitorModel(),
         aiRuntime: AIRuntimeModel? = nil, checkHeadroom: (@Sendable (VMBundle) -> MemoryHeadroom?)? = nil,
         agentHoldSleep: @escaping @Sendable (Duration) async -> Void = { try? await Task.sleep(for: $0) },
-        firstRunSetup: @escaping @Sendable (
+        firstRunSetup: (@Sendable (
             VMBundle, VMConfig, @escaping @Sendable (MacAgentSetupEvent) -> Void
-        ) async throws -> Bool = VMWindowModel.liveFirstRunSetup
+        ) async throws -> Bool)? = nil
     ) {
         self.agentHoldSleep = agentHoldSleep
-        self.firstRunSetupRunner = firstRunSetup
+        self.firstRunSetupRunner = firstRunSetup ?? { bundle, config, onEvent in
+            try await VMWindowModel.liveFirstRunSetup(
+                bundle: bundle, config: config, passwords: passwords, onEvent: onEvent)
+        }
         self.name = name
         self.paths = paths
         let guest = (try? VMBundle.open(name, paths: paths).readConfig())?.guest ?? .linux
@@ -687,12 +700,13 @@ final class VMWindowModel {
 
     /// `MacAgentSetup.live` for `bundle`, waiting for Remote Login (a first boot takes minutes).
     nonisolated static func liveFirstRunSetup(
-        bundle: VMBundle, config: VMConfig, onEvent: @escaping @Sendable (MacAgentSetupEvent) -> Void
+        bundle: VMBundle, config: VMConfig, passwords: any GuestPasswordStore,
+        onEvent: @escaping @Sendable (MacAgentSetupEvent) -> Void
     ) async throws -> Bool {
         let setup = try MacAgentSetup.live(
             bundle: bundle, config: config, surface: .app,
             describe: { ($0 as? AgentFailure)?.message ?? $0.localizedDescription },
-            waitForRemoteLogin: firstRunWait)
+            passwords: passwords, waitForRemoteLogin: firstRunWait)
         return try await setup.run(onEvent: onEvent)
     }
 

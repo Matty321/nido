@@ -107,6 +107,13 @@ public struct MacInstaller: Sendable {
         self.init(paths: paths, environment: Environment())
     }
 
+    /// An installer that saves the account password in `passwords` (the app's single store).
+    public init(paths: NidoPaths, passwords: any GuestPasswordStore) {
+        var environment = Environment()
+        environment.passwords = passwords
+        self.init(paths: paths, environment: environment)
+    }
+
     init(paths: NidoPaths, environment: Environment) {
         self.paths = paths
         self.environment = environment

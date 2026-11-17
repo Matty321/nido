@@ -49,6 +49,9 @@ public protocol GuestPasswordStore: Sendable {
     /// Whether a password is stored, without reading it (the Keychain asks no confirmation for
     /// that).
     func contains(vm: UUID) throws -> Bool
+    /// When the item last changed, asked without its data (no Keychain prompt either): nil when
+    /// there is no item. A new date says the item may hold another password now.
+    func modificationDate(vm: UUID) throws -> Date?
     /// Stores `password`, replacing the previous one.
     func save(_ password: GuestPassword, vm: UUID) throws
     /// Removes the password; removing a missing one is not an error.
@@ -58,6 +61,8 @@ public protocol GuestPasswordStore: Sendable {
 extension GuestPasswordStore {
     /// By reading the password: for stores without a cheaper way.
     public func contains(vm: UUID) throws -> Bool { try read(vm: vm) != nil }
+    /// No dates: for the fakes of tests. Nil reads as "never changed".
+    public func modificationDate(vm: UUID) throws -> Date? { nil }
 }
 
 /// A Keychain failure: only the `OSStatus`, never the password.
@@ -127,14 +132,25 @@ public struct KeychainGuestPasswordStore: GuestPasswordStore {
 
     /// Asks only for the item's attributes, never its data: no "allow" prompt of the Keychain.
     public func contains(vm: UUID) throws -> Bool {
+        try attributes(vm) != nil
+    }
+
+    /// From the attributes only (`kSecAttrModificationDate`), never the data: no prompt. The login
+    /// keychain keeps whole seconds.
+    public func modificationDate(vm: UUID) throws -> Date? {
+        try attributes(vm)?[kSecAttrModificationDate as String] as? Date
+    }
+
+    /// The item's attributes, nil when there is none.
+    private func attributes(_ vm: UUID) throws -> [String: Any]? {
         var query = itemQuery(vm)
         query[kSecReturnAttributes as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
-        if status == errSecItemNotFound { return false }
+        if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess else { throw GuestPasswordStoreError.keychain(status) }
-        return true
+        return result as? [String: Any] ?? [:]
     }
 
     public func save(_ password: GuestPassword, vm: UUID) throws {
@@ -164,6 +180,7 @@ public struct KeychainGuestPasswordStore: GuestPasswordStore {
 public final class MemoryGuestPasswordStore: GuestPasswordStore, @unchecked Sendable {
     private let lock = NSLock()
     private var items: [UUID: GuestPassword] = [:]
+    private var modified: [UUID: Date] = [:]
 
     public init() {}
 
@@ -175,11 +192,27 @@ public final class MemoryGuestPasswordStore: GuestPasswordStore, @unchecked Send
         lock.withLock { items[vm] != nil }
     }
 
+    public func modificationDate(vm: UUID) throws -> Date? {
+        lock.withLock { modified[vm] }
+    }
+
+    /// Every save gets a later date than the previous one, even within the clock's resolution.
     public func save(_ password: GuestPassword, vm: UUID) throws {
-        lock.withLock { items[vm] = password }
+        lock.withLock {
+            items[vm] = password
+            let now = Date()
+            if let last = modified[vm], now <= last {
+                modified[vm] = last.addingTimeInterval(0.001)
+            } else {
+                modified[vm] = now
+            }
+        }
     }
 
     public func delete(vm: UUID) throws {
-        lock.withLock { items[vm] = nil }
+        lock.withLock {
+            items[vm] = nil
+            modified[vm] = nil
+        }
     }
 }

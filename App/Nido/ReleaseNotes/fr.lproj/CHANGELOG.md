@@ -2,6 +2,19 @@
 
 Toutes les versions de Nido, de la plus récente à la plus ancienne. À la première ouverture après une mise à jour, Nido affiche les nouveautés de la version installée (pour les relire, choisissez Aide › Nouveautés de Nido).
 
+## [0.9.3] – 2026-11-17
+
+### Un Mac pour les agents
+- **Un agent peut zoomer pour lire du petit texte.** La nouvelle action `zoom` (l’outil MCP `zoom`, ou `nido act <vm> zoom X Y W H`) montre une partie de la dernière capture à la pleine résolution de l’écran de la VM. Les clics utilisent toujours les coordonnées de la dernière capture. Il faut Nido Agent 1.0.4.
+
+### Corrections
+- **`nido ssh` indique quoi faire quand une VM macOS attend à sa fenêtre de connexion** (FileVault), au lieu d’afficher seulement le « Permission denied » de ssh.
+- **Réglages › Agent n’interroge plus le trousseau sans arrêt** tant qu’un mot de passe enregistré est inutilisable, et l’avertissement disparaît quand vous corrigez le mot de passe depuis le Terminal.
+- **Ce que laisse un clonage interrompu est supprimé avec son élément du trousseau**, et le nettoyage ne touche jamais une installation encore en cours.
+
+### Nido Agent 1.0.4
+- Ajoute le zoom. Mettez-le à jour depuis **Réglages › Agent** de la VM ou avec `nido agent setup <vm>`.
+
 ## [0.9.2] – 2026-11-16
 
 ### Corrections

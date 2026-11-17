@@ -102,13 +102,15 @@ struct LiveMacImageDownloader: MacImageDownloading {
 /// `MacVMInstalling` on top of NidoCore: both run off the main actor.
 struct LiveMacVMInstaller: MacVMInstalling {
     let paths: NidoPaths
+    /// Where the new VM's account password is saved (`AppEnvironment.guestPasswords`).
+    let passwords: any GuestPasswordStore
 
     func inspect(_ ipsw: URL) async throws -> MacImageInfo {
         try await MacRestoreImage.inspect(ipsw)
     }
 
     func install(_ request: MacVMRequest, progress: @escaping @Sendable (Double) -> Void) async throws {
-        _ = try await MacInstaller(paths: paths).install(request, owner: .app, progress: progress)
+        _ = try await MacInstaller(paths: paths, passwords: passwords).install(request, owner: .app, progress: progress)
     }
 }
 

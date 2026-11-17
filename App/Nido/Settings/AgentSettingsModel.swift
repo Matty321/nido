@@ -117,6 +117,22 @@ final class AgentSettingsModel {
     /// Bumped by each write of the switch: a `refresh` that read `config.json` before it keeps
     /// nothing of what it read.
     @ObservationIgnored private var accessWrites = 0
+    /// What `clearUnusableIfFixed` knows of the unusable item (see `UnusableItemCheck`).
+    @ObservationIgnored private var unusableCheck = UnusableItemCheck.unseen
+    /// Bumped each time the item is found unusable: a check that started before keeps nothing.
+    @ObservationIgnored private var unusableFlags = 0
+
+    /// The unusable item's modification date, read with its attributes only (no Keychain
+    /// prompt): its data is read again only once the date changed.
+    private enum UnusableItemCheck {
+        /// Just flagged: the next check records the date.
+        case unseen
+        /// The date recorded (nil: no item).
+        case seen(Date?)
+        /// A read failed otherwise (the owner refused the Keychain prompt): not tried again
+        /// until the item is found unusable anew.
+        case stopped
+    }
 
     /// - Parameters:
     ///   - status: asks the helper for its `status` (a failure is a failed answer).
@@ -307,6 +323,7 @@ final class AgentSettingsModel {
     func refresh() async {
         guard !isInstalling else { return }
         await loadPasswordStateOnce()
+        await clearUnusableIfFixed()
         let writes = accessWrites
         let bundle = bundle
         let config = await Task.detached { try? bundle.readConfig() }.value
@@ -417,6 +434,54 @@ final class AgentSettingsModel {
         }
     }
 
+    /// The item may have been fixed elsewhere (the CLI replaced it). While it is flagged unusable,
+    /// each refresh asks only for its modification date (no Keychain prompt); its data is read,
+    /// off the main actor, only once that date changed: a Keychain prompt the owner answered with
+    /// "Allow" comes back at most once per change, never every 3 seconds. The flag and the field
+    /// go only when the read returns a password; the value is dropped at once, never kept, shown
+    /// or logged. A read that fails otherwise than `.unusableItem` stops the checks.
+    private func clearUnusableIfFixed() async {
+        guard itemUnusable, !isInstalling else { return }
+        if case .stopped = unusableCheck { return }
+        let flags = unusableFlags
+        let (passwords, vmID) = (passwords, vmID)
+        let dated = await Task.detached { Result { try passwords.modificationDate(vm: vmID) } }.value
+        // An installation, the typed password or a new flag may have settled it while asking.
+        guard flags == unusableFlags, itemUnusable, !isInstalling,
+            case .success(let date) = dated
+        else { return }
+        switch unusableCheck {
+        case .stopped:
+            return
+        case .unseen:
+            // The date of the item just found unusable: only a later change is read.
+            unusableCheck = .seen(date)
+            return
+        case .seen(let seen):
+            guard date != seen else { return }
+            unusableCheck = .seen(date)
+        }
+        let read = await Task.detached { Result { try passwords.read(vm: vmID) != nil } }.value
+        guard flags == unusableFlags, itemUnusable, !isInstalling else { return }
+        switch read {
+        case .success(let usable):
+            // No item: the field stays, checked again at the next change.
+            guard usable else { return }
+        case .failure(let error):
+            // Still unusable: checked again at the next change. Anything else is not retried.
+            if case GuestPasswordStoreError.unusableItem = error { return }
+            unusableCheck = .stopped
+            return
+        }
+        itemUnusable = false
+        needsPassword = false
+        // Only the unusable-item message goes; any other error stays.
+        if let message = errorMessage, message.contains(GuestPasswordStoreError.unusableItem.errorDescription ?? "\0") {
+            errorMessage = nil
+        }
+        await reloadPasswordState()
+    }
+
     /// A Keychain error is never "no password": it is shown, the state stays unknown. An item
     /// Nido cannot use asks for the password again (the field of the pane).
     private func passwordReadFailed(_ error: any Error) {
@@ -434,6 +499,8 @@ final class AgentSettingsModel {
         guard case GuestPasswordStoreError.unusableItem = error else { return }
         needsPassword = true
         itemUnusable = true
+        unusableCheck = .unseen
+        unusableFlags += 1
     }
 
     /// "Authorize": runs the setup again with the typed password, which `MacAgentSetup` tries
@@ -704,7 +771,7 @@ final class AgentSettingsModel {
     /// What `nido agent setup` does, for `bundle`, in the pane's words (`MacAgentSetup.live`):
     /// the same checks first (macOS guest, agent access on, the VM running), then the setup.
     nonisolated static func liveSetup(
-        bundle: VMBundle, passwords: any GuestPasswordStore = KeychainGuestPasswordStore()
+        bundle: VMBundle, passwords: any GuestPasswordStore
     ) -> Setup {
         { typed, onEvent in
             let setup = try MacAgentSetup.live(

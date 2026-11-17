@@ -15,6 +15,22 @@ private struct FakeScreen: ScreenSource {
         let space = CoordinateSpace(display: PixelSize(size.width, size.height), maxLongEdge: maxLongEdge)
         return (png, space.image)
     }
+
+    /// Records the region it was asked for.
+    let regions = RegionLog()
+    var regionImage = PixelSize(400, 200)
+
+    func capture(region: CGRect, maxLongEdge: Int) async throws -> (png: Data, image: PixelSize) {
+        regions.record(region)
+        return (png, regionImage)
+    }
+}
+
+private final class RegionLog: @unchecked Sendable {
+    private let lock = NSLock()
+    private var items: [CGRect] = []
+    func record(_ r: CGRect) { lock.withLock { items.append(r) } }
+    var recorded: [CGRect] { lock.withLock { items } }
 }
 
 private struct FakePermissions: PermissionState {
@@ -307,6 +323,7 @@ private struct BrokenScreen: ScreenSource {
     struct Failure: Error {}
     func screenSize() -> ScreenSize { ScreenSize(width: 1440, height: 900) }
     func capture(maxLongEdge: Int) async throws -> (png: Data, image: PixelSize) { throw Failure() }
+    func capture(region: CGRect, maxLongEdge: Int) async throws -> (png: Data, image: PixelSize) { throw Failure() }
 }
 
 @Test func inputFailureIsInternalError() async {
@@ -326,6 +343,7 @@ private struct BrokenScreen: ScreenSource {
 private struct LyingScreen: ScreenSource {
     func screenSize() -> ScreenSize { ScreenSize(width: 1440, height: 900) }
     func capture(maxLongEdge: Int) async throws -> (png: Data, image: PixelSize) { (Data([1]), PixelSize(100, 100)) }
+    func capture(region: CGRect, maxLongEdge: Int) async throws -> (png: Data, image: PixelSize) { (Data([1]), PixelSize(100, 100)) }
 }
 
 @Test func captureOfTheWrongSizeIsScreenChanged() async {
@@ -387,4 +405,57 @@ private struct LyingScreen: ScreenSource {
     let (reply, _) = await d.handle(AgentRequest(action: .setClipboard(text: "abcde", clearAfter: 60)))
     #expect(reply.ok == false)
     #expect(reply.error == .internalError)
+}
+
+// MARK: - zoom
+
+private let zoomShotImage = PixelSize(512, 320)
+private let zoomShotScreen = ScreenSize(width: 1024, height: 640)
+
+private func zoomRequest(_ x: Double, _ y: Double, _ w: Double, _ h: Double) -> AgentRequest {
+    AgentRequest(action: .zoom(x: x, y: y, width: w, height: h, maxLongEdge: 1280),
+                 image: zoomShotImage, screen: zoomShotScreen)
+}
+
+@Test func zoomNeedsLastShot() async {
+    let screen = FakeScreen(size: zoomShotScreen)
+    let (reply, png) = await dispatcher(screen: screen)
+        .handle(AgentRequest(action: .zoom(x: 1, y: 1, width: 10, height: 10, maxLongEdge: 1280)))
+    #expect(reply.ok == false)
+    #expect(reply.error == .noScreenshot)
+    #expect(reply.message?.contains("take a screenshot first") == true)
+    #expect(png == nil)
+    #expect(screen.regions.recorded.isEmpty)
+}
+
+@Test func zoomCapturesMappedRegion() async {
+    let screen = FakeScreen(size: zoomShotScreen)
+    let (reply, png) = await dispatcher(screen: screen).handle(zoomRequest(10, 20, 100, 50))
+    #expect(reply.ok == true)
+    #expect(screen.regions.recorded == [CGRect(x: 20, y: 40, width: 200, height: 100)])
+    #expect(reply.image == screen.regionImage)
+    #expect(reply.screen == zoomShotScreen)
+    #expect(png == screen.png)
+}
+
+@Test func zoomOffScreenIsBadRequest() async {
+    let screen = FakeScreen(size: zoomShotScreen)
+    let (reply, png) = await dispatcher(screen: screen).handle(zoomRequest(600, 20, 100, 50))
+    #expect(reply.error == .badRequest)
+    #expect(png == nil)
+    #expect(screen.regions.recorded.isEmpty)
+}
+
+@Test func zoomNeedsScreenRecording() async {
+    let d = dispatcher(screen: FakeScreen(size: zoomShotScreen),
+                       permissions: FakePermissions(screenRecording: false, accessibility: true))
+    let (reply, _) = await d.handle(zoomRequest(10, 20, 100, 50))
+    #expect(reply.error == .permissionMissing)
+    #expect(reply.message?.contains("Screen Recording") == true)
+}
+
+@Test func zoomWhenScreenChangedIsScreenChanged() async {
+    let d = dispatcher(screen: FakeScreen(size: ScreenSize(width: 1920, height: 1200)))
+    let (reply, _) = await d.handle(zoomRequest(10, 20, 100, 50))
+    #expect(reply.error == .screenChanged)
 }

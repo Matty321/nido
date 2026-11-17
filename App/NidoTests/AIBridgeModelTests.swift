@@ -245,7 +245,7 @@ struct AIBridgeModelTests {
         _ = try bundle.updateConfig { $0.aiBridge = AIBridgePolicy(enabled: true, privacyAcknowledged: true) }
         let factory = FakeSessionFactory()
         factory.configure = { $0.aiBridgeAttached = true }
-        let store = VMSessionStore(paths: NidoPaths(root: root), factory: factory)
+        let store = VMSessionStore(paths: NidoPaths(root: root), factory: factory, passwords: MemoryGuestPasswordStore())
         #expect(!store.isAIBridgeActive("debian-13"))
         let window = store.model(for: try VMName("debian-13"))
         await window.start()

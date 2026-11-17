@@ -2,6 +2,19 @@
 
 Le versioni di Nido, dalla più recente. L'app mostra la sezione della versione installata al primo avvio dopo un aggiornamento (menu Aiuto › Novità di Nido per rivederla).
 
+## [0.9.3] – 2026-11-17
+
+### Un Mac per gli agenti
+- **Un agente può ingrandire per leggere il testo piccolo.** La nuova azione `zoom` (lo strumento MCP `zoom`, o `nido act <vm> zoom X Y W H`) mostra una parte dell’ultimo screenshot alla piena risoluzione dello schermo della VM. I clic usano ancora le coordinate dell’ultimo screenshot. Serve Nido Agent 1.0.4.
+
+### Correzioni
+- **`nido ssh` dice cosa fare quando una VM macOS è ferma alla finestra di login** (FileVault), invece di mostrare solo il “Permission denied” di ssh.
+- **Impostazioni › Agent non interroga più il Portachiavi di continuo** mentre una password salvata non è utilizzabile, e l’avviso sparisce quando sistemi la password dal Terminale.
+- **Quello che lascia una clonazione interrotta viene rimosso insieme al suo elemento del Portachiavi**, e la pulizia non tocca mai un’installazione ancora in corso.
+
+### Nido Agent 1.0.4
+- Aggiunge lo zoom. Aggiornalo da **Impostazioni › Agent** della VM o con `nido agent setup <vm>`.
+
 ## [0.9.2] – 2026-11-16
 
 ### Correzioni

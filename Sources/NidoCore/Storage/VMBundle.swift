@@ -385,32 +385,22 @@ public struct VMBundle: Sendable {
             } else if isCreatingName(entry) {
                 // A running installation holds the lock: never removed. Free lock: the installation
                 // crashed (a large disk image must not stay hidden for an hour); the short age only
-                // covers the moment between `mkdir` and taking the lock.
-                if BundleLock.holder(VMBundle(url: url)) != nil { continue }
+                // covers the moment between `mkdir` and taking the lock. The age is read before the
+                // lock is taken: taking it creates or touches `.lock`, which would look recent.
                 let inside = ((try? FileManager.default.contentsOfDirectory(atPath: url.path)) ?? [])
                     .compactMap { changeTime(url.appendingPathComponent($0)) }
                 guard let changed = ([changeTime(url)].compactMap { $0 } + inside).max(),
                     now.timeIntervalSince(changed) > creatingUnlockedMaxAge
                 else { continue }
-                // The folder is dead (lock free, old enough): first the Keychain item the
-                // installation saved under the id of its `config.json` (`MacInstaller` saves it
-                // before the long installation), then the folder. The other way round, a removal
-                // that stopped after `config.json` would leave an item no later sweep can name.
-                // The folder goes whatever the Keychain answers: a hidden disk image must not stay.
-                if let passwords, let stagedID = (try? VMBundle(url: url).readConfig())?.id,
-                    !idMayBeInUse(stagedID, paths: paths)
-                {
-                    do {
-                        try passwords.delete(vm: stagedID)
-                    } catch {
-                        // The folder goes next, so no later sweep can name this item: it is orphaned and
-                        // only the user can remove it, in Keychain Access. The VM id (not a secret)
-                        // lets them find it; the password is never logged.
-                        Logger(subsystem: "io.gitlab.pichierri.Nido", category: "sweep").error(
-                            "Keychain item of VM \(stagedID.uuidString, privacy: .public) (dead staging folder) not deleted, remove it in Keychain Access: \(String(describing: error), privacy: .public)"
-                        )
-                    }
-                }
+                // The lock is taken, not just looked at: a check-then-act would let an installation
+                // start between the check and the removal. It is held until the folder is gone.
+                guard let lock = try? BundleLock.acquire(VMBundle(url: url), owner: .cliOperation) else { continue }
+                defer { lock.release() }
+                // The folder is dead (lock ours, old enough): first the Keychain item, then the
+                // folder. The other way round, a removal that stopped after `config.json` would
+                // leave an item no later sweep can name. The folder goes whatever the Keychain
+                // answers: a hidden disk image must not stay.
+                deleteStagedItem(in: url, passwords: passwords, paths: paths)
                 try? removeTombstone(at: url)
                 continue
             } else if isCloningName(entry) {
@@ -423,7 +413,26 @@ public struct VMBundle: Sendable {
                 continue
             }
             guard let changed, now.timeIntervalSince(changed) > tombstoneMaxAge else { continue }
+            // A clone saves its Keychain item just before the rename: a crash in between orphans it.
+            if isCloningName(entry) { deleteStagedItem(in: url, passwords: passwords, paths: paths) }
             try? removeTombstone(at: url)
+        }
+    }
+
+    /// Deletes the Keychain item saved under the id in the `config.json` of a dead staging folder
+    /// (`.creating-` or `.cloning-`), unless a bundle in the root may use that id. A failure is
+    /// logged (the VM id, never a secret): the folder goes next, so the item is orphaned.
+    private static func deleteStagedItem(in url: URL, passwords: (any GuestPasswordStore)?, paths: NidoPaths) {
+        guard let passwords, let stagedID = (try? VMBundle(url: url).readConfig())?.id,
+            !idMayBeInUse(stagedID, paths: paths)
+        else { return }
+        do {
+            try passwords.delete(vm: stagedID)
+        } catch {
+            // Only the user can remove it now, in Keychain Access; the VM id lets them find it.
+            Logger(subsystem: "io.gitlab.pichierri.Nido", category: "sweep").error(
+                "Keychain item of VM \(stagedID.uuidString, privacy: .public) (dead staging folder) not deleted, remove it in Keychain Access: \(String(describing: error), privacy: .public)"
+            )
         }
     }
 

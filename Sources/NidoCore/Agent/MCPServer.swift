@@ -31,7 +31,7 @@ public final class MCPServer {
     public static let protocolVersions = ["2025-11-25", "2025-06-18", "2025-03-26"]
 
     /// The tool names, in the order `tools/list` returns them.
-    public static let toolNames = ["status", "screenshot", "click", "drag", "scroll", "type", "key", "wait"]
+    public static let toolNames = ["status", "screenshot", "zoom", "click", "drag", "scroll", "type", "key", "wait"]
 
     private let vmName: String
     private let actions: any AgentActions
@@ -126,6 +126,15 @@ public final class MCPServer {
                 let args = try Arguments(arguments, allowed: ["max_long_edge"])
                 let edge = try args.optionalInteger("max_long_edge", in: AgentProtocol.maxLongEdgeRange) ?? AgentProtocol.defaultMaxLongEdge
                 return screenshot(send(.screenshot(maxLongEdge: edge)))
+            case "zoom":
+                let args = try Arguments(arguments, allowed: ["x", "y", "width", "height", "max_long_edge"])
+                let x = try args.integer("x", in: 0...Int(Int32.max))
+                let y = try args.integer("y", in: 0...Int(Int32.max))
+                let width = try args.integer("width", in: 1...Int(Int32.max))
+                let height = try args.integer("height", in: 1...Int(Int32.max))
+                let edge = try args.optionalInteger("max_long_edge", in: AgentProtocol.maxLongEdgeRange) ?? AgentProtocol.defaultMaxLongEdge
+                return zoom(send(.zoom(x: Double(x), y: Double(y), width: Double(width), height: Double(height), maxLongEdge: edge)),
+                            region: "\(x),\(y),\(width),\(height)")
             case "click":
                 let args = try Arguments(arguments, allowed: ["x", "y", "button", "count"])
                 let button = try args.optionalString("button", in: ["left", "right"]).flatMap(MouseButton.init(rawValue:)) ?? .left
@@ -191,6 +200,22 @@ public final class MCPServer {
             "content": [
                 ["type": "image", "data": png.base64EncodedString(), "mimeType": "image/png"],
                 ["type": "text", "text": "\(image.width)x\(image.height) screenshot of a \(screen.width)x\(screen.height)-point screen"],
+            ]
+        ]
+    }
+
+    private func zoom(_ answer: AgentAnswer, region: String) -> [String: Any] {
+        guard answer.ok else { return Self.failure(answer) }
+        guard let path = answer.path, let image = answer.image else {
+            return Self.toolError(.internalError, "The owner answered without a zoom.")
+        }
+        guard let png = try? readPNG(path) else {
+            return Self.toolError(.internalError, "The zoom file could not be read.")
+        }
+        return [
+            "content": [
+                ["type": "image", "data": png.base64EncodedString(), "mimeType": "image/png"],
+                ["type": "text", "text": "\(image.width)x\(image.height) zoom of the region \(region) of the latest screenshot; click coordinates still refer to the latest screenshot"],
             ]
         ]
     }
@@ -308,6 +333,18 @@ public final class MCPServer {
                 "max_long_edge": ["type": "integer", "minimum": AgentProtocol.maxLongEdgeRange.lowerBound, "maximum": AgentProtocol.maxLongEdgeRange.upperBound,
                     "description": "Longest side of the returned image in pixels (default \(AgentProtocol.defaultMaxLongEdge))."]
             ], required: []),
+        ],
+        [
+            "name": "zoom",
+            "description": "Look at a region of the VM's screen at full pixel density, to read small text. The region is \(inPixels). Click coordinates still refer to the latest screenshot, not to the zoom.",
+            "inputSchema": schema([
+                "x": ["type": "integer", "minimum": 0, "description": "Left edge of the region, \(inPixels)"],
+                "y": ["type": "integer", "minimum": 0, "description": "Top edge of the region, \(inPixels)"],
+                "width": ["type": "integer", "minimum": 1, "description": "Width of the region, \(inPixels)"],
+                "height": ["type": "integer", "minimum": 1, "description": "Height of the region, \(inPixels)"],
+                "max_long_edge": ["type": "integer", "minimum": AgentProtocol.maxLongEdgeRange.lowerBound, "maximum": AgentProtocol.maxLongEdgeRange.upperBound,
+                    "description": "Longest side of the returned image in pixels (default \(AgentProtocol.defaultMaxLongEdge))."],
+            ], required: ["x", "y", "width", "height"]),
         ],
         [
             "name": "click",

@@ -3,7 +3,9 @@ import Foundation
 
 public enum AgentProtocol {
     public static let version = 1
-    public static let helperVersion = "1.0.3"
+    public static let helperVersion = "1.0.4"
+    /// The first Nido Agent that understands `zoom`.
+    public static let minimumZoomHelperVersion = "1.0.4"
     public static let port: UInt32 = 7710
     public static let maxFrameBytes = 32 << 20
     public static let defaultMaxLongEdge = 1280
@@ -37,9 +39,14 @@ public enum AgentAction: Codable, Equatable, Sendable {
     /// own vsock: the control socket of `nido act` and `nido mcp` refuses it. Nido Agent 1.0.2 and
     /// older answer `badRequest`.
     case setClipboard(text: String, clearAfter: Int)
+    /// A region of the latest screenshot (pixels of that screenshot), captured again at the
+    /// display's full pixel density and scaled down to `maxLongEdge`. Never changes the
+    /// coordinate space: clicks keep referring to the latest screenshot. Nido Agent 1.0.3 and
+    /// older answer `badRequest`.
+    case zoom(x: Double, y: Double, width: Double, height: Double, maxLongEdge: Int)
 
     private enum CodingKeys: String, CodingKey {
-        case op, maxLongEdge, x, y, button, count, fromX, fromY, toX, toY, dx, dy, text, combo, clearAfter
+        case op, maxLongEdge, x, y, width, height, button, count, fromX, fromY, toX, toY, dx, dy, text, combo, clearAfter
     }
 
     public init(from decoder: Decoder) throws {
@@ -68,6 +75,11 @@ public enum AgentAction: Codable, Equatable, Sendable {
         case "setClipboard":
             self = .setClipboard(text: try c.decode(String.self, forKey: .text),
                                  clearAfter: try c.decode(Int.self, forKey: .clearAfter))
+        case "zoom":
+            self = .zoom(x: try c.decode(Double.self, forKey: .x), y: try c.decode(Double.self, forKey: .y),
+                         width: try c.decode(Double.self, forKey: .width),
+                         height: try c.decode(Double.self, forKey: .height),
+                         maxLongEdge: try c.decode(Int.self, forKey: .maxLongEdge))
         default:
             throw DecodingError.dataCorruptedError(forKey: .op, in: c, debugDescription: "unknown op '\(op)'")
         }
@@ -109,6 +121,13 @@ public enum AgentAction: Codable, Equatable, Sendable {
             try c.encode("setClipboard", forKey: .op)
             try c.encode(text, forKey: .text)
             try c.encode(clearAfter, forKey: .clearAfter)
+        case .zoom(let x, let y, let width, let height, let maxLongEdge):
+            try c.encode("zoom", forKey: .op)
+            try c.encode(x, forKey: .x)
+            try c.encode(y, forKey: .y)
+            try c.encode(width, forKey: .width)
+            try c.encode(height, forKey: .height)
+            try c.encode(maxLongEdge, forKey: .maxLongEdge)
         }
     }
 }

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+import CoreGraphics
 import Foundation
 
 public struct PixelSize: Codable, Equatable, Sendable, CustomStringConvertible {
@@ -45,5 +46,18 @@ public struct CoordinateSpace: Equatable, Sendable {
         let dx = min(max(x * Double(display.width) / Double(image.width), 0), Double(display.width - 1))
         let dy = min(max(y * Double(display.height) / Double(image.height), 0), Double(display.height - 1))
         return (dx, dy)
+    }
+
+    /// Converts a region in screenshot space to display points: both corners map like
+    /// `toDisplay` (so the region is clamped on screen), but the far corner may reach the
+    /// display's edge. Nil when less than one point is left.
+    public func toDisplayRect(x: Double, y: Double, width: Double, height: Double) -> CGRect? {
+        let w = Double(display.width), h = Double(display.height)
+        let x0 = min(max(x * w / Double(image.width), 0), w)
+        let y0 = min(max(y * h / Double(image.height), 0), h)
+        let x1 = min(max((x + width) * w / Double(image.width), 0), w)
+        let y1 = min(max((y + height) * h / Double(image.height), 0), h)
+        guard x1 - x0 >= 1, y1 - y0 >= 1 else { return nil }
+        return CGRect(x: x0, y: y0, width: x1 - x0, height: y1 - y0)
     }
 }

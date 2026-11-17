@@ -83,7 +83,7 @@ public enum AgentSupport {
     /// `args` as an `Invocation`: the action name, then its arguments; unknown options, missing or
     /// extra arguments and out-of-range values throw (`CLIError`, `KeyMapError` for a bad combo).
     public static func parseInvocation(_ args: [String]) throws -> Invocation {
-        guard let name = args.first else { throw CLIError.agentUsage("status | screenshot | click | drag | scroll | type | key | wait") }
+        guard let name = args.first else { throw CLIError.agentUsage("status | screenshot | zoom | click | drag | scroll | type | key | wait") }
         let rest = Array(args.dropFirst())
         switch name {
         case "status":
@@ -97,6 +97,18 @@ public enum AgentSupport {
                 maxLongEdge = try integer(value, name: "--max", in: maxLongEdgeRange)
             }
             return .send(.screenshot(maxLongEdge: maxLongEdge), output: p.options["--output"])
+        case "zoom":
+            let usage = "zoom X Y W H [--max N] [--output PATH]"
+            let p = try Parsed(rest, usage: usage, flags: [], options: ["--max", "--output"], positionals: 4)
+            var maxLongEdge = AgentProtocol.defaultMaxLongEdge
+            if let value = p.options["--max"] {
+                maxLongEdge = try integer(value, name: "--max", in: maxLongEdgeRange)
+            }
+            let x = try number(p.positionals[0], name: "X"), y = try number(p.positionals[1], name: "Y")
+            let width = try number(p.positionals[2], name: "W"), height = try number(p.positionals[3], name: "H")
+            guard x >= 0, y >= 0, width >= 1, height >= 1 else { throw CLIError.agentUsage(usage) }
+            return .send(.zoom(x: x, y: y, width: width, height: height, maxLongEdge: maxLongEdge),
+                         output: p.options["--output"])
         case "click":
             let usage = "click X Y [--right] [--count N]"
             let p = try Parsed(rest, usage: usage, flags: ["--right"], options: ["--count"], positionals: 2)

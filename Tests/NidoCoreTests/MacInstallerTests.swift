@@ -611,4 +611,50 @@ private final class SpyPasswordStore: GuestPasswordStore, @unchecked Sendable {
         #expect(deletes.map(\.0) == [id])
         #expect(deletes.map(\.1) == [true])
     }
+
+    /// The sweep holds the staging folder's lock while it deletes the item and removes the
+    /// folder (no check-then-act window); a folder whose lock is held is kept with its item.
+    @Test func sweepHoldsLockWhileRemovingCreating() async throws {
+        let env = try InstallEnv()
+        defer { env.cleanup() }
+        try env.paths.ensureRoot()
+        /// Records whether the folder's lock was held when its item was deleted.
+        final class LockStore: GuestPasswordStore, @unchecked Sendable {
+            let folders = Mutex<[UUID: URL]>([:])
+            let held = Mutex<[UUID: Bool]>([:])
+            let items = Mutex<Set<UUID>>([])
+            func read(vm: UUID) throws -> GuestPassword? { nil }
+            func save(_ password: GuestPassword, vm: UUID) throws {}
+            func delete(vm: UUID) throws {
+                let url = folders.withLock { $0[vm] }
+                let isHeld = url.map { BundleLock.holder(VMBundle(url: $0)) != nil } ?? false
+                held.withLock { $0[vm] = isHeld }
+                items.withLock { _ = $0.insert(vm) }
+            }
+        }
+        let store = LockStore()
+        func staging(_ id: UUID) throws -> URL {
+            let url = env.paths.root.appendingPathComponent(".creating-\(UUID().uuidString)")
+            try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
+            try VMBundle(url: url).writeConfigUnlocked(VMConfig(
+                id: id, name: try VMName("staged"), guest: .macos, cpuCount: 2, memoryBytes: 4 * gib,
+                diskBytes: 64 * gib, macAddress: "02:00:00:00:00:0d"))
+            store.folders.withLock { $0[id] = url }
+            return url
+        }
+        let deadID = UUID(), liveID = UUID()
+        let dead = try staging(deadID)
+        let live = try staging(liveID)
+        let lock = try BundleLock.acquire(VMBundle(url: live), owner: .cliOperation)
+        defer { lock.release() }
+        let now = Date()
+        _ = try await VMRegistry(
+            paths: env.paths, passwords: store, now: { now }, changeTime: { _ in now.addingTimeInterval(-600) }
+        ).summaries()
+        let entries = env.rootEntries()
+        #expect(!entries.contains(dead.lastPathComponent))
+        #expect(entries.contains(live.lastPathComponent))
+        #expect(store.held.withLock { $0[deadID] } == true)
+        #expect(!store.items.withLock { $0.contains(liveID) })
+    }
 }

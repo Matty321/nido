@@ -58,13 +58,17 @@ struct LiveSessionFactoryTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let bundle = try makeMacBundle(in: root)
         let services = AIBridgeServices(router: DebugFakeRouter(), tokenStore: DebugMemoryTokenStore())
-        let factory = LiveSessionFactory(imageCache: root.appendingPathComponent("cache"), aiBridge: services)
+        let store = MemoryGuestPasswordStore()
+        let factory = LiveSessionFactory(
+            imageCache: root.appendingPathComponent("cache"), aiBridge: services, passwords: store)
 
         let handle = try await factory.makeSession(bundle: bundle)
 
         #expect(handle.aiBridgeAttached == nil)
         let session = try #require(handle as? VMSession)
         #expect(session.guest == .macos)
+        // The app's store, never the Keychain default of `VMSession`.
+        #expect((session.guestPasswords as AnyObject) === store)
         #expect(session.aiBridge == nil)
         // Asked directly, the session refuses too: no vsock device, no bridge on a macOS guest.
         #expect(!session.attachAIBridge(try services.makeHost(for: bundle)))
@@ -86,7 +90,8 @@ struct LiveSessionFactoryTests {
             diskBytes: 1 << 30, macAddress: "02:00:00:00:00:07", controlledNetwork: true)
         let bundle = try VMBundle.create(config: config, paths: paths)
         let seen = Mutex<(onMain: Bool, mac: String)?>(nil)
-        let factory = LiveSessionFactory(imageCache: root.appendingPathComponent("cache"), startRelay: { _, mac in
+        let store = MemoryGuestPasswordStore()
+        let factory = LiveSessionFactory(imageCache: root.appendingPathComponent("cache"), passwords: store, startRelay: { _, mac in
             seen.withLock { $0 = (Thread.isMainThread, mac) }
             throw Sentinel()
         })
@@ -105,7 +110,8 @@ struct LiveSessionFactoryTests {
         let bundle = try makeMacBundle(in: root)
         let mac = try bundle.updateConfig { $0.controlledNetwork = true }.macAddress
         let seen = Mutex<(onMain: Bool, mac: String)?>(nil)
-        let factory = LiveSessionFactory(imageCache: root.appendingPathComponent("cache"), startRelay: { _, mac in
+        let store = MemoryGuestPasswordStore()
+        let factory = LiveSessionFactory(imageCache: root.appendingPathComponent("cache"), passwords: store, startRelay: { _, mac in
             seen.withLock { $0 = (Thread.isMainThread, mac) }
             throw Sentinel()
         })

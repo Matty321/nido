@@ -2,6 +2,19 @@
 
 Every Nido release, newest first. The first time Nido opens after an update, it shows the notes for the installed version (choose Help › What’s New in Nido to read them again).
 
+## [0.9.3] – 2026-11-17
+
+### A Mac for Agents
+- **An agent can zoom in to read small text.** The new `zoom` action (the MCP tool `zoom`, or `nido act <vm> zoom X Y W H`) shows a part of the latest screenshot at the full resolution of the VM’s display. Clicks still use the coordinates of the latest screenshot. It needs Nido Agent 1.0.4.
+
+### Fixes
+- **`nido ssh` tells you what to do when a macOS VM is waiting at its login window** (FileVault), instead of showing only ssh’s “Permission denied”.
+- **Settings › Agent no longer asks the Keychain again and again** while a stored password can’t be used, and the warning goes away when you fix the password from Terminal.
+- **What an interrupted clone leaves behind is removed together with its Keychain item**, and the cleanup never touches an installation that is still running.
+
+### Nido Agent 1.0.4
+- Adds zoom. Update it from the VM’s **Settings › Agent** or with `nido agent setup <vm>`.
+
 ## [0.9.2] – 2026-11-16
 
 ### Fixes

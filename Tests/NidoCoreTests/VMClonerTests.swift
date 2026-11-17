@@ -488,6 +488,38 @@ private struct InjectedFailure: Error {}
         #expect(try VMBundle.list(paths: env.paths).map(\.displayName) == ["sorgente"])
     }
 
+    /// A crash between the clone's Keychain save and the rename leaves a `.cloning-<uuid>` folder
+    /// with the clone's `config.json`: the sweep removes the item with it, unless a bundle in the
+    /// root uses the same id.
+    @Test func sweepDeletesItemOfDeadCloning() throws {
+        let env = try CloneEnv()
+        defer { env.cleanup() }
+        let store = MemoryGuestPasswordStore()
+        let password = try #require(GuestPassword("abcde-fghjk-mnpqr-stuvw"))
+        func staging(_ id: UUID, _ name: String) throws -> URL {
+            let url = env.paths.root.appendingPathComponent(".\(name).cloning-\(UUID().uuidString)")
+            try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
+            try VMBundle(url: url).writeConfigUnlocked(VMConfig(
+                id: id, name: try VMName(name), guest: .macos, cpuCount: 2, memoryBytes: 4 << 30,
+                diskBytes: 64 << 30, macAddress: "02:00:00:00:00:0c"))
+            return url
+        }
+        let deadID = UUID()
+        let usedID = try env.source.readConfig().id
+        try store.save(password, vm: deadID)
+        try store.save(password, vm: usedID)
+        let dead = try staging(deadID, "morta")
+        let copied = try staging(usedID, "copiata")
+        let now = Date()
+        VMBundle.sweepOrphanTombstones(
+            paths: env.paths, now: now, changeTime: { _ in now.addingTimeInterval(-7200) }, passwords: store)
+        let entries = try env.rootEntries()
+        #expect(!entries.contains(dead.lastPathComponent))
+        #expect(!entries.contains(copied.lastPathComponent))
+        #expect(try store.read(vm: deadID) == nil)
+        #expect(try store.read(vm: usedID) == password)
+    }
+
     @Test func cloningDirectoryWithARecentFileIsKept() throws {
         let env = try CloneEnv()
         defer { env.cleanup() }

@@ -19,7 +19,7 @@ struct LibraryView: View {
             let fakeTemplateSizes: [String: UInt64] = [:]
         #endif
         _model = State(initialValue: LibraryModel(
-            registry: environment.registry, control: LiveVMControl(paths: paths),
+            registry: environment.registry, control: LiveVMControl(paths: paths, passwords: environment.guestPasswords),
             cloner: LiveVMCloner(paths: paths, passwords: environment.guestPasswords), templates: LiveVMTemplates(paths: paths),
             stopAppVM: { name in await environment.sessions.stop(name) },
             resumeAppVM: { name in await environment.sessions.resume(name) },

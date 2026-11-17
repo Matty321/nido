@@ -20,6 +20,8 @@ protocol VMControlling: Sendable {
 /// `VMControlling` on top of `VMControl`, for the VMs in `paths`.
 struct LiveVMControl: VMControlling {
     let paths: NidoPaths
+    /// The password of a deleted VM goes from this store (`AppEnvironment.guestPasswords`).
+    let passwords: any GuestPasswordStore
 
     func requestStop(_ name: VMName) throws {
         try VMControl.requestStop(bundle: VMBundle.open(name, paths: paths), name: name)
@@ -29,7 +31,7 @@ struct LiveVMControl: VMControlling {
     /// without blocking a thread.
     @concurrent
     func delete(_ name: VMName) async throws {
-        try await VMControl.deleteVMAsync(name, paths: paths, owner: .app)
+        try await VMControl.deleteVMAsync(name, paths: paths, owner: .app, passwords: passwords)
     }
 }
 

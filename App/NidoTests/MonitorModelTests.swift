@@ -332,7 +332,7 @@ struct MonitorModelTests {
             $0.aiBridgeAttached = false
         }
         let window = VMWindowModel(
-            name: try VMName("debian-13"), paths: root.paths, factory: factory,
+            name: try VMName("debian-13"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             monitor: MonitorModel(interval: .milliseconds(20)))
         #expect(window.monitor.state == .vmStopped)
         await window.start()

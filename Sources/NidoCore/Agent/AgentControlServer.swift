@@ -560,6 +560,32 @@ actor AgentGate {
             request.image = lastShot.image
             request.screen = lastShot.screen
         }
+        if case .zoom = action {
+            // A helper older than the zoom op answers "unknown action": ask its version first,
+            // through the same path, so the op never reaches it. Nothing interleaves: this is one turn.
+            let statusRequest = AgentRequest(v: AgentProtocol.version, action: .status)
+            do {
+                let (statusReply, _) = try await perform(statusRequest)
+                let version = statusReply.status?.helperVersion
+                // The helper's own refusal (busy, too slow...) is not an old version: forward it.
+                guard statusReply.ok else {
+                    return Outcome(answer: .failure(statusReply.error ?? .internalError, statusReply.message ?? ""),
+                                   close: false)
+                }
+                guard let version,
+                      MacAgentInstaller.compareVersions(version, AgentProtocol.minimumZoomHelperVersion) >= 0 else {
+                    return Outcome(answer: .failure(.versionMismatch, L10n.string(
+                        "Nido Agent is too old to zoom: run nido agent setup \(config.name.rawValue) to update it")),
+                        close: false)
+                }
+            } catch where error.code == .versionMismatch {
+                return Outcome(answer: .failure(.versionMismatch, L10n.string(
+                    "incompatible Nido Agent version: run nido agent setup \(config.name.rawValue) to update Nido Agent")),
+                    close: false)
+            } catch {
+                return Outcome(answer: .failure(error.code, error.message), close: false)
+            }
+        }
 
         let reply: AgentReply
         let png: Data?
@@ -575,7 +601,7 @@ actor AgentGate {
         }
         var answer = AgentAnswer(ok: reply.ok, status: reply.status, image: reply.image, screen: reply.screen,
                                  error: reply.error, message: reply.message)
-        if case .screenshot = action, reply.ok {
+        if action.isImageAction, reply.ok {
             guard let png, let image = reply.image, let screen = reply.screen else {
                 return Outcome(answer: .failure(.internalError, L10n.string("could not talk to Nido Agent")), close: false)
             }
@@ -584,7 +610,8 @@ actor AgentGate {
             } catch {
                 return Outcome(answer: .failure(.internalError, L10n.string("could not save the screenshot")), close: false)
             }
-            lastShot = (image, screen)
+            // A zoom never changes what coordinates refer to.
+            if case .screenshot = action { lastShot = (image, screen) }
         }
         return Outcome(answer: answer, close: false)
     }
@@ -593,7 +620,7 @@ actor AgentGate {
     /// where the pointer is and needs none.
     static func carriesPoint(_ action: AgentAction) -> Bool {
         switch action {
-        case .click, .drag: true
+        case .click, .drag, .zoom: true
         case .scroll(_, _, let x, let y): x != nil || y != nil
         case .status, .screenshot, .type, .key, .setClipboard: false
         }

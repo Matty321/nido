@@ -69,6 +69,18 @@ import Testing
         #expect(throws: (any Error).self) { _ = try AgentSupport.parseInvocation(["click", "1", "2", "--output", "x"]) }
     }
 
+    @Test func zoomParsing() throws {
+        #expect(try AgentSupport.parseInvocation(["zoom", "10", "20", "300", "200", "--max", "800"])
+            == .send(.zoom(x: 10, y: 20, width: 300, height: 200, maxLongEdge: 800), output: nil))
+        #expect(try AgentSupport.parseInvocation(["zoom", "1", "2", "3", "4", "--output", "/x/z.png"])
+            == .send(.zoom(x: 1, y: 2, width: 3, height: 4, maxLongEdge: 1280), output: "/x/z.png"))
+        #expect(throws: (any Error).self) { _ = try AgentSupport.parseInvocation(["zoom", "10", "20", "300"]) }
+        #expect(throws: (any Error).self) { _ = try AgentSupport.parseInvocation(["zoom", "10", "20", "0", "200"]) }
+        #expect(throws: (any Error).self) { _ = try AgentSupport.parseInvocation(["zoom", "-1", "20", "3", "200"]) }
+        #expect(throws: (any Error).self) { _ = try AgentSupport.parseInvocation(["zoom", "1", "2", "3", "4", "--max", "63"]) }
+        #expect(throws: (any Error).self) { _ = try AgentSupport.parseInvocation(["zoom", "1", "2", "3", "4", "--max", "4097"]) }
+    }
+
     @Test func waitBounds() throws {
         #expect(try AgentSupport.waitMilliseconds(10000) == .milliseconds(10000))
         #expect(try AgentSupport.waitMilliseconds(0) == .zero)

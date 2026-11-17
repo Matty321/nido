@@ -139,7 +139,7 @@ struct LibraryModelTests {
     }
 
     @Test func noMarkForVMWithoutSession() {
-        let store = VMSessionStore(paths: NidoPaths(root: FileManager.default.temporaryDirectory), factory: FakeSessionFactory())
+        let store = VMSessionStore(paths: NidoPaths(root: FileManager.default.temporaryDirectory), factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
         let model = LibraryModel(
             registry: FakeRegistry(), control: FakeControl(), liveAgentActive: { store.isAgentActive($0) })
         #expect(!store.isAgentActive("sconosciuta"))
@@ -684,7 +684,7 @@ struct LibraryTemplateTests {
         _ = try source.updateConfig { $0.aiBridge = AIBridgePolicy(enabled: true, privacyAcknowledged: true) }
 
         let model = LibraryModel(
-            registry: VMRegistry(paths: paths, passwords: nil), control: LiveVMControl(paths: paths),
+            registry: VMRegistry(paths: paths, passwords: nil), control: LiveVMControl(paths: paths, passwords: MemoryGuestPasswordStore()),
             cloner: LiveVMCloner(paths: paths, passwords: MemoryGuestPasswordStore()), templates: LiveVMTemplates(paths: paths))
         await model.refresh()
         let vm = try #require(model.items.first { $0.name == "debian-ai" })

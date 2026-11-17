@@ -2004,7 +2004,7 @@ final class MacWizardTests {
         let store = MacInstallStore()
         let model = WizardModel(
             registry: VMRegistry(paths: paths, passwords: nil), images: .localFile(tmp.appendingPathComponent("unused.raw")),
-            creator: FakeCreator(), defaultKeyURL: key, macInstaller: LiveMacVMInstaller(paths: paths),
+            creator: FakeCreator(), defaultKeyURL: key, macInstaller: LiveMacVMInstaller(paths: paths, passwords: MemoryGuestPasswordStore()),
             installs: store, defaultSSHUser: "agente")
         var created: [String] = []
         model.onCreated = { created.append($0.rawValue) }
@@ -2055,7 +2055,7 @@ final class MacWizardTests {
         let ipsw = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["NIDO_TEST_IPSW"]))
         let paths = NidoPaths(root: tmp.appendingPathComponent("VMs", isDirectory: true))
         try paths.ensureRoot()
-        let installer = LiveMacVMInstaller(paths: paths)
+        let installer = LiveMacVMInstaller(paths: paths, passwords: MemoryGuestPasswordStore())
         let info = try await installer.inspect(ipsw)
         let store = MacInstallStore()
         let request = MacVMRequest(

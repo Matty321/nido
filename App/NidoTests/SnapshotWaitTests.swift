@@ -23,7 +23,7 @@ struct SnapshotWaitTests {
                 let scenario = Task(priority: .background) { @MainActor in
                     let root = try SnapshotRoot()
                     let window = VMWindowModel(
-                        name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory())
+                        name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
                     let gate = Gate()
                     let work = Task(priority: workPriority) { try await window.exclusive { await gate.wait() } }
                     while !window.isSnapshotting { await Task.yield() }

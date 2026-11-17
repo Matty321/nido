@@ -4528,38 +4528,38 @@
         }
       }
     },
-    "Coordinates are in the pixels of the last screenshot. The VM must be running with agent access on (nido agent enable). The exit code is 0 when the action succeeded and 1 otherwise; --output saves a copy of the screenshot and never overwrites a file." : {
+    "Coordinates are in the pixels of the last screenshot. The VM must be running with agent access on (nido agent enable). The exit code is 0 when the action succeeded and 1 otherwise; --output saves a copy of the screenshot or zoom and never overwrites a file." : {
       "comment" : "Agent Mac: discussion of nido act.",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Koordinaten beziehen sich auf die Pixel des letzten Screenshots. Die VM muss laufen und der Agent-Zugriff eingeschaltet sein (nido agent enable). Der Exit-Code ist 0, wenn die Aktion gelungen ist, sonst 1; --output speichert eine Kopie des Screenshots und überschreibt nie eine Datei."
+            "value" : "Die Koordinaten beziehen sich auf die Pixel des letzten Screenshots. Die VM muss laufen und der Agent-Zugriff eingeschaltet sein (nido agent enable). Der Exit-Code ist 0, wenn die Aktion gelungen ist, sonst 1; --output speichert eine Kopie des Screenshots oder Zooms und überschreibt nie eine Datei."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coordinates are in the pixels of the last screenshot. The VM must be running with agent access on (nido agent enable). The exit code is 0 when the action succeeded and 1 otherwise; --output saves a copy of the screenshot and never overwrites a file."
+            "value" : "Coordinates are in the pixels of the last screenshot. The VM must be running with agent access on (nido agent enable). The exit code is 0 when the action succeeded and 1 otherwise; --output saves a copy of the screenshot or zoom and never overwrites a file."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Las coordenadas están en píxeles de la última captura. La VM debe estar en ejecución con el acceso del agente activado (nido agent enable). El código de salida es 0 si la acción tuvo éxito y 1 en caso contrario; --output guarda una copia de la captura y nunca sobrescribe un archivo."
+            "value" : "Las coordenadas están en píxeles de la última captura. La VM debe estar en ejecución con el acceso del agente activado (nido agent enable). El código de salida es 0 si la acción tuvo éxito y 1 en caso contrario; --output guarda una copia de la captura o del zoom y nunca sobrescribe un archivo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les coordonnées sont en pixels de la dernière capture. La VM doit être en cours d’exécution avec l’accès agent activé (nido agent enable). Le code de sortie est 0 si l’action a réussi, 1 sinon ; --output enregistre une copie de la capture et n’écrase jamais un fichier."
+            "value" : "Les coordonnées sont en pixels de la dernière capture. La VM doit être en cours d’exécution avec l’accès agent activé (nido agent enable). Le code de sortie est 0 si l’action a réussi, 1 sinon ; --output enregistre une copie de la capture ou du zoom et n’écrase jamais un fichier."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le coordinate sono nei pixel dell’ultimo screenshot. La VM deve essere in esecuzione con l’accesso dell’agente attivo (nido agent enable). Il codice di uscita è 0 se l’azione è riuscita, 1 altrimenti; --output salva una copia dello screenshot e non sovrascrive mai un file."
+            "value" : "Le coordinate sono nei pixel dell’ultimo screenshot. La VM deve essere in esecuzione con l’accesso dell’agente attivo (nido agent enable). Il codice di uscita è 0 se l’azione è riuscita, 1 altrimenti; --output salva una copia dello screenshot o dello zoom e non sovrascrive mai un file."
           }
         }
       }
@@ -16032,6 +16032,42 @@
         }
       }
     },
+    "Nido Agent is too old to zoom: run nido agent setup %@ to update it" : {
+      "comment" : "Agent Mac: zoom needs a newer Nido Agent in the VM; %@ is the VM name, nido agent setup is a command.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent ist zu alt für den Zoom: Führe nido agent setup %@ aus, um es zu aktualisieren"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent is too old to zoom: run nido agent setup %@ to update it"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent es demasiado antiguo para el zoom: ejecuta nido agent setup %@ para actualizarlo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent est trop ancien pour le zoom : exécutez nido agent setup %@ pour le mettre à jour"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent è troppo vecchio per lo zoom: esegui nido agent setup %@ per aggiornarlo"
+          }
+        }
+      }
+    },
     "incompatible Nido Agent version: run nido agent setup %@ to update Nido Agent" : {
       "comment" : "Agent Mac: the helper speaks another protocol version; %@ is the VM name, nido agent setup is a command.",
       "extractionState" : "manual",
@@ -23422,6 +23458,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "La chiave è autorizzata, ma non è stato possibile salvare la password nel Portachiavi: %@"
+          }
+        }
+      }
+    },
+    "If %@ is waiting at its login window (FileVault), log in through its window, then try again." : {
+      "comment" : "nido ssh: ssh failed on its own against a macOS VM, most likely at a FileVault login window; %@ is the VM name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn %@ im Anmeldefenster (FileVault) wartet, melde dich in seinem Fenster an und versuche es dann erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If %@ is waiting at its login window (FileVault), log in through its window, then try again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si %@ está esperando en su ventana de inicio de sesión (FileVault), inicia sesión en su ventana y vuelve a intentarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si %@ attend à sa fenêtre de connexion (FileVault), connectez-vous dans sa fenêtre, puis réessayez."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se %@ è ferma alla finestra di login (FileVault), accedi dalla sua finestra, poi riprova."
           }
         }
       }

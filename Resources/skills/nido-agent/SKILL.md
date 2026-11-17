@@ -5,7 +5,7 @@ description: Use a separate macOS VM run by Nido through the nido MCP tools: loo
 
 # Driving a Nido macOS VM
 
-The nido MCP tools (`status`, `screenshot`, `click`, `drag`, `scroll`, `type`, `key`, `wait`) control a separate Mac: a virtual machine with its own apps, files, accounts and permissions. Nothing you do there reaches the user's Mac: not the pointer, not the keyboard, not the clipboard. Work in the VM only through these tools.
+The nido MCP tools (`status`, `screenshot`, `zoom`, `click`, `drag`, `scroll`, `type`, `key`, `wait`) control a separate Mac: a virtual machine with its own apps, files, accounts and permissions. Nothing you do there reaches the user's Mac: not the pointer, not the keyboard, not the clipboard. Work in the VM only through these tools.
 
 ## Setup (for the human)
 
@@ -27,7 +27,7 @@ Never chain several actions on a screen you have not looked at since the last on
 
 ## Coordinates
 
-All coordinates are pixels of the latest screenshot. Never reuse coordinates from an older one. If an answer says "the screen changed: take a new screenshot", do exactly that, then decide again. `screenshot` takes `max_long_edge` to get a smaller image.
+All coordinates are pixels of the latest screenshot. Never reuse coordinates from an older one. If an answer says "the screen changed: take a new screenshot", do exactly that, then decide again. `screenshot` takes `max_long_edge` to get a smaller image. Use `zoom` (x, y, width, height of a region of the latest screenshot) to read small text; clicks still use the coordinates of the screenshot, never those of a zoom.
 
 ## Tools
 

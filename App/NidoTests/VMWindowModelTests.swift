@@ -290,7 +290,7 @@ final class TempRoot {
 struct VMWindowModelTests {
     private func model(_ root: TempRoot, _ factory: FakeSessionFactory,
                        name: String = "debian-13") throws -> VMWindowModel {
-        VMWindowModel(name: try VMName(name), paths: root.paths, factory: factory)
+        VMWindowModel(name: try VMName(name), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
     }
 
     // MARK: - Agent banner and frozen display
@@ -309,7 +309,7 @@ struct VMWindowModelTests {
     {
         let (stream, continuation) = AsyncStream.makeStream(of: Void.self)
         let model = VMWindowModel(
-            name: try VMName("mac"), paths: root.paths, factory: factory,
+            name: try VMName("mac"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             agentHoldSleep: { _ in for await _ in stream { break } })
         return (model, { continuation.yield() })
     }
@@ -324,7 +324,7 @@ struct VMWindowModelTests {
         let factory = FakeSessionFactory()
         factory.configure = { $0.sentProvisioning = true }
         let model = VMWindowModel(
-            name: try VMName("mac"), paths: root.paths, factory: factory,
+            name: try VMName("mac"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             agentHoldSleep: { _ in },
             firstRunSetup: { _, _, onEvent in
                 calls.withLock { $0 += 1 }
@@ -342,7 +342,7 @@ struct VMWindowModelTests {
         factory.configure = { $0.sentProvisioning = true }
         let (stream, continuation) = AsyncStream.makeStream(of: Void.self)
         let model = VMWindowModel(
-            name: try VMName("mac"), paths: root.paths, factory: factory,
+            name: try VMName("mac"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             agentHoldSleep: { _ in for await _ in stream { break } },
             firstRunSetup: { _, _, _ in true })
         await model.start()
@@ -358,7 +358,7 @@ struct VMWindowModelTests {
         let factory = FakeSessionFactory()
         factory.configure = { $0.sentProvisioning = true }
         let model = VMWindowModel(
-            name: try VMName("mac"), paths: root.paths, factory: factory,
+            name: try VMName("mac"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             agentHoldSleep: { _ in try? await Task.sleep(for: .seconds(3600)) },
             firstRunSetup: { _, _, _ in throw MacAgentSetupError.passwordNeeded("mac") })
         await model.start()
@@ -376,7 +376,7 @@ struct VMWindowModelTests {
         let factory = FakeSessionFactory()
         factory.configure = { $0.sentProvisioning = true }
         let model = VMWindowModel(
-            name: try VMName("mac"), paths: root.paths, factory: factory,
+            name: try VMName("mac"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             agentHoldSleep: { _ in try? await Task.sleep(for: .seconds(3600)) },
             firstRunSetup: { _, _, _ in throw GuestSSHError.passwordRejected(user: "agent", vm: "mac") })
         await model.start()
@@ -393,7 +393,7 @@ struct VMWindowModelTests {
         factory.configure = { $0.sentProvisioning = true }
         let (gate, open) = AsyncStream.makeStream(of: Void.self)
         let model = VMWindowModel(
-            name: try VMName("mac"), paths: root.paths, factory: factory,
+            name: try VMName("mac"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             agentHoldSleep: { _ in },
             firstRunSetup: { bundle, _, _ in
                 for await _ in gate { break }
@@ -431,7 +431,7 @@ struct VMWindowModelTests {
         let runs = Mutex(0)
         let cancelled = Mutex<[Bool]>([])
         let model = VMWindowModel(
-            name: try VMName("mac"), paths: root.paths, factory: factory,
+            name: try VMName("mac"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             agentHoldSleep: { _ in try? await Task.sleep(for: .seconds(3600)) },
             firstRunSetup: { _, _, _ in
                 let run = runs.withLock { $0 += 1; return $0 }
@@ -468,7 +468,7 @@ struct VMWindowModelTests {
         let factory = FakeSessionFactory()
         factory.configure = { $0.sentProvisioning = true }
         let model = VMWindowModel(
-            name: try VMName("mac"), paths: root.paths, factory: factory,
+            name: try VMName("mac"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             agentHoldSleep: { _ in try? await Task.sleep(for: .seconds(3600)) },
             firstRunSetup: { _, _, _ in throw MacAgentSetupError.passwordNeeded("mac") })
         let panel = try #require(model.terminalAccess)
@@ -496,7 +496,7 @@ struct VMWindowModelTests {
         let holds = HoldLog()
         let (stream, continuation) = AsyncStream.makeStream(of: Void.self)
         let model = VMWindowModel(
-            name: try VMName("mac"), paths: root.paths, factory: factory,
+            name: try VMName("mac"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             agentHoldSleep: { duration in
                 holds.add(duration)
                 for await _ in stream { break }
@@ -616,7 +616,7 @@ struct VMWindowModelTests {
         let factory = FakeSessionFactory()
         factory.configure = { $0.sentProvisioning = sent }
         let model = VMWindowModel(
-            name: try VMName("mac"), paths: root.paths, factory: factory,
+            name: try VMName("mac"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             agentHoldSleep: { _ in }, firstRunSetup: { _, _, _ in calls.withLock { $0 += 1 }; return true })
         await model.start()
         for _ in 0..<20 { await settle() }
@@ -922,7 +922,7 @@ struct VMWindowModelTests {
 
     @Test func storeHandsOutOneModelPerVM() throws {
         let root = try TempRoot(vms: ["debian-13", "web"])
-        let store = VMSessionStore(paths: root.paths, factory: FakeSessionFactory())
+        let store = VMSessionStore(paths: root.paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
         let name = try VMName("debian-13")
 
         #expect(store.model(for: name) === store.model(for: name))
@@ -1000,7 +1000,7 @@ struct VMWindowModelTests {
     @Test func storeStopsAllRunningVMsInParallel() async throws {
         let root = try TempRoot(vms: ["a", "b", "c"])
         let factory = FakeSessionFactory()
-        let store = VMSessionStore(paths: root.paths, factory: factory)
+        let store = VMSessionStore(paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         await store.model(for: try VMName("a")).start()
         await store.model(for: try VMName("b")).start()
         _ = store.model(for: try VMName("c"))  // window open, VM stopped
@@ -1020,7 +1020,7 @@ struct VMWindowModelTests {
 
     @Test func storeRoutesAppStopToTheRightModel() async throws {
         let root = try TempRoot(vms: ["a", "b"])
-        let store = VMSessionStore(paths: root.paths, factory: FakeSessionFactory())
+        let store = VMSessionStore(paths: root.paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
         await store.model(for: try VMName("a")).start()
         await store.model(for: try VMName("b")).start()
 
@@ -1033,7 +1033,7 @@ struct VMWindowModelTests {
     /// Riprendi on a library card: the store resumes the VM in its window model.
     @Test func storeResumesAPausedVM() async throws {
         let root = try TempRoot(vms: ["a"])
-        let store = VMSessionStore(paths: root.paths, factory: FakeSessionFactory())
+        let store = VMSessionStore(paths: root.paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
         let name = try VMName("a")
         #expect(!(await store.resume(name)), "Nessun modello: niente da riprendere")
         let model = store.model(for: name)
@@ -1050,7 +1050,7 @@ struct VMWindowModelTests {
     @Test func storeKnowsWhichVMsHaveAMachine() async throws {
         let root = try TempRoot(vms: ["a", "b"])
         let factory = FakeSessionFactory()
-        let store = VMSessionStore(paths: root.paths, factory: factory)
+        let store = VMSessionStore(paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         #expect(!store.runsMachine("a"))
         await store.model(for: try VMName("a")).start()
         #expect(store.runsMachine("a"))
@@ -1063,7 +1063,7 @@ struct VMWindowModelTests {
 
     @Test func storeForgetsOnlySettledModels() async throws {
         let root = try TempRoot(vms: ["a"])
-        let store = VMSessionStore(paths: root.paths, factory: FakeSessionFactory())
+        let store = VMSessionStore(paths: root.paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
         let name = try VMName("a")
         let running = store.model(for: name)
         await running.start()
@@ -1194,7 +1194,7 @@ struct VMWindowModelTests {
         let root = try TempRoot()
         let factory = FakeSessionFactory()
         factory.configure = { $0.holdsStop = true }
-        let store = VMSessionStore(paths: root.paths, factory: factory)
+        let store = VMSessionStore(paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         let model = store.model(for: try VMName("debian-13"))
         await model.start()
         let first = Task { await model.stop() }
@@ -1263,7 +1263,7 @@ struct VMWindowModelTests {
         let root = try TempRoot()
         let factory = FakeSessionFactory()
         factory.configure = { $0.stopFailure = "arresto forzato non riuscito" }
-        let store = VMSessionStore(paths: root.paths, factory: factory)
+        let store = VMSessionStore(paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         let name = try VMName("debian-13")
         weak var weakModel: VMWindowModel?
         do {
@@ -1297,7 +1297,7 @@ struct VMWindowModelTests {
         let root = try TempRoot()
         let factory = FakeSessionFactory()
         factory.configure = { $0.pauseFailure = "pausa non riuscita" }
-        let store = VMSessionStore(paths: root.paths, factory: factory)
+        let store = VMSessionStore(paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         let name = try VMName("debian-13")
         let model = store.model(for: name)
         await model.start()
@@ -1341,7 +1341,7 @@ struct VMWindowModelTests {
     @Test func storeRefusesToStartWhileQuitting() async throws {
         let root = try TempRoot(vms: ["a", "b"])
         let factory = FakeSessionFactory()
-        let store = VMSessionStore(paths: root.paths, factory: factory)
+        let store = VMSessionStore(paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         let a = store.model(for: try VMName("a"))
         store.beginQuit()
         store.open(try VMName("a"))
@@ -1382,7 +1382,7 @@ struct VMWindowModelTests {
 struct SuspendModelTests {
     private func model(_ root: TempRoot, _ factory: FakeSessionFactory,
                        name: String = "debian-13") throws -> VMWindowModel {
-        VMWindowModel(name: try VMName(name), paths: root.paths, factory: factory)
+        VMWindowModel(name: try VMName(name), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
     }
 
     @Test func suspendStopsWithStateAndOffersRiprendi() async throws {
@@ -1469,7 +1469,7 @@ struct SuspendModelTests {
         // "vecchia" booted before: its console.log exists.
         FileManager.default.createFile(atPath: try root.bundle("vecchia").consoleLogURL.path, contents: Data())
         let factory = FakeSessionFactory()
-        let store = VMSessionStore(paths: root.paths, factory: factory)
+        let store = VMSessionStore(paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         #expect(store.firstBootNames(now: Date()).isEmpty)
         for name in ["nuova", "vecchia", "mac"] {
             await store.model(for: try VMName(name)).start()
@@ -1504,7 +1504,7 @@ struct SuspendModelTests {
         factory.configure = { session in
             if session.bundleURL.lastPathComponent == "b.nidovm" { session.suspendUnsupported = "dispositivo non salvabile" }
         }
-        let store = VMSessionStore(paths: root.paths, factory: factory)
+        let store = VMSessionStore(paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         for name in ["a", "b"] { await store.model(for: try VMName(name)).start() }
         #expect(store.unsuspendableNames() == ["b"])
         #expect(store.firstBootNames(stoppedBy: .stop, now: Date()) == ["a", "b"])
@@ -1541,7 +1541,7 @@ struct SuspendModelTests {
     @Test func quitSuspendsAllAndStopsWhatCannotBeSaved() async throws {
         let root = try TempRoot(vms: ["a", "b"])
         let factory = FakeSessionFactory()
-        let store = VMSessionStore(paths: root.paths, factory: factory)
+        let store = VMSessionStore(paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         await store.model(for: try VMName("a")).start()
         factory.configure = { $0.suspendUnsupported = "dispositivo non salvabile" }
         await store.model(for: try VMName("b")).start()
@@ -1573,7 +1573,7 @@ struct VMWindowModelResumeStopTests {
         let root = try TempRoot()
         let factory = FakeSessionFactory()
         factory.configure = { $0.holdsResume = true }
-        let model = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: factory)
+        let model = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         let start = Task { await model.start() }
         await eventually { factory.made.first?.isRestoring == true }
         let session = try #require(factory.made.first)
@@ -1597,7 +1597,7 @@ struct VMWindowModelResumeStopTests {
         let root = try TempRoot()
         let factory = FakeSessionFactory()
         factory.configure = { $0.holdsResume = true }
-        let model = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: factory)
+        let model = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         let start = Task { await model.start() }
         await eventually { factory.made.first?.isRestoring == true }
         let session = try #require(factory.made.first)
@@ -1620,7 +1620,7 @@ struct VMWindowModelFailedResumeTests {
         let root = try TempRoot()
         let factory = FakeSessionFactory()
         factory.configure = { $0.resumeError = .unsafePath("config.json") }
-        let model = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: factory)
+        let model = VMWindowModel(name: try VMName("debian-13"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         await model.start()
         guard case .error = model.state else {
             Issue.record("atteso .error, ottenuto \(model.state)")
@@ -1646,7 +1646,7 @@ struct VMWindowModelFailedResumeTests {
             $0.aiBridgeAttached = true
         }
         let window = VMWindowModel(
-            name: try VMName("debian-13"), paths: root.paths, factory: factory,
+            name: try VMName("debian-13"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             monitor: MonitorModel(interval: .milliseconds(20)))
         await window.start()
         window.monitor.setVisible(true)
@@ -1672,7 +1672,7 @@ struct VMWindowModelFailedResumeTests {
         let over = MemoryHeadroom(physicalMemory: 16 << 30, nidoBytes: 10 << 30, foreignBytes: 0, startingBytes: 4 << 30)
         let answer = Mutex<MemoryHeadroom?>(over)
         let window = VMWindowModel(
-            name: try VMName("debian-13"), paths: root.paths, factory: factory,
+            name: try VMName("debian-13"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             checkHeadroom: { _ in answer.withLock { $0 } })
         await window.requestStart()
         #expect(window.state == .stopped)
@@ -1702,7 +1702,7 @@ struct VMWindowModelFailedResumeTests {
         factory.configure = { $0.guestChannel = channel }
         let runtime = FakeAIRuntime(status: runtimeStatus(installed: false, running: false))
         let window = VMWindowModel(
-            name: try VMName("debian-13"), paths: root.paths, factory: factory,
+            name: try VMName("debian-13"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             monitor: MonitorModel(interval: .milliseconds(20)),
             aiRuntime: AIRuntimeModel(readGuestToolsVersion: { "1.0.0" }, makeRuntime: { runtime }))
         window.provisioning.begin(ProvisioningPlan(model: "qwen3:0.6b"))
@@ -1736,7 +1736,7 @@ struct VMWindowModelFailedResumeTests {
         factory.configure = { $0.guestChannel = channel }
         let runtime = FakeAIRuntime(status: runtimeStatus(installed: false, running: false))
         let window = VMWindowModel(
-            name: try VMName("debian-ai"), paths: paths, factory: factory,
+            name: try VMName("debian-ai"), paths: paths, factory: factory, passwords: MemoryGuestPasswordStore(),
             monitor: MonitorModel(interval: .milliseconds(20)),
             aiRuntime: AIRuntimeModel(readGuestToolsVersion: { "1.0.0" }, makeRuntime: { runtime }),
             checkHeadroom: { _ in nil })
@@ -1752,7 +1752,7 @@ struct VMWindowModelFailedResumeTests {
     /// One Guest Tools model per VM, shared by its window and its settings: two installs cannot run at once.
     @Test func oneGuestToolsModelPerVM() throws {
         let root = try TempRoot()
-        let store = VMSessionStore(paths: root.paths, factory: FakeSessionFactory())
+        let store = VMSessionStore(paths: root.paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
         let name = try VMName("debian-13")
         let first = try #require(store.guestTools(for: name))
         #expect(store.guestTools(for: name) === first)
@@ -1776,7 +1776,7 @@ struct VMWindowModelFailedResumeTests {
                 id: UUID(), name: try VMName("debian-13"), guest: .linux, cpuCount: 2, memoryBytes: 4 << 30,
                 diskBytes: 16 << 30, macAddress: "52:54:00:12:34:56", sshPublicKeyPath: "/Users/x/.ssh/id_ed25519.pub"),
             paths: paths)
-        let store = VMSessionStore(paths: paths, factory: FakeSessionFactory(), checkHeadroom: { _ in nil })
+        let store = VMSessionStore(paths: paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore(), checkHeadroom: { _ in nil })
         let name = try VMName("debian-13")
         let services = FakeGuestToolsServices()
         let tools = try #require(store.guestTools(for: name, services: services))
@@ -1947,7 +1947,7 @@ final class RecordingSink: KeystrokeSink {
 @MainActor
 struct MacWindowTests {
     private func model(_ root: TempRoot, _ factory: FakeSessionFactory) throws -> VMWindowModel {
-        VMWindowModel(name: try VMName("macos-agenti"), paths: root.paths, factory: factory)
+        VMWindowModel(name: try VMName("macos-agenti"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
     }
 
     /// R4: the guest's screen, no serial terminal, no Monitor/AI views, no M3c panels;
@@ -1971,7 +1971,7 @@ struct MacWindowTests {
 
         // Linux keeps its console, its views and its bar.
         let linuxRoot = try TempRoot()
-        let linux = VMWindowModel(name: try VMName("debian-13"), paths: linuxRoot.paths, factory: factory)
+        let linux = VMWindowModel(name: try VMName("debian-13"), paths: linuxRoot.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         #expect(linux.guest == .linux && !linux.showsDisplay && linux.showsViewTabs && linux.terminalAccess == nil)
         await linux.start()
         #expect(linux.terminal != nil)
@@ -1985,7 +1985,7 @@ struct MacWindowTests {
     @Test func closingWindowKeepsMacVMRunning() async throws {
         let root = try macRoot()
         let factory = FakeSessionFactory()
-        let store = VMSessionStore(paths: root.paths, factory: factory, checkHeadroom: { _ in nil })
+        let store = VMSessionStore(paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore(), checkHeadroom: { _ in nil })
         let name = try VMName("macos-agenti")
         let model = store.model(for: name)
         await model.start()

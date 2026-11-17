@@ -25,11 +25,17 @@ struct SSHCommand: ParsableCommand {
         let argv = try CLISupport.sshArguments(
             config: config, endpoint: endpoint, knownHosts: bundle.knownHostsURL, extra: sshArguments)
 
-        // A macOS VM never reached: wait for ssh, so its first success is recorded and the app's
-        // "Accesso da terminale" panel stops opening by itself.
-        if CLISupport.watchesSSHResult(config: config) {
+        // A macOS VM: ssh runs as a child, so a refused key can be explained afterwards (the
+        // FileVault login window) and, while the guest was never reached, its first success
+        // recorded so the app's "Accesso da terminale" panel stops opening by itself.
+        if config.guest == .macos {
             let exit = try CLISupport.runSSH(argv)
-            CLISupport.recordSSHResult(bundle: bundle, exit: exit, extra: sshArguments)
+            if CLISupport.watchesSSHResult(config: config) {
+                CLISupport.recordSSHResult(bundle: bundle, exit: exit, extra: sshArguments)
+            }
+            if let hint = CLISupport.loginWindowHint(config: config, exit: exit) {
+                Terminal.error(hint)
+            }
             throw ExitCode(exit.exitCode)
         }
 

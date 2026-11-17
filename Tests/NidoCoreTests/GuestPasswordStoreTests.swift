@@ -45,6 +45,22 @@ private let keychainAvailable: Bool = {
         #expect(try !store.contains(vm: id))
     }
 
+    /// The date of the last change, without the password: nil while there is no item, a later
+    /// one after every save.
+    @Test func memoryStoreModificationDate() throws {
+        let store = MemoryGuestPasswordStore()
+        let id = UUID()
+        #expect(try store.modificationDate(vm: id) == nil)
+        try store.save(try #require(GuestPassword("first")), vm: id)
+        let first = try #require(try store.modificationDate(vm: id))
+        try store.save(try #require(GuestPassword("second")), vm: id)
+        let second = try #require(try store.modificationDate(vm: id))
+        #expect(second > first)
+        #expect(try store.modificationDate(vm: UUID()) == nil)
+        try store.delete(vm: id)
+        #expect(try store.modificationDate(vm: id) == nil)
+    }
+
     @Test func deleteMissingIsNotAnError() throws {
         try MemoryGuestPasswordStore().delete(vm: UUID())
     }
@@ -119,6 +135,20 @@ private let keychainAvailable: Bool = {
         #expect(try store.read(vm: id) == nil)
         #expect(try !store.contains(vm: id))
         try store.delete(vm: id)
+    }
+
+    /// The item's modification date comes with its attributes only (no prompt): nil without an
+    /// item.
+    @Test(.enabled(if: keychainAvailable, "needs a login keychain the test process can write"))
+    func keychainModificationDate() throws {
+        let store = KeychainGuestPasswordStore(service: "\(testService).\(UUID().uuidString)")
+        let id = UUID()
+        defer { try? store.delete(vm: id) }
+        #expect(try store.modificationDate(vm: id) == nil)
+        try store.save(try #require(GuestPassword("first pass")), vm: id)
+        #expect(try store.modificationDate(vm: id) != nil)
+        try store.delete(vm: id)
+        #expect(try store.modificationDate(vm: id) == nil)
     }
 
     /// A Keychain failure is reported with its status, never as "no password".

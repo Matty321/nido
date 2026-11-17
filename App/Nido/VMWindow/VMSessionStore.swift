@@ -21,8 +21,14 @@ final class VMSessionStore {
     /// that never warns).
     @ObservationIgnored private let checkHeadroom: (@Sendable (VMBundle) -> MemoryHeadroom?)?
 
+    /// The account passwords the windows' first-run setup reads (`AppEnvironment.guestPasswords`).
+    /// Required, like `VMRegistry`'s: a store left out by mistake would lose the password.
+    let passwords: any GuestPasswordStore
+
     init(paths: NidoPaths, factory: any SessionFactory, aiBridge: AIBridgeServices? = nil,
+         passwords: any GuestPasswordStore,
          checkHeadroom: (@Sendable (VMBundle) -> MemoryHeadroom?)? = nil) {
+        self.passwords = passwords
         self.paths = paths
         self.factory = factory
         self.aiBridge = aiBridge
@@ -40,8 +46,8 @@ final class VMSessionStore {
                 makeRuntime: { runtime })
         }
         let model = VMWindowModel(
-            name: name, paths: paths, factory: factory, aiBridgeServices: aiBridge, aiRuntime: aiRuntime,
-            checkHeadroom: checkHeadroom)
+            name: name, paths: paths, factory: factory, passwords: passwords, aiBridgeServices: aiBridge,
+            aiRuntime: aiRuntime, checkHeadroom: checkHeadroom)
         model.refusesStart = isQuitting
         models[name] = model
         return model

@@ -7,6 +7,9 @@ public protocol ScreenSource: Sendable {
     func screenSize() -> ScreenSize
     /// PNG of the main display, scaled to `CoordinateSpace(display: <points>, maxLongEdge:).image`.
     func capture(maxLongEdge: Int) async throws -> (png: Data, image: PixelSize)
+    /// PNG of `region` (display points, origin top left) at the display's full pixel density,
+    /// scaled down so its long edge is at most `maxLongEdge`; `image` is the exact PNG size.
+    func capture(region: CGRect, maxLongEdge: Int) async throws -> (png: Data, image: PixelSize)
 }
 
 /// Posts input in the guest. Points are display coordinates in points, origin top left.
@@ -97,6 +100,8 @@ public struct AgentDispatcher: Sendable {
             return (status(), nil)
         case .screenshot(let maxLongEdge):
             return await screenshot(maxLongEdge: maxLongEdge)
+        case .zoom(let x, let y, let width, let height, let maxLongEdge):
+            return await zoom(request, x: x, y: y, width: width, height: height, maxLongEdge: maxLongEdge)
         case .click, .drag, .scroll, .type, .key:
             return (act(request), nil)
         case .setClipboard(let text, let clearAfter):
@@ -132,6 +137,45 @@ public struct AgentDispatcher: Sendable {
             return (Self.failure(.screenChanged, Self.screenChangedMessage), nil)
         }
         return (AgentReply(ok: true, image: shot.image, screen: points), shot.png)
+    }
+
+    /// Coordinates are those of the latest screenshot, as for a click; the reply carries that
+    /// screenshot's `screen` and the zoomed image's own size.
+    private func zoom(_ request: AgentRequest, x: Double, y: Double, width: Double, height: Double,
+                      maxLongEdge: Int) async -> (AgentReply, Data?) {
+        guard permissions.screenRecording else { return (Self.missing("Screen Recording"), nil) }
+        guard request.image != nil, request.screen != nil else {
+            return (Self.failure(.noScreenshot, "take a screenshot first: coordinates refer to the last screenshot"), nil)
+        }
+        guard maxLongEdge > 0 else {
+            return (Self.failure(.badRequest, "maxLongEdge must be a positive number of pixels"), nil)
+        }
+        guard [x, y, width, height].allSatisfy(\.isFinite) else {
+            return (Self.failure(.badRequest, "coordinates must be finite numbers"), nil)
+        }
+        let rect: CGRect
+        let points: ScreenSize
+        do {
+            let space = try coordinateSpace(request)
+            points = screen.screenSize()
+            guard let mapped = space.toDisplayRect(x: x, y: y, width: width, height: height) else {
+                throw Refusal("the region is outside the screenshot (or smaller than one point)")
+            }
+            rect = mapped
+        } catch let refusal as Refusal {
+            return (refusal.reply, nil)
+        } catch {
+            return (Self.failure(.internalError, "\(error)"), nil)
+        }
+        do {
+            let shot = try await screen.capture(region: rect, maxLongEdge: maxLongEdge)
+            guard screen.screenSize() == points else {
+                return (Self.failure(.screenChanged, Self.screenChangedMessage), nil)
+            }
+            return (AgentReply(ok: true, image: shot.image, screen: points), shot.png)
+        } catch {
+            return (Self.failure(.internalError, "could not capture the screen: \(error)"), nil)
+        }
     }
 
     /// Needs no permission: writing the pasteboard works before Screen Recording and Accessibility
@@ -189,7 +233,7 @@ public struct AgentDispatcher: Sendable {
                     throw Refusal(error.description)
                 }
                 try input.key(stroke)
-            case .status, .screenshot, .setClipboard:
+            case .status, .screenshot, .setClipboard, .zoom:
                 throw Refusal("not an input action")
             }
         } catch let refusal as Refusal {

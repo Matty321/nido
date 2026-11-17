@@ -199,4 +199,24 @@ struct AppSetupTests {
         #expect(environment.takeOpenAtLaunch() == (try VMName("macos-t8")))
         #expect(environment.takeOpenAtLaunch() == nil)
     }
+
+    /// A test root never touches the real Keychain: one memory store, the same instance in every
+    /// builder of the environment (sessions, installer, registry).
+    @Test func debugTestRootUsesOneMemoryStore() async throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("nido-env-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let environment = try AppEnvironment(arguments: ["Nido", "-NidoRoot", dir.path], isDebug: true)
+        let store = environment.guestPasswords
+        #expect(store is MemoryGuestPasswordStore)
+        let installer = try #require(environment.macInstaller as? LiveMacVMInstaller)
+        #expect(installer.passwords as AnyObject === store as AnyObject)
+        #expect(environment.sessions.passwords as AnyObject === store as AnyObject)
+        // A password saved through one is read through another.
+        let id = UUID()
+        let password = try #require(GuestPassword("abcde-fghjk-mnpqr-stuvw"))
+        try installer.passwords.save(password, vm: id)
+        #expect(try environment.sessions.passwords.read(vm: id) == password)
+        #expect(try store.read(vm: id) == password)
+    }
 }

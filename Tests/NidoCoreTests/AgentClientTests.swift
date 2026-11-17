@@ -94,6 +94,14 @@ private func failure(of client: AgentClient, _ action: AgentAction = .status) as
         #expect(result.png == png)
     }
 
+    @Test func zoomCarriesPNG() async throws {
+        let png = Data(repeating: 9, count: 1 << 20)
+        let reply = AgentReply(ok: true, image: PixelSize(400, 200), screen: ScreenSize(width: 1440, height: 900))
+        let c = client(.respond([try json(reply), png]))
+        let result = try await c.perform(AgentRequest(action: .zoom(x: 1, y: 2, width: 3, height: 4, maxLongEdge: 800)))
+        #expect(result.png == png)
+    }
+
     @Test func connectResetIsNotReady() async {
         let f = await failure(of: client(.fail(POSIXError(.ECONNRESET))))
         #expect(f?.code == .notReady)

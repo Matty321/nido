@@ -12,8 +12,7 @@ private final class FakeHelper: Sendable {
     static let png = Data([0x89, 0x50, 0x4E, 0x47, 1, 2, 3, 4])
     static let image = PixelSize(1280, 800)
     static let screen = ScreenSize(width: 1440, height: 900)
-    static let status = AgentStatus(
-        helperVersion: "1.0.0", protocolVersion: 1, screenRecording: true, accessibility: true, screen: screen)
+    static let zoomImage = PixelSize(400, 200)
 
     private struct State {
         var requests: [AgentRequest] = []
@@ -22,8 +21,20 @@ private final class FakeHelper: Sendable {
     }
     private let state = Mutex(State())
     let delay: Duration
+    let helperVersion: String
+    /// What `status` answers instead of a status: a refusal (`ok` false) or an ok reply without one.
+    let statusReply: AgentReply?
 
-    init(delay: Duration = .zero) { self.delay = delay }
+    init(delay: Duration = .zero, helperVersion: String = "1.0.0", statusReply: AgentReply? = nil) {
+        self.delay = delay
+        self.helperVersion = helperVersion
+        self.statusReply = statusReply
+    }
+
+    var status: AgentStatus {
+        AgentStatus(helperVersion: helperVersion, protocolVersion: 1, screenRecording: true, accessibility: true,
+                    screen: Self.screen)
+    }
 
     var requests: [AgentRequest] { state.withLock { $0.requests } }
     var maxInFlight: Int { state.withLock { $0.maxInFlight } }
@@ -39,9 +50,11 @@ private final class FakeHelper: Sendable {
             state.withLock { $0.inFlight -= 1 }
             switch request.action {
             case .status:
-                return (AgentReply(ok: true, status: Self.status), nil)
+                return (statusReply ?? AgentReply(ok: true, status: status), nil)
             case .screenshot:
                 return (AgentReply(ok: true, image: Self.image, screen: Self.screen), Self.png)
+            case .zoom:
+                return (AgentReply(ok: true, image: Self.zoomImage, screen: Self.screen), Self.png)
             case .type(let text):
                 return (AgentReply(ok: true, message: text), nil)
             case .key(let combo) where combo == "fail":
@@ -135,7 +148,7 @@ private struct Env {
     let config: VMConfig
     let helper: FakeHelper
 
-    init(delay: Duration = .zero) throws {
+    init(delay: Duration = .zero, helperVersion: String = "1.0.0", statusReply: AgentReply? = nil) throws {
         tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent("nido-act-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
@@ -147,7 +160,7 @@ private struct Env {
             memoryBytes: 8 * 1024 * 1024 * 1024, diskBytes: 64 * 1024 * 1024 * 1024,
             macAddress: "02:00:00:00:00:01", agentAccess: true)
         bundle = try VMBundle.create(config: config, paths: NidoPaths(root: tmp.appendingPathComponent("VMs")))
-        helper = FakeHelper(delay: delay)
+        helper = FakeHelper(delay: delay, helperVersion: helperVersion, statusReply: statusReply)
     }
 
     var socketURL: URL { AgentControlServer.socketURL(vmID: config.id, root: root) }
@@ -188,6 +201,19 @@ private func blocking<T: Sendable>(_ body: @escaping @Sendable () throws -> T) a
 }
 
 @Suite struct AgentControlServerTests {
+    /// The client waits longer than the owner's own limits towards the helper, so the owner's
+    /// error arrives rather than a timeout: a zoom asks `status` first, then the image.
+    @Test func clientTimeoutCoversTheOwnersLimits() {
+        let zoom = AgentControlClient.timeout(for: .zoom(x: 0, y: 0, width: 10, height: 10, maxLongEdge: 800))
+        #expect(zoom > AgentClient.defaultTimeout + AgentClient.defaultImageTimeout)
+        for action: AgentAction in [.status, .screenshot(maxLongEdge: 800), .click(x: 1, y: 1, button: .left, count: 1)] {
+            let limit = AgentControlClient.timeout(for: action)
+            #expect(limit > AgentClient.defaultImageTimeout, "\(action)")
+            #expect(limit < zoom, "\(action)")
+        }
+        #expect(AgentControlClient.timeout(for: .status) == .seconds(20))
+    }
+
     @Test func socketAndDirectoryModes() throws {
         let env = try Env()
         defer { env.cleanup() }
@@ -475,6 +501,115 @@ private func blocking<T: Sendable>(_ body: @escaping @Sendable () throws -> T) a
             #expect(request.screen == FakeHelper.screen)
         }
         #expect(requests[1].action == .click(x: 100, y: 200, button: .right, count: 2))
+    }
+
+    @Test func carriesPointIncludesZoom() {
+        #expect(AgentGate.carriesPoint(.zoom(x: 1, y: 2, width: 3, height: 4, maxLongEdge: 800)))
+    }
+
+    @Test func zoomBeforeScreenshot() async throws {
+        let env = try Env(helperVersion: "1.0.4")
+        defer { env.cleanup() }
+        let server = try env.start()
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking { try client.send(.zoom(x: 0, y: 0, width: 10, height: 10, maxLongEdge: 800)) }
+        #expect(!answer.ok)
+        #expect(answer.error == .noScreenshot)
+        #expect(answer.message == L10n.string("take a screenshot first: coordinates refer to the last screenshot"))
+        #expect(env.helper.requests.isEmpty)
+    }
+
+    @Test func zoomKeepsLastShot() async throws {
+        let env = try Env(helperVersion: "1.0.4")
+        defer { env.cleanup() }
+        let server = try env.start()
+        defer { server.stop() }
+
+        let client = env.client()
+        let answers = try await blocking {
+            [
+                try client.send(.screenshot(maxLongEdge: 1280)),
+                try client.send(.zoom(x: 10, y: 20, width: 300, height: 200, maxLongEdge: 800)),
+                try client.send(.click(x: 5, y: 6, button: .left, count: 1)),
+            ]
+        }
+        #expect(answers.map(\.ok) == [true, true, true])
+        #expect(answers[1].image == FakeHelper.zoomImage)
+        let requests = env.helper.requests.filter { if case .status = $0.action { false } else { true } }
+        try #require(requests.count == 3)
+        #expect(requests[1].action == .zoom(x: 10, y: 20, width: 300, height: 200, maxLongEdge: 800))
+        #expect(requests[1].image == FakeHelper.image)
+        #expect(requests[1].screen == FakeHelper.screen)
+        #expect(requests[2].image == FakeHelper.image)
+        #expect(requests[2].screen == FakeHelper.screen)
+    }
+
+    @Test func zoomSavesPNG() async throws {
+        let env = try Env(helperVersion: "1.0.4")
+        defer { env.cleanup() }
+        let server = try env.start()
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return try client.send(.zoom(x: 0, y: 0, width: 50, height: 50, maxLongEdge: 800))
+        }
+        let path = try #require(answer.path)
+        #expect(answer.screen == FakeHelper.screen)
+        #expect(try Data(contentsOf: URL(fileURLWithPath: path)) == FakeHelper.png)
+        #expect(URL(fileURLWithPath: path).deletingLastPathComponent().standardizedFileURL
+            == env.bundle.agentShotsURL.standardizedFileURL)
+    }
+
+    @Test func zoomOnOldHelper() async throws {
+        let env = try Env(helperVersion: "1.0.3")
+        defer { env.cleanup() }
+        let server = try env.start()
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return try client.send(.zoom(x: 0, y: 0, width: 50, height: 50, maxLongEdge: 800))
+        }
+        #expect(answer.error == .versionMismatch)
+        #expect(answer.message == L10n.string("Nido Agent is too old to zoom: run nido agent setup \(env.config.name.rawValue) to update it"))
+        #expect(!env.helper.requests.contains { if case .zoom = $0.action { true } else { false } })
+    }
+
+    @Test func zoomForwardsAFailedStatus() async throws {
+        let busy = AgentReply(ok: false, error: .timeout, message: "Nido Agent is still finishing the previous action")
+        let env = try Env(statusReply: busy)
+        defer { env.cleanup() }
+        let server = try env.start()
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return try client.send(.zoom(x: 0, y: 0, width: 50, height: 50, maxLongEdge: 800))
+        }
+        #expect(answer.error == .timeout)
+        #expect(answer.message == "Nido Agent is still finishing the previous action")
+        #expect(!env.helper.requests.contains { if case .zoom = $0.action { true } else { false } })
+    }
+
+    @Test func zoomWithoutHelperVersionIsTooOld() async throws {
+        let env = try Env(statusReply: AgentReply(ok: true))
+        defer { env.cleanup() }
+        let server = try env.start()
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return try client.send(.zoom(x: 0, y: 0, width: 50, height: 50, maxLongEdge: 800))
+        }
+        #expect(answer.error == .versionMismatch)
+        #expect(!env.helper.requests.contains { if case .zoom = $0.action { true } else { false } })
     }
 
     @Test func helperErrorsAreForwardedAndConnectionStays() async throws {

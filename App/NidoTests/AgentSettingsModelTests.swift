@@ -532,6 +532,105 @@ struct AgentSettingsModelTests {
         }
     }
 
+    /// The item was fixed elsewhere (the CLI): the next refresh drops the flag and the field. A
+    /// still-unusable item keeps both.
+    @Test func unusableClearedWhenFixedElsewhere() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingStore()
+        store.failsReads = true
+        store.readError = .unusableItem
+        let model = model(bundle, config, passwords: store)
+        #expect(await model.revealPassword() == nil)
+        #expect(model.itemUnusable && model.needsPassword)
+
+        // Still unusable: nothing changes.
+        await model.refresh()
+        #expect(model.itemUnusable && model.needsPassword)
+
+        // The CLI saved a valid item.
+        store.failsReads = false
+        try store.save(try #require(GuestPassword("abcde-fghjk-mnpqr-stuvw")), vm: config.id)
+        await model.refresh()
+        #expect(!model.itemUnusable)
+        #expect(!model.needsPassword)
+        #expect(model.passwordState == .stored)
+    }
+
+    /// While the unusable item keeps its modification date, the polls read only its attributes:
+    /// no data read, so no Keychain prompt every 3 seconds.
+    @Test func unchangedUnusableItemIsNotReadAgain() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingStore()
+        store.failsReads = true
+        store.readError = .unusableItem
+        store.touch(vm: config.id)
+        let model = model(bundle, config, passwords: store)
+        #expect(await model.revealPassword() == nil)
+        #expect(model.itemUnusable)
+        #expect(store.reads == 1)
+
+        for _ in 0..<4 { await model.refresh() }
+        #expect(store.reads == 1)
+        #expect(model.itemUnusable && model.needsPassword)
+    }
+
+    /// A new modification date with a valid item: one read, and the flag and the field go.
+    @Test func changedUnusableItemIsReadOnceAndCleared() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingStore()
+        store.failsReads = true
+        store.readError = .unusableItem
+        store.touch(vm: config.id)
+        let model = model(bundle, config, passwords: store)
+        #expect(await model.revealPassword() == nil)
+        await model.refresh()
+        #expect(store.reads == 1)
+
+        // The item changed but is still unusable: read once, the flag stays.
+        store.touch(vm: config.id)
+        await model.refresh()
+        await model.refresh()
+        #expect(store.reads == 2)
+        #expect(model.itemUnusable)
+
+        // The CLI saved a valid item.
+        store.failsReads = false
+        try store.save(try #require(GuestPassword("abcde-fghjk-mnpqr-stuvw")), vm: config.id)
+        await model.refresh()
+        #expect(store.reads == 3)
+        #expect(!model.itemUnusable)
+        #expect(!model.needsPassword)
+    }
+
+    /// A read that fails otherwise (the owner refused the Keychain prompt) is not tried again,
+    /// even after the item changes.
+    @Test func otherReadFailureStopsTheUnusableCheck() async throws {
+        let (bundle, config, root) = try makeBundle(access: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingStore()
+        store.failsReads = true
+        store.readError = .unusableItem
+        store.touch(vm: config.id)
+        let model = model(bundle, config, passwords: store)
+        #expect(await model.revealPassword() == nil)
+        await model.refresh()
+
+        store.readError = .keychain(-128)
+        store.touch(vm: config.id)
+        await model.refresh()
+        #expect(store.reads == 2)
+        #expect(model.itemUnusable)
+
+        store.touch(vm: config.id)
+        await model.refresh()
+        await model.refresh()
+        #expect(store.reads == 2)
+        #expect(model.itemUnusable)
+    }
+
     /// An item Nido cannot use asks for the password again, in the pane's field.
     @Test func unusableItemAsksForThePasswordAgain() async throws {
         let (bundle, config, root) = try makeBundle(access: true)
@@ -975,9 +1074,12 @@ struct AgentSettingsModelTests {
 
 
 /// Counts the reads of the password's data; `failsReads` makes them fail as the Keychain would.
+/// Each save (and `touch`) gives the item a new modification date.
 private final class CountingStore: GuestPasswordStore, @unchecked Sendable {
     private let lock = NSLock()
     private var items: [UUID: GuestPassword] = [:]
+    private var modified: [UUID: Date] = [:]
+    private var changes = 0
     private var readCount = 0
     var failsReads = false
     var failsContains = false
@@ -998,6 +1100,22 @@ private final class CountingStore: GuestPasswordStore, @unchecked Sendable {
             return items[vm] != nil
         }
     }
-    func save(_ password: GuestPassword, vm: UUID) throws { lock.withLock { items[vm] = password } }
-    func delete(vm: UUID) throws { lock.withLock { items[vm] = nil } }
+    func modificationDate(vm: UUID) throws -> Date? { lock.withLock { modified[vm] } }
+    /// The item changed (written by someone else): a new modification date only.
+    func touch(vm: UUID) {
+        lock.withLock {
+            changes += 1
+            modified[vm] = Date(timeIntervalSinceReferenceDate: Double(changes))
+        }
+    }
+    func save(_ password: GuestPassword, vm: UUID) throws {
+        lock.withLock { items[vm] = password }
+        touch(vm: vm)
+    }
+    func delete(vm: UUID) throws {
+        lock.withLock {
+            items[vm] = nil
+            modified[vm] = nil
+        }
+    }
 }

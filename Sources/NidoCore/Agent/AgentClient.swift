@@ -24,7 +24,13 @@ public struct AgentClient: Sendable {
     private let timeout: Duration
     private let screenshotTimeout: Duration
 
-    public init(channel: any GuestChannel, timeout: Duration = .seconds(10), screenshotTimeout: Duration = .seconds(15)) {
+    /// The owner's limit on a reply of the helper.
+    public static let defaultTimeout: Duration = .seconds(10)
+    /// The owner's limit on a reply that brings an image (a screenshot or a zoom).
+    public static let defaultImageTimeout: Duration = .seconds(15)
+
+    public init(channel: any GuestChannel, timeout: Duration = defaultTimeout,
+                screenshotTimeout: Duration = defaultImageTimeout) {
         self.channel = channel
         self.timeout = timeout
         self.screenshotTimeout = screenshotTimeout
@@ -35,7 +41,7 @@ public struct AgentClient: Sendable {
     /// speaks another protocol version (`.versionMismatch`).
     public func perform(_ request: AgentRequest) async throws(AgentFailure) -> (reply: AgentReply, png: Data?) {
         let limit: Duration
-        if case .screenshot = request.action { limit = screenshotTimeout } else { limit = timeout }
+        limit = request.action.isImageAction ? screenshotTimeout : timeout
         let channel = channel
         let connection = Connection()
         let result: (reply: AgentReply, png: Data?)
@@ -76,7 +82,7 @@ public struct AgentClient: Sendable {
         }
         try AgentFrame.writeJSON(request, to: fd)
         let reply = try AgentFrame.readJSON(AgentReply.self, from: fd)
-        guard case .screenshot = request.action, reply.ok else { return (reply, nil) }
+        guard request.action.isImageAction, reply.ok else { return (reply, nil) }
         return (reply, try AgentFrame.read(from: fd))
     }
 
@@ -134,6 +140,16 @@ public struct AgentClient: Sendable {
                 return s.handle?.fileDescriptor
             }
             if let fd { shutdown(fd, SHUT_RDWR) }
+        }
+    }
+}
+
+extension AgentAction {
+    /// Actions the helper answers with a reply and then a PNG frame (a screenshot or a zoom).
+    var isImageAction: Bool {
+        switch self {
+        case .screenshot, .zoom: true
+        default: false
         }
     }
 }

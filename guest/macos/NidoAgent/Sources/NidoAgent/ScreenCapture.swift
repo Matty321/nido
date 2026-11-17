@@ -33,6 +33,23 @@ struct ScreenCapture: ScreenSource {
         // than the display in points, so a Retina display is scaled down, never up.
         let target = CoordinateSpace(display: PixelSize(points.width, points.height), maxLongEdge: maxLongEdge).image
 
+        return try await shoot(target: target, sourceRect: nil)
+    }
+
+    func capture(region: CGRect, maxLongEdge: Int) async throws -> (png: Data, image: PixelSize) {
+        // Backing scale: the display's pixels per point (2 on Retina).
+        var density = 1.0
+        if let mode = CGDisplayCopyDisplayMode(CGMainDisplayID()), mode.width > 0 {
+            density = Double(mode.pixelWidth) / Double(mode.width)
+        }
+        let native = PixelSize(max(1, Int((region.width * density).rounded())),
+                               max(1, Int((region.height * density).rounded())))
+        return try await shoot(target: native.fitted(in: PixelSize(maxLongEdge, maxLongEdge)), sourceRect: region)
+    }
+
+    /// The one capture path: the main display (or `sourceRect` of it, in points) as a PNG of
+    /// exactly `target` pixels.
+    private func shoot(target: PixelSize, sourceRect: CGRect?) async throws -> (png: Data, image: PixelSize) {
         let mainID = CGMainDisplayID()
         let content = try await SCShareableContent.current
         guard let display = content.displays.first(where: { $0.displayID == mainID }) else {
@@ -40,6 +57,7 @@ struct ScreenCapture: ScreenSource {
         }
         let filter = SCContentFilter(display: display, excludingWindows: [])
         let config = SCStreamConfiguration()
+        if let sourceRect { config.sourceRect = sourceRect }
         config.width = target.width
         config.height = target.height
         config.showsCursor = true

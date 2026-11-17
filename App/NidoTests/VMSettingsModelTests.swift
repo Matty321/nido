@@ -662,7 +662,7 @@ struct VMSettingsSuspendedTests {
         let (bundle, root) = try suspendedBundle()
         defer { try? FileManager.default.removeItem(at: root) }
         let window = VMWindowModel(
-            name: try VMName("debian-13"), paths: NidoPaths(root: root), factory: FakeSessionFactory())
+            name: try VMName("debian-13"), paths: NidoPaths(root: root), factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore())
         #expect(window.isSuspended)
         #expect(window.stoppedMessage(now: Date()).hasPrefix("Lo stato della VM è salvato sul Mac"))
         var config = try bundle.readConfig()

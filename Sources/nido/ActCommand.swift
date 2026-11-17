@@ -17,6 +17,7 @@ struct ActCommand: ParsableCommand {
             L10n.string("Actions:"),
             "  status",
             "  screenshot [--max N] [--output PATH]",
+            "  zoom X Y W H [--max N] [--output PATH]",
             "  click X Y [--right] [--count N]",
             "  drag X1 Y1 X2 Y2",
             "  scroll --dx DX --dy DY [--x X --y Y]",
@@ -24,7 +25,7 @@ struct ActCommand: ParsableCommand {
             "  key COMBO",
             "  wait MS",
             "",
-            L10n.string("Coordinates are in the pixels of the last screenshot. The VM must be running with agent access on (nido agent enable). The exit code is 0 when the action succeeded and 1 otherwise; --output saves a copy of the screenshot and never overwrites a file."),
+            L10n.string("Coordinates are in the pixels of the last screenshot. The VM must be running with agent access on (nido agent enable). The exit code is 0 when the action succeeded and 1 otherwise; --output saves a copy of the screenshot or zoom and never overwrites a file."),
         ].joined(separator: "\n")
     )
 

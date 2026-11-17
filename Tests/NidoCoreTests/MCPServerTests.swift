@@ -58,10 +58,10 @@ struct MCPServerTests {
         #expect(try initialize("1999-01-01")["protocolVersion"] as? String == "2025-11-25")
     }
 
-    @Test func listsEightTools() throws {
+    @Test func listsTheTools() throws {
         let reply = try call(server(FakeActions()), #"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#)
         let tools = try #require((reply["result"] as? [String: Any])?["tools"] as? [[String: Any]])
-        #expect(tools.compactMap { $0["name"] as? String } == ["status", "screenshot", "click", "drag", "scroll", "type", "key", "wait"])
+        #expect(tools.compactMap { $0["name"] as? String } == ["status", "screenshot", "zoom", "click", "drag", "scroll", "type", "key", "wait"])
         for tool in tools {
             let schema = try #require(tool["inputSchema"] as? [String: Any])
             #expect(schema["type"] as? String == "object")
@@ -82,6 +82,38 @@ struct MCPServerTests {
         #expect(content[0]["mimeType"] as? String == "image/png")
         #expect(content[1]["text"] as? String == "1280x800 screenshot of a 1440x900-point screen")
         #expect(fake.sent == [.screenshot(maxLongEdge: 1280)])
+    }
+
+    @Test func zoomToolMapsAndAnswersWithImage() throws {
+        let fake = FakeActions()
+        fake.answer = AgentAnswer(ok: true, path: "/shots/1.png", image: PixelSize(400, 200), screen: ScreenSize(width: 1440, height: 900))
+        let s = server(fake)
+        let result = try tool(s, "zoom", #"{"x":10,"y":20,"width":300,"height":150}"#)
+        #expect(fake.sent == [.zoom(x: 10, y: 20, width: 300, height: 150, maxLongEdge: AgentProtocol.defaultMaxLongEdge)])
+        let content = try #require(result["content"] as? [[String: Any]])
+        #expect(content[0]["type"] as? String == "image")
+        #expect(content[1]["text"] as? String
+            == "400x200 zoom of the region 10,20,300,150 of the latest screenshot; click coordinates still refer to the latest screenshot")
+        _ = try tool(s, "zoom", #"{"x":0,"y":0,"width":5,"height":5,"max_long_edge":640}"#)
+        #expect(fake.sent.last == .zoom(x: 0, y: 0, width: 5, height: 5, maxLongEdge: 640))
+    }
+
+    @Test func zoomToolRefusesBadArguments() throws {
+        let fake = FakeActions()
+        let s = server(fake)
+        for bad in [
+            #"{"x":1,"y":2,"width":3}"#, #"{"x":-1,"y":2,"width":3,"height":4}"#, #"{"x":1,"y":2,"width":0,"height":4}"#,
+            #"{"x":1,"y":2,"width":3,"height":4,"max_long_edge":10}"#, #"{"x":1,"y":2,"width":3,"height":4,"max_long_edge":9999}"#,
+            #"{"x":1.5,"y":2,"width":3,"height":4}"#,
+        ] {
+            #expect(try tool(s, "zoom", bad)["isError"] as? Bool == true, "\(bad)")
+        }
+        #expect(fake.sent.isEmpty)
+        let list = try call(s, #"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#)
+        let tools = try #require((list["result"] as? [String: Any])?["tools"] as? [[String: Any]])
+        let zoom = try #require(tools.first { $0["name"] as? String == "zoom" })
+        let schema = try #require(zoom["inputSchema"] as? [String: Any])
+        #expect(schema["required"] as? [String] == ["x", "y", "width", "height"])
     }
 
     @Test func screenshotWithoutReadablePathIsToolError() throws {

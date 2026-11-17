@@ -62,3 +62,12 @@ private func refusal(_ decoding: RequestDecoding) -> AgentReply? {
     let data = try JSONEncoder().encode(request)
     #expect(AgentDispatcher.decodeRequest(data) == .request(request))
 }
+
+@Test func zoomRoundTrips() throws {
+    let action = AgentAction.zoom(x: 10, y: 20, width: 300, height: 200, maxLongEdge: 1280)
+    let data = try JSONEncoder().encode(action)
+    #expect(try JSONDecoder().decode(AgentAction.self, from: data) == action)
+    #expect(throws: DecodingError.self) {
+        try JSONDecoder().decode(AgentAction.self, from: Data(#"{"op":"zoom","x":1,"y":2,"width":3}"#.utf8))
+    }
+}

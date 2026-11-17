@@ -289,22 +289,59 @@ extension CLISupport {
         _ = try? bundle.updateConfig { $0.sshSucceeded = true }
     }
 
+    /// What to say after ssh failed on its own (status 255) against a macOS guest: the key is
+    /// refused most often because the VM waits at its FileVault login window. Nil for a Linux
+    /// guest, and for any other ending (a remote command's status is never 255 in practice).
+    public static func loginWindowHint(config: VMConfig, exit: SSHExit) -> String? {
+        guard config.guest == .macos, exit == .exited(255) else { return nil }
+        let name = config.name.rawValue
+        return L10n.string("If \(name) is waiting at its login window (FileVault), log in through its window, then try again.")
+    }
+
     /// Runs `/usr/bin/ssh` with `argv` (argv[0] included) as a child sharing this terminal, and
     /// waits for it: no shell, absolute path, explicit argv. Returns how it ended.
+    ///
+    /// ssh stopped (its `~^Z` escape, or a stop signal): `nido` stops with the same signal, so the
+    /// shell takes the terminal back; once `nido` is continued (`fg`), ssh is continued too and
+    /// the wait goes on.
     public static func runSSH(_ argv: [String]) throws -> SSHExit {
         var cArguments: [UnsafeMutablePointer<CChar>?] = argv.map { strdup($0) } + [nil]
         defer { cArguments.forEach { free($0) } }
         var pid: pid_t = 0
         let spawned = posix_spawn(&pid, "/usr/bin/ssh", nil, nil, &cArguments, environ)
         guard spawned == 0 else { throw POSIXError(POSIXErrorCode(rawValue: spawned) ?? .ENOEXEC) }
-        var status: Int32 = 0
-        while waitpid(pid, &status, 0) < 0 {
-            guard errno == EINTR else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .ECHILD) }
+        while true {
+            var status: Int32 = 0
+            guard waitpid(pid, &status, WUNTRACED) >= 0 else {
+                guard errno == EINTR else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .ECHILD) }
+                continue
+            }
+            switch sshWaitStatus(status) {
+            case .ended(let exit):
+                return exit
+            case .stopped(let signal):
+                // Returns once this process is continued.
+                raise(signal)
+                kill(pid, SIGCONT)
+            }
         }
-        // WIFEXITED / WEXITSTATUS / WTERMSIG (macros, not imported into Swift).
-        let signal = status & 0x7f
-        return signal == 0 ? .exited((status >> 8) & 0xff) : .signaled(signal)
     }
+
+    /// A `waitpid` status of the child ssh, decoded by hand (WIFEXITED, WEXITSTATUS, WIFSIGNALED,
+    /// WTERMSIG, WIFSTOPPED, WSTOPSIG are macros, not imported into Swift).
+    static func sshWaitStatus(_ status: Int32) -> SSHWaitStatus {
+        let low = status & 0x7f
+        if low == 0x7f { return .stopped((status >> 8) & 0xff) }
+        return low == 0 ? .ended(.exited((status >> 8) & 0xff)) : .ended(.signaled(low))
+    }
+}
+
+/// What `waitpid` (with `WUNTRACED`) said of the child ssh.
+enum SSHWaitStatus: Equatable {
+    /// It ended.
+    case ended(SSHExit)
+    /// A signal stopped it (SIGTSTP for `~^Z`).
+    case stopped(Int32)
 }
 
 /// How a child ssh ended.

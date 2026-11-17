@@ -162,6 +162,13 @@ final class AppEnvironment {
             }
         #endif
         self.updates = updates
+        // The one store of account passwords of this launch, handed to every builder below (the
+        // sessions, the installer, the setup, the control, the registry). A test root never
+        // touches the real Keychain: a throwaway store.
+        var guestPasswords: any GuestPasswordStore = KeychainGuestPasswordStore()
+        #if DEBUG
+            if isDebug, root != NidoPaths.defaultRoot() { guestPasswords = MemoryGuestPasswordStore() }
+        #endif
         var factory: (any SessionFactory)?
         var usesFixtures = false
         var aiBridge = AIBridgeServices(router: URLSessionRouterClient(), tokenStore: KeychainTokenStore())
@@ -215,7 +222,7 @@ final class AppEnvironment {
         self.imageStore = ImageStore(cacheRoot: cacheRoot, session: ImageStore.makeDownloadSession())
         self.imageFile = try Self.resolveImageFile(arguments: arguments, isDebug: isDebug)
         self.ipswFile = try Self.resolveIPSWFile(arguments: arguments, isDebug: isDebug)
-        var macInstaller: any MacVMInstalling = LiveMacVMInstaller(paths: paths)
+        var macInstaller: any MacVMInstalling = LiveMacVMInstaller(paths: paths, passwords: guestPasswords)
         #if DEBUG
             if isDebug, arguments.contains(Self.fakeMacInstallerFlag) { macInstaller = DebugFakeMacInstaller() }
         #endif
@@ -231,12 +238,11 @@ final class AppEnvironment {
         checksMemoryHeadroom = checksHeadroom
         let neverWarns: @Sendable (VMBundle) -> MemoryHeadroom? = { _ in nil }
         let sessions = VMSessionStore(
-            paths: paths, factory: factory ?? LiveSessionFactory(imageCache: cacheRoot, aiBridge: aiBridge),
-            aiBridge: aiBridge, checkHeadroom: checksHeadroom ? nil : neverWarns)
+            paths: paths, factory: factory ?? LiveSessionFactory(imageCache: cacheRoot, aiBridge: aiBridge, passwords: guestPasswords),
+            aiBridge: aiBridge, passwords: guestPasswords, checkHeadroom: checksHeadroom ? nil : neverWarns)
         self.sessions = sessions
         var poster: (any EgressNotificationPosting)?
         var authenticator: any OwnerAuthenticator = LocalOwnerAuthenticator()
-        var guestPasswords: any GuestPasswordStore = KeychainGuestPasswordStore()
         var egressDefaults = UserDefaults.standard
         var tintDefaults = UserDefaults.standard
         #if DEBUG
@@ -245,8 +251,6 @@ final class AppEnvironment {
                 let suite = "io.gitlab.pichierri.Nido.debug-egress"
                 egressDefaults = UserDefaults(suiteName: suite) ?? .standard
                 egressDefaults.removePersistentDomain(forName: suite)
-                // Never the real Keychain: a throwaway store of account passwords.
-                guestPasswords = MemoryGuestPasswordStore()
                 // Its VMs' tints too: the UI tests' app has the user's bundle identifier.
                 let tintSuite = "io.gitlab.pichierri.Nido.debug-tints"
                 tintDefaults = UserDefaults(suiteName: tintSuite) ?? .standard

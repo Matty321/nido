@@ -463,6 +463,40 @@ private final class Sink: Sendable {
         }
     }
 
+    /// ssh exits 255 on its own failure: a macOS VM that refuses the key is most likely waiting at
+    /// the FileVault login window, so `nido ssh` says to log in there.
+    @Test func loginWindowHintForMacOn255() throws {
+        let hint = CLISupport.loginWindowHint(config: try macConfig("fv-test"), exit: .exited(255))
+        let name = "fv-test"
+        #expect(hint == L10n.string("If \(name) is waiting at its login window (FileVault), log in through its window, then try again."))
+        #expect(hint?.contains("fv-test") == true)
+    }
+
+    @Test func noLoginWindowHintForLinux() throws {
+        #expect(CLISupport.loginWindowHint(config: try linuxConfig("deb"), exit: .exited(255)) == nil)
+    }
+
+    @Test func noLoginWindowHintOnSuccessOrRemoteStatus() throws {
+        let mac = try macConfig("fv-test")
+        #expect(CLISupport.loginWindowHint(config: mac, exit: .exited(0)) == nil)
+        #expect(CLISupport.loginWindowHint(config: mac, exit: .exited(1)) == nil)
+        #expect(CLISupport.loginWindowHint(config: mac, exit: .signaled(SIGINT)) == nil)
+    }
+
+    /// The `waitpid` status of the child ssh, decoded by hand (WIFEXITED, WIFSIGNALED, WIFSTOPPED
+    /// are macros): a stop (`~^Z`) is no ending, so `nido` can stop with it.
+    @Test func sshWaitStatusDecoding() {
+        #expect(CLISupport.sshWaitStatus(0) == .ended(.exited(0)))
+        #expect(CLISupport.sshWaitStatus(3 << 8) == .ended(.exited(3)))
+        #expect(CLISupport.sshWaitStatus(255 << 8) == .ended(.exited(255)))
+        #expect(CLISupport.sshWaitStatus(SIGINT) == .ended(.signaled(SIGINT)))
+        // The core-dump bit is no part of the signal.
+        #expect(CLISupport.sshWaitStatus(SIGSEGV | 0x80) == .ended(.signaled(SIGSEGV)))
+        #expect(CLISupport.sshWaitStatus((SIGTSTP << 8) | 0x7f) == .stopped(SIGTSTP))
+        #expect(CLISupport.sshWaitStatus((SIGSTOP << 8) | 0x7f) == .stopped(SIGSTOP))
+        #expect(CLISupport.sshWaitStatus((SIGTTIN << 8) | 0x7f) == .stopped(SIGTTIN))
+    }
+
     /// `nido ssh` on a macOS VM that never reached its guest waits for ssh (instead of exec) and
     /// records the first success: ssh exits 255 on its own errors (refused, host key,
     /// authentication), otherwise with the remote status. The panel stops opening by itself.

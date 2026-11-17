@@ -38,10 +38,23 @@ public struct AgentControlClient: Sendable {
             })
     }
 
-    /// `send(_:timeout:)` with 20 seconds: longer than the owner's own limits towards the helper
-    /// (`AgentClient`: 10 s, 15 s for a screenshot), so their errors arrive rather than a timeout.
+    /// `send(_:timeout:)` with `timeout(for:)`.
     public func send(_ action: AgentAction) throws -> AgentAnswer {
-        try send(action, timeout: .seconds(20))
+        try send(action, timeout: Self.timeout(for: action))
+    }
+
+    /// Added to the owner's own limits towards the helper.
+    static let ownerMargin: Duration = .seconds(5)
+
+    /// How long the client waits for `action`: longer than the owner's own limits towards the
+    /// helper (`AgentClient`: `defaultTimeout`, `defaultImageTimeout` for an image), so their
+    /// errors arrive rather than a timeout. A zoom asks `status` first, then the image: both
+    /// limits.
+    static func timeout(for action: AgentAction) -> Duration {
+        switch action {
+        case .zoom: AgentClient.defaultTimeout + AgentClient.defaultImageTimeout + ownerMargin
+        default: AgentClient.defaultImageTimeout + ownerMargin
+        }
     }
 
     /// Sends `action` to the owner of the running VM and returns its answer. No owner listening
