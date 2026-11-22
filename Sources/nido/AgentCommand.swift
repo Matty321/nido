@@ -9,7 +9,7 @@ struct AgentCommand: ParsableCommand {
         commandName: "agent",
         abstract: L10n.string("Let an AI agent see and drive a macOS VM (agent access)."),
         discussion: L10n.string("Agent access is off by default. When it is on, a program on this Mac running as you can take screenshots of the VM and use its keyboard and mouse through nido act."),
-        subcommands: [Enable.self, Disable.self, Setup.self, Password.self, Status.self]
+        subcommands: [Enable.self, Disable.self, Setup.self, Password.self, Status.self, Log.self]
     )
 
     struct Enable: ParsableCommand {
@@ -129,10 +129,55 @@ struct AgentCommand: ParsableCommand {
             let access = config.agentAccess == true
             var helper: AgentAnswer?
             if running && access {
-                let client = AgentSupport.client(bundle: bundle, config: config)
+                let client = AgentSupport.client(bundle: bundle, config: config, for: .nido)
                 helper = AgentSupport.helperAnswer { try client.send(.status) }
             }
             print(AgentSupport.statusJSON(agentAccess: access, running: running, helper: helper))
+        }
+    }
+
+    struct Log: ParsableCommand {
+        static let configuration = CommandConfiguration(
+            commandName: "log",
+            abstract: L10n.string("Show what an agent did in a VM, oldest first."),
+            discussion: L10n.string("Nido records each action an agent takes: which one, with what numbers, when and how it ended. It never records typed text (only how many characters), the clipboard or the text of the UI tree; screenshots and zooms keep a small thumbnail."))
+
+        @Argument(help: ArgumentHelp(L10n.string("VM name.")))
+        var vm: String
+
+        @Option(help: ArgumentHelp(L10n.string("Show only the last N entries (default 50).")))
+        var limit: String?
+
+        @Flag(help: ArgumentHelp(L10n.string("Print the entries as a JSON array.")))
+        var json = false
+
+        @Flag(help: ArgumentHelp(L10n.string("Delete the log of this VM.")))
+        var clear = false
+
+        @Flag(help: ArgumentHelp(L10n.string("Clear without asking for confirmation.")))
+        var yes = false
+
+        func run() throws {
+            try AgentSupport.validateLogOptions(clear: clear, limit: limit, json: json, yes: yes)
+            let (vmName, bundle) = try Terminal.openBundle(vm)
+            if clear {
+                guard try AgentSupport.clearLog(
+                    bundle: bundle, yes: yes, stdinIsTerminal: isatty(0) != 0, confirm: Terminal.confirm)
+                else {
+                    Terminal.error(L10n.string("Not cleared."))
+                    throw ExitCode.failure
+                }
+                print(L10n.string("Agent activity log cleared."))
+                return
+            }
+            let entries = try AgentActivityLog.read(in: bundle, limit: try AgentSupport.logLimit(limit))
+            if json {
+                print(AgentSupport.logJSON(entries))
+            } else if entries.isEmpty {
+                Terminal.error(AgentSupport.emptyLogMessage(vm: vmName.rawValue))
+            } else {
+                for line in AgentSupport.logLines(entries) { print(line) }
+            }
         }
     }
 }

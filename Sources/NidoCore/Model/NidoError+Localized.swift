@@ -140,6 +140,8 @@ extension NidoError: LocalizedError {
             L10n.string("the Linux VM has no serial console", language: language)
         case .macTemplatesUnavailable:
             L10n.string("macOS VM templates aren’t available yet", language: language)
+        case .macVMLimitReached:
+            L10n.string("Apple allows at most two macOS VMs at once: stop one first", language: language)
         case .invalidDomain(let text):
             L10n.string("invalid domain: “\(text)” (a name like deb.debian.org, or *.debian.org for the domain and its subdomains; no IP addresses)", language: language)
         case .invalidEgressPolicy(let reason):

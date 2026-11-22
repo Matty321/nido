@@ -2,6 +2,23 @@
 
 Every Nido release, newest first. The first time Nido opens after an update, it shows the notes for the installed version (choose Help › What’s New in Nido to read them again).
 
+## [0.9.4] – 2026-11-22
+
+### A Mac for Agents
+- **An agent can read the controls of the app on screen.** The new `ui_tree` action (the MCP tool `ui_tree`, or `nido act <vm> ui-tree`) lists the frontmost app’s buttons, fields and texts with their names and frames. The value of a password field never leaves the VM.
+- **See what an agent did.** **Agent Activity** (the list icon in the VM’s toolbar, or **Activity…** in Settings › Agent) and `nido agent log <vm>` show each session’s actions: what the agent looked at, where it clicked, which keys it pressed. Typed text is never recorded, only its length.
+- **Checkpoints.** Before a risky step an agent can save the VM with its memory (`checkpoint`) and go back to that moment if the step goes wrong (`rollback`). It keeps at most 3, sees only its own and never touches your snapshots; they show an **Agent** label in the snapshot list.
+- **Files in and out.** `put_file` and `get_file` copy files into and out of `~/NidoTransfer` in the VM (up to 1 MiB for an agent; `nido act <vm> put-file` and `get-file` up to 16 MiB). There is no shared folder.
+- **A fresh Mac for each session.** `nido mcp --fresh <base>` gives each agent session its own copy of a stopped macOS VM, started without a window and deleted with its files when the session ends. `--keep` keeps the copy as an ordinary VM.
+- **The agent learns what the network blocked.** On the controlled network an agent is told which domains Nido blocked, so it stops and asks you to run `nido net allow` instead of thinking the site is down. A domain allowed on a base reaches its fresh copies at once.
+
+### Fixes
+- **When the VM’s screen is locked, the agent is told so**, instead of getting a capture error.
+- **Starting a third macOS VM explains Apple’s limit**: at most two macOS VMs can run at once.
+
+### Nido Agent 1.0.6
+- Adds `ui_tree` (1.0.5) and the file transfer (1.0.6). Update it from the VM’s **Settings › Agent** or with `nido agent setup <vm>`.
+
 ## [0.9.3] – 2026-11-17
 
 ### A Mac for Agents

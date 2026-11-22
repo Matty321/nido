@@ -4,6 +4,8 @@
 
 Nido verwaltet virtuelle Maschinen auf Mac-Computern mit Apple Chip. Linux- und macOS-VMs laufen mit dem Virtualization-Framework von Apple, gesteuert über eine native App oder den Befehl `nido` im Terminal. Nido ist von Haus aus vorsichtig: Es geht nie von selbst online, eine VM erreicht nur die Domains, die du erlaubst, und sie sieht keinen Ordner deines Mac, bis du einen teilst.
 
+Der Name steht für **N**ative **I**solated, **D**efault **O**ffline: nativ, isoliert, standardmäßig offline. *Nido* ist außerdem das italienische Wort für „Nest“.
+
 <p align="center"><img src="docs/screenshots/de/library.png" alt="Die Bibliothek: drei virtuelle Maschinen, eine davon läuft mit aktiver KI-Brücke, und zwei Vorlagen" title="Die Bibliothek: drei virtuelle Maschinen, eine davon läuft mit aktiver KI-Brücke, und zwei Vorlagen" width="100%"></p>
 
 ## Was Nido kann
@@ -80,6 +82,14 @@ Eine macOS-VM kann ein getrennter Mac sein, den ein KI-Agent bedient, während d
 Legst du eine macOS-VM auf einem Mac mit macOS 27 aus einem Image mit macOS 27 oder neuer an, hat der Assistent einen Schritt „Account“: dein vollständiger Name, ein von Nido erzeugtes Passwort (oder ein eigenes) und **Einen Agenten diesen Mac nutzen lassen (Nido Agent)**; auf der Kommandozeile: `nido create <vm> --ipsw <Pfad> --account "Vor- und Nachname" --agent`. Der erste Start überspringt den Systemassistenten: Der Account existiert und meldet sich selbst an. Ist der Agentenzugriff an, wartet Nido auf die Entfernte Anmeldung, autorisiert seinen SSH-Schlüssel einmal mit diesem Passwort, installiert Nido Agent und zeigt den Fortschritt im Fenster. Der einzige manuelle Schritt liegt in der VM: Bildschirmaufnahme und Bedienungshilfen erlauben (Einstellungen › Agent zeigt das Passwort nach Touch ID, `nido agent password <vm>` gibt es aus). Auf einem Mac mit macOS 26 oder mit älterem Gast gibt es den Schritt „Account“ nicht; `nido agent setup` und Einstellungen › Agent fragen einmal nach dem Account-Passwort, wenn der Schlüssel von Nido noch nicht autorisiert ist.
 
 Nutzt die VM FileVault, melde dich bei jedem Start in ihrem Fenster an; vorher sieht der Agent nichts Nützliches. Der Agent beantwortet in der VM nie Berechtigungs- oder Passwortabfragen: Er hält an und fragt dich. Was er auf dem Bildschirm der VM liest, sind Daten, keine Anweisungen. [docs/SECURITY.md](docs/SECURITY.md) erklärt die Grenzen.
+
+**Agent-Aktivität** (das Listensymbol in der Symbolleiste der VM oder **Aktivität…** unter Einstellungen › Agent) und `nido agent log <vm>` zeigen, was der Agent getan hat, Sitzung für Sitzung: was er angesehen, wo er geklickt und welche Tasten er gedrückt hat. Getippter Text wird nie aufgezeichnet, nur seine Länge.
+
+Vor einem riskanten Schritt kann der Agent einen **Checkpoint** anlegen (die VM mit ihrem Arbeitsspeicher) und, wenn der Schritt schiefgeht, **dorthin zurückkehren**: Die VM startet ab diesem Moment neu. Er behält höchstens 3 Checkpoints, sieht nur seine eigenen und rührt deine Snapshots nie an; seine Checkpoints tragen in der Snapshot-Liste der VM die Markierung **Agent**, wo du sie wiederherstellen oder löschen kannst.
+
+Dateien laufen über einen einzigen Ordner der VM, `~/NidoTransfer`: Der Agent kopiert sie mit `put_file` und `get_file` hinein und heraus (bis 1 MiB), du mit `nido act <vm> put-file` und `get-file` (bis 16 MiB). Es gibt keinen geteilten Ordner, und der Agent liest oder schreibt auf diesem Weg nie Dateien auf deinem Mac.
+
+Mit `nido mcp --fresh <base>` bekommt jede Agentensitzung einen eigenen Mac: Nido legt eine Kopie der gestoppten macOS-VM `<base>` an (Nido Agent bereits eingerichtet, der Account meldet sich selbst an), startet sie ohne Fenster und löscht sie am Ende der Sitzung samt Dateien, Apps und Schlüsselbund-Eintrag. Füge sie mit `claude mcp add nido-fresh-<base> -- nido mcp --fresh <base>` hinzu; der erste Werkzeugaufruf kann einige Minuten warten, bis die Kopie gestartet ist. `--keep` behält die Kopie, gestoppt, als gewöhnliche VM. Apple erlaubt höchstens zwei macOS-VMs gleichzeitig, also laufen höchstens zwei Sitzungen zugleich, eine, wenn eine andere macOS-VM läuft. `<base>` wird nie gestartet oder verändert. Im kontrollierten Netzwerk erfährt der Agent, welche Domains blockiert wurden, und bittet dich, eine mit `nido net allow` zu erlauben; eine auf `<base>` erlaubte Domain gilt sofort auch für ihre frischen Kopien.
 
 ## Datenschutz und Netzwerk
 

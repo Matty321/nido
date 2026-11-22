@@ -18,6 +18,17 @@ struct StartCommand: AsyncParsableCommand {
     @Flag(help: ArgumentHelp(L10n.string("Also show the serial console in the terminal (with escape sequences removed); console.log records it either way. Linux VMs only.")))
     var console = false
 
+    /// The process that started this run (`nido mcp --fresh`): when it ends, even killed, the VM
+    /// stops as with Ctrl-C. Not for users.
+    @Option(name: .customLong("parent-pid"), help: ArgumentHelp(visibility: .hidden))
+    var parentPid: Int32?
+
+    func validate() throws {
+        if let parentPid, parentPid <= 1 {
+            throw ValidationError(L10n.string("--parent-pid needs a process ID greater than 1"))
+        }
+    }
+
     @MainActor
     func run() async throws {
         // A closed stdout/stderr (e.g. the terminal went away) must not kill the VM process.
@@ -33,7 +44,19 @@ struct StartCommand: AsyncParsableCommand {
         try CLISupport.checkConsoleFlag(console, guest: try bundle.readConfig().guest)
         // Lock first: a second start fails here without touching the bundle.
         let lock = try BundleLock.acquire(bundle, owner: .cli)
-        defer { lock.release() }
+        // The last thing the run does, after every other `defer`: the lock goes, and a fresh
+        // Mac's run (--parent-pid) deletes its copy if it is still disposable, whatever ended it.
+        defer {
+            lock.release()
+            if parentPid != nil {
+                FreshMac.deleteAfterRun(
+                    vmName, paths: NidoPaths(root: bundle.url.deletingLastPathComponent()),
+                    report: { Terminal.error($0) })
+            }
+        }
+        // A start by the user: a fresh Mac left by a session becomes an ordinary VM, never
+        // deleted later.
+        if parentPid == nil { try DisposableVMs.claim(bundle) }
         // An interrupted snapshot restore is finished or undone first; refused if it left files.
         try SnapshotStore(bundle: bundle).recoverBeforeUse()
         // Guest memory against the Mac's RAM: a warning only, the VM starts anyway.
@@ -51,10 +74,10 @@ struct StartCommand: AsyncParsableCommand {
         // always print. Local noise (IPv6 multicast, broadcast: `EgressEvent.isLocalNoise`) is
         // not printed, as the app does not notify it. Every block is also in the VM's egress.log.
         let notices = EgressNoticeMerger()
-        let session = try VMSession(bundle: bundle, mirrorsConsole: console, egressEvents: { event in
-            guard !event.isLocalNoise else { return }
-            for line in notices.lines(for: event, now: Date()) { Terminal.error(CLISupport.networkNoticeLine(line)) }
-        })
+        let (shown, pid) = (vmName.rawValue, String(getpid()))
+        // Every session of the run (a new one after an agent's rollback) is made and wired by it.
+        let wiring = StartWiring(bundle: bundle, name: shown, console: console, notices: notices)
+        let session = try wiring.makeSession()
         let noticeTimer = DispatchSource.makeTimerSource(queue: .global(qos: .utility))
         noticeTimer.schedule(deadline: .now() + 2, repeating: 2, leeway: .milliseconds(500))
         // Sendable: runs on a utility queue, not on the main actor of `run()`.
@@ -63,75 +86,69 @@ struct StartCommand: AsyncParsableCommand {
         }
         noticeTimer.resume()
         defer { noticeTimer.cancel() }
-        for warning in session.warnings { Terminal.error(L10n.string("Warning: \(ConsoleSanitizer.escapingControls(warning))")) }
-        // --console: the guest's output, sanitised (no escape sequences reach the terminal).
+        // The run keeps the lock across an agent's rollback; one coordinator serves every session
+        // (a macOS VM with agent access on only).
+        let run = StartRun(
+            session: session, wiring: wiring, bundle: bundle, lock: lock, vm: shown, pid: pid,
+            checkpoints: StartRun<StartWiring>.offersCheckpoints(try? bundle.readConfig()))
+        wiring.run = run
+        // Its warnings, and Ctrl-C / `nido stop --suspend` for it.
+        wiring.attach(session)
+        defer { wiring.stopper?.cancel() }
+        // --parent-pid: the end of that process stops the VM as Ctrl-C does.
+        if let parentPid { wiring.watchParent(parentPid) }
+        defer { wiring.endParentWatch() }
+        // --console: the guest's output, sanitised (no escape sequences reach the terminal). Linux
+        // VMs only, which have no rollback: the first session's console is the only one.
         let mirror: ConsoleMirror? = console ? session.serialConsole.map { ConsoleMirror(output: $0.output) } : nil
-        defer { session.serialConsole?.close() }
-        let stopper = SignalStopper(session: session, bundle: bundle, name: vmName.rawValue)
-        stopper.install()
-        defer { stopper.cancel() }
+        defer { run.session.serialConsole?.close() }
 
-        let (shown, pid) = (vmName.rawValue, String(getpid()))
-        switch try await session.startOrResume() {
-        case .coldStart:
-            Terminal.error(L10n.string("VM \(shown) started (pid \(pid)). Press Ctrl-C to stop it."))
-        case .resumed:
-            Terminal.error(L10n.string("VM \(shown) resumed from its saved state (pid \(pid)). Press Ctrl-C to stop it."))
-        case .discarded(let warning):
-            // May carry Virtualization.framework's reason: printed without control characters.
-            // A period ends the sentence alike in the five languages.
-            Terminal.error(L10n.string("Warning: \(ConsoleSanitizer.escapingControls(warning) + ".")"))
-            Terminal.error(L10n.string("VM \(shown) started from a cold boot (pid \(pid)). Press Ctrl-C to stop it."))
-        case .stoppedWhileResuming:
-            Terminal.error(L10n.string("Stop requested while resuming: the VM \(shown) wasn’t resumed and its saved state was discarded."))
+        for line in StartSupport.startLines(try await session.startOrResume(), vm: shown, pid: pid) {
+            Terminal.error(line)
         }
 
         // The owner serves the agent socket (macOS VM with agent access on); a failure, also of
         // reading config.json, is a warning.
-        let agentServer = AgentHost.readConfig(bundle, onWarning: { Terminal.error($0) }).flatMap { config in
-            AgentHost.startIfEnabled(session: session, bundle: bundle, config: config) { Terminal.error($0) }
-        }
-        defer { agentServer?.stop() }
+        wiring.serve(session, checkpoints: run.checkpointHandling)
+        defer { wiring.agentServer?.stop() }
 
         // A start that sent the guest its account: say so, and with agent access on set Nido Agent
         // up in a child task (waiting for Remote Login, up to 10 minutes) while the VM runs on.
-        let setupTask = Self.followProvisionedStart(session: session, bundle: bundle, vm: shown)
-        defer { setupTask?.cancel() }
+        wiring.setupTask = Self.followProvisionedStart(session: session, bundle: bundle, vm: shown)
+        defer { wiring.setupTask?.cancel() }
 
-        let final: VMRunState = await withCheckedContinuation { continuation in
-            if Self.isFinal(session.state) {
-                continuation.resume(returning: session.state)
-                return
-            }
-            session.onStateChange = { [weak session] state in
-                guard Self.isFinal(state) else { return }
-                session?.onStateChange = nil
-                continuation.resume(returning: state)
-            }
-        }
+        // Until the session stops, also the one an agent's rollback started.
+        let end = await run.waitForEnd()
+        let final = run.session
         // The setup has nothing to do any more: cancelled and waited for (bounded), so it prints
         // nothing after the VM is gone.
-        _ = await CLISupport.cancelAndWait(setupTask, within: CLISupport.setupTaskStopLimit)
-        agentServer?.stop()
+        _ = await CLISupport.cancelAndWait(wiring.setupTask, within: CLISupport.setupTaskStopLimit)
+        wiring.agentServer?.stop()
         // The machine is gone: the relay delivers its last events (stderr lines, egress.log)
         // before the process exits, waited for off the main actor.
-        if let relay = session.egressRelay {
+        if let relay = final.egressRelay {
             await Task.detached { relay.shutdownAndWait() }.value
         }
         // The machine is gone: read what is left in the console pipe into console.log, end the
         // console and let the mirror print what it already read, for at most 2 s.
-        await session.serialConsole?.closeAndWait()
+        await final.serialConsole?.closeAndWait()
         if let mirror, !(await mirror.finish(within: ConsoleMirror.finishTimeout)) {
             // stdout does not drain (a pipe nobody reads, a terminal stopped with Ctrl-S): do not
             // keep the lock, nor write more to the terminal (stderr may be blocked as well).
             lock.release()
-            Foundation.exit(final == .stopped ? 0 : 1)
+            Foundation.exit(end == .ended(.stopped) ? 0 : 1)
         }
-        if case .error(let reason) = final {
+        switch end {
+        case .ended(.error(let reason)):
             throw CLIError.vmFailed(reason)
+        case .rollbackFailed(let checkpoint, let reason):
+            // The VM is stopped (`waitForEnd`): the error is printed and the process exits 1.
+            throw CLIError.rollbackFailed(checkpoint: checkpoint, reason: reason)
+        case .ended:
+            break
         }
         // Decided by the suspend's own result: the VM reports stopped before the suspend returns.
-        let suspended = await stopper.suspendOutcome()
+        let suspended = await wiring.stopper?.suspendOutcome() ?? false
         Terminal.error(suspended ? L10n.string("VM \(shown) suspended.") : L10n.string("VM \(shown) stopped."))
     }
 
@@ -181,12 +198,118 @@ struct StartCommand: AsyncParsableCommand {
             }
         }
     }
+}
 
-    private static func isFinal(_ state: VMRunState) -> Bool {
-        switch state {
-        case .stopped, .error: true
-        case .starting, .running, .pausing, .paused, .resuming, .stopping: false
+/// `nido start`'s wiring of each session of its run (`StartRun`): the first one, and the one an
+/// agent's rollback starts.
+@MainActor
+private final class StartWiring: StartRunWiring {
+    private let bundle: VMBundle
+    private let name: String
+    private let console: Bool
+    private let notices: EgressNoticeMerger
+    /// Set right after the run is made: a stop signal between two sessions goes to it.
+    weak var run: StartRun<StartWiring>?
+    /// The signal handling of the current session.
+    private(set) var stopper: SignalStopper?
+    /// The agent socket of the current session.
+    private(set) var agentServer: AgentControlServer?
+    /// The first session's Nido Agent setup, if any.
+    var setupTask: Task<Void, Never>?
+    /// The watch on `--parent-pid`'s process.
+    private var parentWatch: ParentExitWatch?
+    /// Asks for the stop again every second once the parent ended, until a stopper takes it.
+    private var parentExitTimer: (any DispatchSourceTimer)?
+
+    init(bundle: VMBundle, name: String, console: Bool, notices: EgressNoticeMerger) {
+        self.bundle = bundle
+        self.name = name
+        self.console = console
+        self.notices = notices
+    }
+
+    func makeSession() throws -> VMSession {
+        let notices = notices
+        return try VMSession(bundle: bundle, mirrorsConsole: console, egressEvents: { event in
+            guard !event.isLocalNoise else { return }
+            for line in notices.lines(for: event, now: Date()) { Terminal.error(CLISupport.networkNoticeLine(line)) }
+        })
+    }
+
+    func attach(_ session: VMSession) {
+        for warning in session.warnings { Terminal.error(L10n.string("Warning: \(ConsoleSanitizer.escapingControls(warning))")) }
+        // The new handling is installed before the previous one goes: no signal falls in between.
+        let previous = stopper
+        let next = SignalStopper(
+            session: session, bundle: bundle, name: name,
+            takeStop: { [weak self] in self?.run?.takeStopBetweenSessions() ?? false },
+            noteStop: { [weak self] in self?.run?.noteStop() },
+            noteSuspend: { [weak self] in self?.run?.noteSuspend($0) },
+            holdForCheckpoint: { [weak self] request, carryOut in
+                self?.run?.holdForCheckpoint(request, then: carryOut) ?? false
+            })
+        next.install()
+        stopper = next
+        previous?.cancel()
+    }
+
+    func serve(_ session: VMSession, checkpoints: (any AgentCheckpointHandling)?) {
+        agentServer?.stop()
+        agentServer = AgentHost.readConfig(bundle, onWarning: { Terminal.error($0) }).flatMap { config in
+            AgentHost.startIfEnabled(
+                session: session, bundle: bundle, config: config, checkpoints: checkpoints,
+                onWarning: { Terminal.error($0) })
         }
+    }
+
+    func detach(_ session: VMSession) async {
+        _ = await CLISupport.cancelAndWait(setupTask, within: CLISupport.setupTaskStopLimit)
+        setupTask = nil
+        agentServer?.stop()
+        agentServer = nil
+        if let relay = session.egressRelay {
+            await Task.detached { relay.shutdownAndWait() }.value
+        }
+        await session.serialConsole?.closeAndWait()
+    }
+
+    func report(_ line: String) {
+        Terminal.error(line)
+    }
+
+    /// When the process `pid` ends, the VM stops as with Ctrl-C.
+    func watchParent(_ pid: Int32) {
+        let watch = ParentExitWatch(pid: pid, queue: .main) { [weak self] in
+            MainActor.assumeIsolated { self?.parentExited(pid) }
+        }
+        parentWatch = watch
+        watch.start()
+    }
+
+    /// The end of the run: no more watch or retries.
+    func endParentWatch() {
+        parentWatch?.cancel()
+        parentWatch = nil
+        parentExitTimer?.cancel()
+        parentExitTimer = nil
+    }
+
+    /// Asked every second, of the stopper of the current session (a new one after a rollback): a
+    /// VM that does not accept a stop yet gets the request again.
+    private func parentExited(_ pid: Int32) {
+        guard parentExitTimer == nil else { return }
+        Terminal.error(L10n.string("The process \(String(pid)) that started this VM ended: stopping the VM."))
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now(), repeating: 1)
+        timer.setEventHandler { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.stopper?.stopForParentExit() == true else { return }
+                self.parentExitTimer?.cancel()
+                self.parentExitTimer = nil
+            }
+        }
+        parentExitTimer = timer
+        timer.resume()
     }
 }
 
@@ -194,22 +317,40 @@ struct StartCommand: AsyncParsableCommand {
 /// `VMControl.suspendSignal` (`nido stop --suspend`) into `VMSession.suspend`: the VM stops with
 /// its state saved and the process exits. When it cannot suspend, the process answers the waiting
 /// `nido stop --suspend` (`VMControl.writeSuspendResult`) at once. A stop asked during a suspend
-/// is kept and carried out if the suspend fails.
+/// is kept and carried out if the suspend fails. During an agent's rollback a stop goes to the
+/// run when no session runs (`takeStop`), and every stop is noted so no rollback starts after it
+/// (`noteStop`); a suspend in progress is noted as well (`noteSuspend`), so no checkpoint or
+/// rollback races with its save. A stop or a suspend asked while an agent takes a checkpoint
+/// waits for it (`holdForCheckpoint`), then is carried out as usual.
 @MainActor
 private final class SignalStopper {
     private let session: VMSession
     private let bundle: VMBundle
     private let name: String
+    private let takeStop: () -> Bool
+    private let noteStop: () -> Void
+    private let noteSuspend: (Bool) -> Void
+    private let holdForCheckpoint: (TerminalRequest, @escaping @MainActor () -> Void) -> Bool
     private var sources: [any DispatchSourceSignal] = []
     private var requested = false
     /// A stop signal that arrived while suspending.
     private var stopAfterSuspend = false
     private var suspendTask: Task<Bool, Never>?
+    /// A suspend waiting for an agent's checkpoint to end.
+    private var suspendHeld = false
 
-    init(session: VMSession, bundle: VMBundle, name: String) {
+    init(
+        session: VMSession, bundle: VMBundle, name: String, takeStop: @escaping () -> Bool,
+        noteStop: @escaping () -> Void, noteSuspend: @escaping (Bool) -> Void,
+        holdForCheckpoint: @escaping (TerminalRequest, @escaping @MainActor () -> Void) -> Bool
+    ) {
         self.session = session
         self.bundle = bundle
         self.name = name
+        self.takeStop = takeStop
+        self.noteStop = noteStop
+        self.noteSuspend = noteSuspend
+        self.holdForCheckpoint = holdForCheckpoint
     }
 
     func install() {
@@ -237,6 +378,14 @@ private final class SignalStopper {
         sources.removeAll()
     }
 
+    /// The process that started this run ended (`--parent-pid`): a stop on the path of SIGINT.
+    /// True once the stop is taken, held for an agent's checkpoint or queued behind a suspend;
+    /// false when the VM does not accept a stop yet (the caller asks again).
+    func stopForParentExit() -> Bool {
+        requestStop()
+        return requested || stopAfterSuspend
+    }
+
     /// True when the VM was suspended (waits for a suspend in progress to finish).
     func suspendOutcome() async -> Bool {
         guard let suspendTask else { return false }
@@ -244,7 +393,14 @@ private final class SignalStopper {
     }
 
     private func requestSuspend() {
-        guard suspendTask == nil else { return }
+        guard suspendTask == nil, !suspendHeld else { return }
+        // An agent's checkpoint in progress (the VM paused, its state being saved): the suspend
+        // waits for it, the waiting `nido stop --suspend` with it. Checked before the state: the
+        // checkpoint passes through pausing and resuming.
+        if !requested, holdForCheckpoint(.suspend, { [weak self] in self?.carryOutHeldSuspend() }) {
+            suspendHeld = true
+            return
+        }
         let refusal: CLISupport.SuspendRefusal? = if requested {
             .alreadyStopping
         } else if session.state == .stopped, session.acceptsStop {
@@ -262,6 +418,8 @@ private final class SignalStopper {
             return
         }
         Terminal.error(L10n.string("Suspending the VM…"))
+        // Marked before the task runs: a rollback accepted meanwhile does not stop the VM.
+        noteSuspend(true)
         suspendTask = Task {
             do {
                 try await session.suspend()
@@ -271,9 +429,23 @@ private final class SignalStopper {
                 Terminal.error(L10n.string("Error: \(reason). \(stateAfterFailure())"))
                 answer(reason)
                 suspendTask = nil
+                // The VM is still there (running, paused or stopped): checkpoints and rollbacks
+                // are possible again where it runs.
+                noteSuspend(false)
                 if stopAfterSuspend { requestStop() }
                 return false
             }
+        }
+    }
+
+    /// The suspend held for an agent's checkpoint, now that it ended. Refused then (the VM is no
+    /// longer running), a stop asked while it waited is carried out.
+    private func carryOutHeldSuspend() {
+        suspendHeld = false
+        requestSuspend()
+        if suspendTask == nil, stopAfterSuspend {
+            stopAfterSuspend = false
+            requestStop()
         }
     }
 
@@ -297,8 +469,9 @@ private final class SignalStopper {
     }
 
     private func requestStop() {
-        // A stop in the middle of a suspend would race with the saved state: kept for after it.
-        if suspendTask != nil {
+        // A stop in the middle of a suspend would race with the saved state: kept for after it
+        // (also a suspend still waiting for an agent's checkpoint).
+        if suspendTask != nil || suspendHeld {
             if !stopAfterSuspend {
                 stopAfterSuspend = true
                 Terminal.error(L10n.string("Stop requested: if the suspend fails, the VM stops after it."))
@@ -306,6 +479,19 @@ private final class SignalStopper {
             return
         }
         guard !requested else { return }
+        // A rollback between two sessions: the run takes it, nothing more is restored or started.
+        if takeStop() {
+            requested = true
+            Terminal.error(L10n.string("Stopping the VM…"))
+            return
+        }
+        // An agent's checkpoint in progress has paused the VM: stopped now, it would be powered
+        // off at once (no graceful shutdown) and the checkpoint would fail. Carried out after it;
+        // meanwhile a suspend is refused as for a stop in progress.
+        if holdForCheckpoint(.stop, { [weak self] in self?.carryOutHeldStop() }) {
+            requested = true
+            return
+        }
         // Nothing to stop yet (or any more): the request is not consumed, a later signal still
         // works. A resume from the suspended state in progress does accept it (R-M3A-22).
         guard session.acceptsStop else {
@@ -315,7 +501,16 @@ private final class SignalStopper {
             return
         }
         requested = true
+        noteStop()
         Terminal.error(L10n.string("Stopping the VM…"))
         Task { await session.stop(gracePeriod: .seconds(30)) }
+    }
+
+    /// The stop held for an agent's checkpoint, now that it ended: carried out as a new one,
+    /// unless the VM is already gone (the run ends with it).
+    private func carryOutHeldStop() {
+        guard !StartSupport.isFinal(session.state) else { return }
+        requested = false
+        requestStop()
     }
 }

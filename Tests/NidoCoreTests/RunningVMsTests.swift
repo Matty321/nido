@@ -13,9 +13,9 @@ import Testing
     }
 
     @discardableResult
-    private func makeVM(_ name: String, in paths: NidoPaths) throws -> VMBundle {
+    private func makeVM(_ name: String, guest: GuestOS = .linux, in paths: NidoPaths) throws -> VMBundle {
         let config = VMConfig(
-            id: UUID(), name: try VMName(name), guest: .linux, cpuCount: 2,
+            id: UUID(), name: try VMName(name), guest: guest, cpuCount: 2,
             memoryBytes: 2 << 30, diskBytes: 8 << 30, macAddress: "02:00:00:00:00:01")
         return try VMBundle.create(config: config, paths: paths)
     }
@@ -34,6 +34,22 @@ import Testing
         defer { operation.release() }
 
         #expect(RunningVMs.names(paths: paths).map(\.rawValue) == ["avviata"])
+    }
+
+    @Test func macOSCountCountsRunningMacsOnly() throws {
+        let paths = try makeRoot()
+        defer { try? FileManager.default.removeItem(at: paths.root) }
+        let a = try BundleLock.acquire(try makeVM("a", guest: .macos, in: paths), owner: .cli)
+        defer { a.release() }
+        let b = try BundleLock.acquire(try makeVM("b", guest: .macos, in: paths), owner: .app)
+        defer { b.release() }
+        let c = try BundleLock.acquire(try makeVM("c", guest: .macos, in: paths), owner: .cliOperation)
+        defer { c.release() }
+        let d = try BundleLock.acquire(try makeVM("d", guest: .linux, in: paths), owner: .cli)
+        defer { d.release() }
+        try makeVM("e", guest: .macos, in: paths)
+
+        #expect(RunningVMs.macOSCount(paths: paths) == 2)
     }
 
     /// Both kinds of runner, sorted by name.

@@ -65,8 +65,10 @@ struct Nido: AsyncParsableCommand {
 
 /// Terminal I/O helpers: diagnostics and prompts go to stderr, results to stdout.
 enum Terminal {
+    /// A stderr that can't be written (closed by the client of `nido mcp`, with SIGPIPE ignored)
+    /// loses the line: the throwing write never raises an Objective-C exception that would abort.
     static func error(_ message: String) {
-        FileHandle.standardError.write(Data((message + "\n").utf8))
+        try? FileHandle.standardError.write(contentsOf: Data((message + "\n").utf8))
     }
 
     /// Prints `question` on stderr and reads one line from stdin; EOF counts as "no".

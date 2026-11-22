@@ -114,6 +114,32 @@ private struct InjectedFailure: Error {}
         #expect(try env.source.readConfig().agentAccess == true)
     }
 
+    @Test func cloneOfADisposableIsNotDisposable() async throws {
+        let env = try CloneEnv()
+        defer { env.cleanup() }
+        _ = try env.source.updateConfig { $0.disposable = true }
+
+        let clone = try await env.cloner().clone(try VMName("sorgente"), as: try VMName("copia"), owner: .cli)
+
+        #expect(try clone.readConfig().disposable == nil)
+        #expect(try env.source.readConfig().disposable == true)
+    }
+
+    @Test func cloneClearsFreshBase() async throws {
+        let env = try CloneEnv()
+        defer { env.cleanup() }
+        let base = UUID()
+        _ = try env.source.updateConfig {
+            $0.disposable = true
+            $0.freshBaseID = base
+        }
+
+        let clone = try await env.cloner().clone(try VMName("sorgente"), as: try VMName("copia"), owner: .cli)
+
+        #expect(try clone.readConfig().freshBaseID == nil)
+        #expect(try env.source.readConfig().freshBaseID == base)
+    }
+
     /// The guest's disk, and so its keyboard layout, is copied: the clone keeps the choice.
     @Test func cloneKeepsTheGuestKeyboardLayout() async throws {
         let env = try CloneEnv()
@@ -241,6 +267,36 @@ private struct InjectedFailure: Error {}
             let names = try fm.subpathsOfDirectory(atPath: url.path).map { ($0 as NSString).lastPathComponent }
             #expect(!names.contains { $0.hasPrefix(".egress") }, "\(url.lastPathComponent): \(names)")
         }
+    }
+
+    /// What an agent did in a VM, and what it saw, stays with that VM: neither a clone nor a VM
+    /// made from a template carries the activity log, its thumbnails or the screenshots.
+    @Test func cloneDoesNotCopyTheLog() async throws {
+        let env = try CloneEnv()
+        defer { env.cleanup() }
+        let entry = AgentActivityEntry(
+            v: 1, time: Date(), session: "s", client: "act", op: "screenshot", detail: [:], ok: true, error: nil,
+            message: nil, ms: 5, thumb: nil)
+        try AgentActivityLog.append(entry, thumbnailPNG: testPNG(width: 64, height: 40), in: env.source)
+        _ = try AgentShots.write(testPNG(width: 64, height: 40), in: env.source)
+        _ = try AgentFiles.stage(Data("a file on its way".utf8), in: env.source)
+        #expect(try AgentActivityLog.read(in: env.source, limit: nil).first?.thumb != nil)
+
+        let clone = try await env.cloner().clone(try VMName("sorgente"), as: try VMName("copia"), owner: .cli)
+        try VMTemplates.save(env.source, owner: .cli)
+        let key = env.tmp.appendingPathComponent("id_test.pub")
+        try (validKey + "\n").write(to: key, atomically: true, encoding: .utf8)
+        let fromTemplate = try await env.cloner().createFromTemplate(
+            try VMName("sorgente"), as: try VMName("nuova"), sshKeyPath: key, owner: .cli)
+        let fm = FileManager.default
+        for vm in [clone, fromTemplate] {
+            #expect(!fm.fileExists(atPath: vm.agentLogURL.path), "\(vm.url.lastPathComponent)")
+            #expect(!fm.fileExists(atPath: vm.agentShotsURL.path), "\(vm.url.lastPathComponent)")
+            #expect(!fm.fileExists(atPath: vm.agentFilesURL.path), "\(vm.url.lastPathComponent)")
+            #expect(try AgentActivityLog.read(in: vm, limit: nil).isEmpty)
+        }
+        // The source keeps its own.
+        #expect(try AgentActivityLog.read(in: env.source, limit: nil).count == 1)
     }
 
     /// The controlled network follows a clone and a VM made from a template: the flag and the
@@ -812,6 +868,18 @@ private struct InjectedFailure: Error {}
         let clone = try await cloner(fixture).clone(try VMName("mac"), as: try VMName("copia"), owner: .cli)
         #expect(!FileManager.default.fileExists(atPath: clone.authorizedKeyURL.path))
         try clone.verifyInnerFiles(for: .macos)
+    }
+
+    @Test func macCloneDoesNotCopyTheActivityLog() async throws {
+        let fixture = try MacFixture()
+        defer { fixture.cleanup() }
+        let entry = AgentActivityEntry(
+            v: 1, time: Date(), session: "s", client: "mcp", op: "type", detail: ["chars": "3"], ok: true, error: nil,
+            message: nil, ms: 5, thumb: nil)
+        try AgentActivityLog.append(entry, thumbnailPNG: nil, in: fixture.bundle)
+        let clone = try await cloner(fixture).clone(try VMName("mac"), as: try VMName("copia"), owner: .cli)
+        #expect(!FileManager.default.fileExists(atPath: clone.agentLogURL.path))
+        #expect(try AgentActivityLog.read(in: fixture.bundle, limit: nil).count == 1)
     }
 
     @Test func macCloneNotesListGuestSteps() async throws {

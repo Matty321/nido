@@ -143,6 +143,18 @@ public final class BundleLock: Sendable {
         _ = Darwin.close(fd)
     }
 
+    /// Whether this lock is still held and is the lock of `bundle` (its open file is the one at
+    /// `<bundle>/.lock`): what an operation under a lock the caller already holds checks first.
+    func holds(_ bundle: VMBundle) -> Bool {
+        released.withLock { done in
+            guard !done else { return false }
+            var mine = stat()
+            var current = stat()
+            guard fstat(fd, &mine) == 0, lstat(bundle.lockURL.path, &current) == 0 else { return false }
+            return mine.st_dev == current.st_dev && mine.st_ino == current.st_ino
+        }
+    }
+
     private static func readHolder(_ fd: Int32) -> LockHolder? {
         var buf = [UInt8](repeating: 0, count: 32)
         let n = buf.withUnsafeMutableBytes { pread(fd, $0.baseAddress, $0.count, 0) }

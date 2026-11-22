@@ -28,7 +28,8 @@ extension CLISupport {
     /// for an invalid domain, a list that does not load or is full; refused without a terminal
     /// (`interactive` false) or when the authentication fails. A domain already listed is not
     /// asked for (nothing widens). A broad wildcard (`DomainPattern.isBroadWildcard`) first
-    /// needs `confirm` on the warning the app shows too, before the authentication.
+    /// needs `confirm` on the warning the app shows too, before the authentication. Once the
+    /// list of `vm` is written, the domain reaches its disposable fresh copies too (`FreshCopies`).
     public static func netAllow(
         vm: String, domain: String, paths: NidoPaths, interactive: Bool, confirm: (String) -> Bool,
         authenticator: any OwnerAuthenticator
@@ -48,18 +49,21 @@ extension CLISupport {
         guard await authenticator.authenticate(reason: L10n.string("add \(shown) to the allowed domains of the VM \(name.rawValue)")) else {
             throw CLIError.authenticationFailed
         }
-        try updatePolicy(bundle, name) { policy in
+        let add: (inout EgressPolicy) throws -> Void = { policy in
             guard !policy.allow.contains(pattern) else { return }
             guard policy.allow.count < EgressPolicy.maxPatterns else { throw CLIError.tooManyDomains }
             policy.allow.append(pattern)
         }
+        try updatePolicy(bundle, name, add)
         var lines = [L10n.string("Added \(shown) to the allowed domains of \(name.rawValue): it applies within seconds, even while the VM is running.")]
+        lines += propagate(from: bundle, name, paths: paths, add)
         lines += controlledNote(bundle, name)
         return lines.joined(separator: "\n")
     }
 
     /// Removes `domain` (the same pattern: an exact name never removes a wildcard) from the list
-    /// of `vm`. No authentication: the list only narrows.
+    /// of `vm`. No authentication: the list only narrows. Only when it was on the list of `vm`,
+    /// it is removed from its disposable fresh copies too (`FreshCopies`).
     public static func netDeny(vm: String, domain: String, paths: NidoPaths) throws -> String {
         let (name, bundle) = try openNet(vm, paths: paths)
         let pattern = try DomainPattern(domain)
@@ -71,7 +75,9 @@ extension CLISupport {
             removed = policy.allow.count < before
         }
         guard removed else { return L10n.string("\(shown) isn’t an allowed domain of \(name.rawValue).") }
-        return L10n.string("Removed \(shown) from the allowed domains of \(name.rawValue): open connections to it are being cut.")
+        var lines = [L10n.string("Removed \(shown) from the allowed domains of \(name.rawValue): open connections to it are being cut.")]
+        lines += propagate(from: bundle, name, paths: paths) { policy in policy.allow.removeAll { $0 == pattern } }
+        return lines.joined(separator: "\n")
     }
 
     /// A network notice as `nido start` prints it on stderr: prefixed with "Network: ", unless the
@@ -164,6 +170,25 @@ extension CLISupport {
         } catch NidoError.invalidEgressPolicy {
             throw malformed(bundle, name)
         }
+    }
+
+    /// `FreshCopies.propagate` after the base was written: one line naming the copies that got
+    /// the change, one per copy that did not; nothing when the base has no copies. A copy's
+    /// failure never fails the command: the base's change is done.
+    private static func propagate(
+        from bundle: VMBundle, _ name: VMName, paths: NidoPaths, _ edit: (inout EgressPolicy) throws -> Void
+    ) -> [String] {
+        let outcome = FreshCopies.propagate(from: bundle, paths: paths, edit)
+        var lines: [String] = []
+        if !outcome.applied.isEmpty {
+            let names = outcome.applied.map(\.rawValue).joined(separator: ", ")
+            lines.append(L10n.string("Also applied to the fresh Macs of \(name.rawValue): \(names)."))
+        }
+        for (copy, reason) in outcome.failed {
+            let shown = ConsoleSanitizer.echoable(reason)
+            lines.append(L10n.string("Couldn’t apply it to the fresh Mac \(copy.rawValue): \(shown)."))
+        }
+        return lines
     }
 
     private static func controlledNote(_ bundle: VMBundle, _ name: VMName) -> [String] {

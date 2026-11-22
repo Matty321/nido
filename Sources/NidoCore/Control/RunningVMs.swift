@@ -20,4 +20,15 @@ public enum RunningVMs {
         }
         return result.sorted { $0.rawValue.lowercased() < $1.rawValue.lowercased() }
     }
+
+    /// How many macOS VMs run right now (lock held by `.app` or `.cli`). A bundle whose
+    /// `config.json` cannot be read is not counted.
+    public static func macOSCount(paths: NidoPaths) -> Int {
+        var count = 0
+        for bundle in (try? VMBundle.list(paths: paths)) ?? [] {
+            guard let owner = BundleLock.holder(bundle)?.owner, owner == .app || owner == .cli else { continue }
+            if let config = try? bundle.readConfig(), config.guest == .macos { count += 1 }
+        }
+        return count
+    }
 }

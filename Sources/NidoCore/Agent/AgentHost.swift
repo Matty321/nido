@@ -17,9 +17,13 @@ public enum AgentHost {
     /// `onActivity` gets `true` before each forwarded command other than `status` and `false`
     /// after it (also when it fails), from any thread, so it must be thread-safe: the app shows
     /// "an agent is using this VM" from it.
+    ///
+    /// `checkpoints` is the owner's checkpoint handling (one per owner, kept across sessions: a
+    /// rollback restarts the VM); without it the socket refuses the checkpoint ops.
     @MainActor
     public static func startIfEnabled(
         session: VMSession, bundle: VMBundle, config: VMConfig,
+        checkpoints: (any AgentCheckpointHandling)? = nil,
         root: URL = AgentControlServer.defaultRoot, onWarning: (String) -> Void = { _ in },
         onActivity: @escaping @Sendable (Bool) -> Void = { _ in }
     ) -> AgentControlServer? {
@@ -35,6 +39,7 @@ public enum AgentHost {
                             }
                             return try await AgentClient(channel: VsockGuestChannel(session: session)).perform(request)
                         }, onActivity: onActivity),
+                    checkpoints: checkpoints,
                     root: root)
             })
     }

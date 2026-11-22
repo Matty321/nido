@@ -47,7 +47,8 @@ public enum RequestDecoding: Equatable, Sendable {
     case refused(AgentReply)
 }
 
-/// Turns one `AgentRequest` into one `AgentReply` (plus the PNG of a screenshot).
+/// Turns one `AgentRequest` into one `AgentReply` (plus the PNG of a screenshot, or the bytes of
+/// a `getFile`).
 ///
 /// All decisions live here so they can be tested without a VM. Messages are read by the
 /// agent model and stay in English.
@@ -64,14 +65,50 @@ public struct AgentDispatcher: Sendable {
     private let permissions: any PermissionState
     /// Nil: `setClipboard` fails (`internalError`).
     private let clipboard: (any ClipboardSink)?
+    /// Nil: `uiTree` fails (`internalError`).
+    private let accessibility: (any AccessibilitySource)?
+    /// `~/NidoTransfer`. Nil: `putFile`, `getFile` and `listFiles` fail (`internalError`).
+    private let transfer: TransferFolder?
+    /// Whether the guest's session shows the lock screen. Then nothing on it can be captured
+    /// ("the main display is not shareable") and its tree is the lock screen's: `screenshot`,
+    /// `zoom` and `uiTree` answer `notReady` instead.
+    private let screenLocked: @Sendable () -> Bool
 
     public init(screen: any ScreenSource, input: any InputSink, permissions: any PermissionState,
-                clipboard: (any ClipboardSink)? = nil) {
+                clipboard: (any ClipboardSink)? = nil, accessibility: (any AccessibilitySource)? = nil,
+                transfer: TransferFolder? = nil, screenLocked: @escaping @Sendable () -> Bool = { false }) {
         self.screen = screen
         self.input = input
         self.permissions = permissions
         self.clipboard = clipboard
+        self.accessibility = accessibility
+        self.transfer = transfer
+        self.screenLocked = screenLocked
     }
+
+    /// What the listener reads after a request frame, before handling it.
+    public enum DataFrame: Equatable, Sendable {
+        /// Nothing: the request is all there is.
+        case nothing
+        /// One binary frame (the bytes of a `putFile`), read with this bound whatever `size` says,
+        /// so a frame of the wrong length is still read whole and the reply stays in step; the
+        /// dispatcher then refuses it.
+        case frame(maxBytes: Int)
+        /// Refused before reading anything (a `putFile` whose `size` is out of bounds): the
+        /// listener answers this and closes the connection.
+        case refused(AgentReply)
+    }
+
+    /// Only a `putFile` is followed by a data frame.
+    public static func dataFrame(after request: AgentRequest) -> DataFrame {
+        guard case .putFile(_, let size) = request.action else { return .nothing }
+        guard (0...AgentProtocol.maxTransferBytes).contains(size) else { return .refused(sizeRefusal) }
+        return .frame(maxBytes: AgentProtocol.maxTransferBytes)
+    }
+
+    /// The answer to a `putFile` whose size is out of bounds (`size`, or the frame's length).
+    public static let sizeRefusal = failure(
+        .badRequest, "the file must be 0 to \(AgentProtocol.maxTransferBytes) bytes (16 MiB)")
 
     /// Decodes a request frame. The version is read first, on its own, so a newer host whose
     /// request does not decode here (a new op, a renamed field) hears "update Nido Agent"
@@ -93,7 +130,9 @@ public struct AgentDispatcher: Sendable {
         }
     }
 
-    public func handle(_ request: AgentRequest) async -> (AgentReply, Data?) {
+    /// `data` is the frame read after the request (`dataFrame(after:)`): the bytes of a `putFile`,
+    /// ignored for any other op.
+    public func handle(_ request: AgentRequest, data: Data? = nil) async -> (AgentReply, Data?) {
         guard request.v == AgentProtocol.version else { return (Self.versionMismatch(request.v), nil) }
         switch request.action {
         case .status:
@@ -106,6 +145,17 @@ public struct AgentDispatcher: Sendable {
             return (act(request), nil)
         case .setClipboard(let text, let clearAfter):
             return (await setClipboard(text, clearAfter: clearAfter), nil)
+        case .uiTree(let maxElements):
+            return (await uiTree(request, maxElements: maxElements), nil)
+        case .checkpoint, .rollback, .checkpoints:
+            // The VM's owner answers these itself and never forwards them.
+            return (Self.failure(.badRequest, "host-only action"), nil)
+        case .putFile(let path, let size):
+            return (putFile(path, size: size, data: data), nil)
+        case .getFile(let path, let maxBytes):
+            return getFile(path, maxBytes: maxBytes)
+        case .listFiles(let path):
+            return (listFiles(path), nil)
         }
     }
 
@@ -120,6 +170,7 @@ public struct AgentDispatcher: Sendable {
 
     private func screenshot(maxLongEdge: Int) async -> (AgentReply, Data?) {
         guard permissions.screenRecording else { return (Self.missing("Screen Recording"), nil) }
+        guard !screenLocked() else { return (Self.locked, nil) }
         guard maxLongEdge > 0 else {
             return (Self.failure(.badRequest, "maxLongEdge must be a positive number of pixels"), nil)
         }
@@ -144,6 +195,7 @@ public struct AgentDispatcher: Sendable {
     private func zoom(_ request: AgentRequest, x: Double, y: Double, width: Double, height: Double,
                       maxLongEdge: Int) async -> (AgentReply, Data?) {
         guard permissions.screenRecording else { return (Self.missing("Screen Recording"), nil) }
+        guard !screenLocked() else { return (Self.locked, nil) }
         guard request.image != nil, request.screen != nil else {
             return (Self.failure(.noScreenshot, "take a screenshot first: coordinates refer to the last screenshot"), nil)
         }
@@ -178,6 +230,46 @@ public struct AgentDispatcher: Sendable {
         }
     }
 
+    /// Frames are in pixels of the latest screenshot, as a click's coordinates: the request
+    /// carries that screenshot's `image` and `screen`. Needs Accessibility only (nothing is
+    /// captured); the reply has no PNG.
+    private func uiTree(_ request: AgentRequest, maxElements: Int) async -> AgentReply {
+        guard permissions.accessibility else { return Self.missing("Accessibility") }
+        guard !screenLocked() else { return Self.locked }
+        guard request.image != nil, request.screen != nil else {
+            return Self.failure(.noScreenshot, "take a screenshot first: frames refer to the last screenshot")
+        }
+        let range = AgentProtocol.uiTreeElementsRange
+        guard range.contains(maxElements) else {
+            return Self.failure(.badRequest, "maxElements must be \(range.lowerBound) to \(range.upperBound)")
+        }
+        let space: CoordinateSpace
+        let points: ScreenSize
+        do {
+            space = try coordinateSpace(request)
+            points = screen.screenSize()
+        } catch let refusal as Refusal {
+            return refusal.reply
+        } catch {
+            return Self.failure(.internalError, "\(error)")
+        }
+        guard let accessibility else {
+            return Self.failure(.internalError, "the accessibility tree is not available")
+        }
+        let tree: UITree
+        do {
+            tree = try await accessibility.uiTree(space: space, maxElements: maxElements)
+        } catch {
+            return Self.failure(.internalError, "could not read the frontmost app: \(error)")
+        }
+        // Frames were mapped against the screenshot's screen: a different screen now means
+        // they would point elsewhere.
+        guard screen.screenSize() == points else {
+            return Self.failure(.screenChanged, Self.screenChangedMessage)
+        }
+        return AgentReply(ok: true, tree: tree)
+    }
+
     /// Needs no permission: writing the pasteboard works before Screen Recording and Accessibility
     /// are allowed (the password it carries is what the user types to allow them). The text is
     /// never logged, nor repeated in a refusal.
@@ -193,6 +285,56 @@ public struct AgentDispatcher: Sendable {
         }
         await clipboard.set(text, clearAfter: clearAfter)
         return AgentReply(ok: true)
+    }
+
+    // MARK: - Files
+
+    /// Files need no permission and work on a locked screen: nothing is captured or posted.
+    /// Nothing is written unless exactly `size` bytes came.
+    private func putFile(_ path: String, size: Int, data: Data?) -> AgentReply {
+        guard (0...AgentProtocol.maxTransferBytes).contains(size) else { return Self.sizeRefusal }
+        guard let data, data.count == size else {
+            return Self.failure(.badRequest,
+                                "the file has \(data?.count ?? 0) bytes, not the \(size) announced: nothing was written")
+        }
+        guard let transfer else { return Self.noTransferFolder }
+        do {
+            try transfer.write(data, to: path)
+        } catch {
+            return Self.failure(error)
+        }
+        return AgentReply(ok: true, bytes: size)
+    }
+
+    private func getFile(_ path: String, maxBytes: Int) -> (AgentReply, Data?) {
+        guard (1...AgentProtocol.maxTransferBytes).contains(maxBytes) else {
+            return (Self.failure(.badRequest, "maxBytes must be 1 to \(AgentProtocol.maxTransferBytes)"), nil)
+        }
+        guard let transfer else { return (Self.noTransferFolder, nil) }
+        do {
+            let data = try transfer.read(path, maxBytes: maxBytes)
+            return (AgentReply(ok: true, bytes: data.count), data)
+        } catch {
+            return (Self.failure(error), nil)
+        }
+    }
+
+    private func listFiles(_ path: String?) -> AgentReply {
+        guard let transfer else { return Self.noTransferFolder }
+        do {
+            let listed = try transfer.list(path, limit: AgentProtocol.maxListedFiles)
+            return AgentReply(ok: true, files: listed.entries, truncated: listed.truncated)
+        } catch {
+            return Self.failure(error)
+        }
+    }
+
+    private static let noTransferFolder = failure(.internalError, "the transfer folder is not available")
+
+    /// A `TransferError` as it is, anything else an `internalError`.
+    private static func failure(_ error: Error) -> AgentReply {
+        guard let error = error as? TransferError else { return failure(.internalError, "\(error)") }
+        return failure(error.code, error.message)
     }
 
     private func act(_ request: AgentRequest) -> AgentReply {
@@ -233,7 +375,8 @@ public struct AgentDispatcher: Sendable {
                     throw Refusal(error.description)
                 }
                 try input.key(stroke)
-            case .status, .screenshot, .setClipboard, .zoom:
+            case .status, .screenshot, .setClipboard, .zoom, .uiTree, .checkpoint, .rollback, .checkpoints,
+                 .putFile, .getFile, .listFiles:
                 throw Refusal("not an input action")
             }
         } catch let refusal as Refusal {
@@ -273,6 +416,9 @@ public struct AgentDispatcher: Sendable {
     // MARK: - Replies
 
     static let screenChangedMessage = "the screen changed: take a new screenshot"
+
+    /// What `screenshot`, `zoom` and `uiTree` answer while the session's screen is locked.
+    static let locked = failure(.notReady, "the VM's screen is locked: log in through its window")
 
     private static func failure(_ code: AgentErrorCode, _ message: String) -> AgentReply {
         AgentReply(ok: false, error: code, message: message)

@@ -253,6 +253,42 @@
         }
       }
     },
+    "%@ didn’t stop within 60 seconds: its process was ended." : {
+      "comment" : "nido mcp --fresh, end of the session: the copy's nido start ignored the stop and was killed; %@ is the VM name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ wurde nicht innerhalb von 60 Sekunden gestoppt: Ihr Prozess wurde beendet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ didn’t stop within 60 seconds: its process was ended."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ no se ha detenido en 60 segundos: se ha terminado su proceso."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ne s’est pas arrêtée en 60 secondes : son processus a été terminé."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ non si è arrestata entro 60 secondi: il suo processo è stato terminato."
+          }
+        }
+      }
+    },
     "%@ exists and nido did not write it: use --force to overwrite it" : {
       "comment" : "Agent Mac: nido skill install refuses a foreign SKILL.md.",
       "extractionState" : "manual",
@@ -378,6 +414,42 @@
         }
       }
     },
+    "%@ is a fresh Mac of another session: use the VM it was copied from" : {
+      "comment" : "nido mcp --fresh: the base VM is itself a disposable copy made by another session; %@ is its VM name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist ein neuer Mac einer anderen Sitzung: Verwende die VM, von der er kopiert wurde"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is a fresh Mac of another session: use the VM it was copied from"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ es un Mac nuevo de otra sesión: usa la VM de la que se copió"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ est un nouveau Mac d’une autre session : utilisez la VM dont il est la copie"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ è un Mac nuovo di un’altra sessione: usa la VM da cui è stato copiato"
+          }
+        }
+      }
+    },
     "%@ is a link to another program: Nido leaves it alone." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -472,6 +544,42 @@
         }
       }
     },
+    "%@ is a template: checkpoints are not available" : {
+      "comment" : "Agent Mac: an agent asked for a checkpoint or a rollback of a template (its name).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist eine Vorlage: Checkpoints sind nicht verfügbar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is a template: checkpoints are not available"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ es una plantilla: los checkpoints no están disponibles"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ est un modèle : les checkpoints ne sont pas disponibles"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ è un modello: i checkpoint non sono disponibili"
+          }
+        }
+      }
+    },
     "%@ is a template: use nido create --from-template or nido template edit" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -557,6 +665,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ non è valido o non è sicuro (un link, troppo grande, JSON non valido): Nido non lo usa e la VM accesa resta sull'ultima lista valida. Per riscriverlo con la lista di base: nido net reset %@"
+          }
+        }
+      }
+    },
+    "%@ is suspended: start it with nido start %@ and shut it down, then try again" : {
+      "comment" : "nido mcp --fresh: the base VM has a saved state; both %@ are the VM name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist im Ruhezustand: Starte sie mit nido start %@ und fahre sie herunter, dann versuche es erneut"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is suspended: start it with nido start %@ and shut it down, then try again"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ está suspendida: iníciala con nido start %@ y apágala, luego vuelve a intentarlo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ est suspendue : démarrez-la avec nido start %@ et éteignez-la, puis réessayez"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ è sospesa: avviala con nido start %@ e arrestala, poi riprova"
           }
         }
       }
@@ -3088,6 +3232,41 @@
         }
       }
     },
+    "--clear can’t be combined with --limit or --json" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--clear lässt sich nicht mit --limit oder --json kombinieren"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--clear can’t be combined with --limit or --json"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--clear no se puede combinar con --limit ni --json"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--clear ne peut pas être combiné avec --limit ou --json"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--clear non può essere combinato con --limit o --json"
+          }
+        }
+      }
+    },
     "--from-template can’t be combined with --image, --image-file, --cpus, --memory, --disk, --no-packages or --no-guest-tools: the VM takes them from the template" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3146,6 +3325,105 @@
         }
       }
     },
+    "--keep works only with --fresh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--keep funktioniert nur mit --fresh"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--keep works only with --fresh"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--keep solo funciona con --fresh"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--keep ne fonctionne qu’avec --fresh"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--keep funziona solo con --fresh"
+          }
+        }
+      }
+    },
+    "--limit must be a whole number, at least 1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--limit muss eine ganze Zahl von mindestens 1 sein"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--limit must be a whole number, at least 1"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--limit debe ser un número entero, al menos 1"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--limit doit être un nombre entier, au moins 1"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--limit deve essere un numero intero, almeno 1"
+          }
+        }
+      }
+    },
+    "--parent-pid needs a process ID greater than 1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--parent-pid braucht eine Prozess-ID größer als 1"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--parent-pid necesita un ID de proceso mayor que 1"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--parent-pid demande un identifiant de processus supérieur à 1"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--parent-pid richiede un ID di processo maggiore di 1"
+          }
+        }
+      }
+    },
     "--user works only with --ipsw: in Linux VMs the user is nido" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3171,6 +3449,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "--user vale solo con --ipsw: nelle VM Linux l'utente è nido"
+          }
+        }
+      }
+    },
+    "--yes only goes with --clear" : {
+      "comment" : "nido agent log: --yes given without --clear.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--yes funktioniert nur mit --clear"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--yes only goes with --clear"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--yes solo se usa con --clear"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--yes ne s’utilise qu’avec --clear"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "--yes si usa solo con --clear"
           }
         }
       }
@@ -3201,6 +3515,186 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "in /usr/local/bin/ollama c'è già un Ollama non installato da Nido: rimuovilo o usa quello"
+          }
+        }
+      }
+    },
+    "Couldn’t delete the fresh Mac %@: %@. Delete it with nido delete %@." : {
+      "comment" : "nido mcp --fresh, end of the session; the first and last %@ are the copy's VM name, the middle one the reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der neue Mac %@ konnte nicht gelöscht werden: %@. Lösche ihn mit nido delete %@."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t delete the fresh Mac %@: %@. Delete it with nido delete %@."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se ha podido eliminar el Mac nuevo %@: %@. Elimínalo con nido delete %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de supprimer le nouveau Mac %@ : %@. Supprimez-le avec nido delete %@."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile eliminare il Mac nuovo %@: %@. Eliminalo con nido delete %@."
+          }
+        }
+      }
+    },
+    "Fresh Mac %@ deleted." : {
+      "comment" : "nido mcp --fresh, end of the session; %@ is the copy's VM name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der neue Mac %@ wurde gelöscht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fresh Mac %@ deleted."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se ha eliminado el Mac nuevo %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le nouveau Mac %@ a été supprimé."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il Mac nuovo %@ è stato eliminato."
+          }
+        }
+      }
+    },
+    "Fresh Mac %@ kept: it is no longer marked disposable." : {
+      "comment" : "nido mcp --fresh, end of the session: someone cleared the copy's disposable mark; %@ is its VM name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der neue Mac %@ wurde behalten: Er ist nicht mehr als Wegwerf-VM markiert."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fresh Mac %@ kept: it is no longer marked disposable."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se ha conservado el Mac nuevo %@: ya no está marcado como desechable."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le nouveau Mac %@ a été conservé : il n’est plus marqué comme jetable."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il Mac nuovo %@ è stato tenuto: non è più segnato come usa e getta."
+          }
+        }
+      }
+    },
+    "Fresh Mac %@ stopped and kept: it is an ordinary VM now." : {
+      "comment" : "nido mcp --fresh --keep, end of the session; %@ is the copy's VM name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der neue Mac %@ wurde gestoppt und behalten: Er ist jetzt eine gewöhnliche VM."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fresh Mac %@ stopped and kept: it is an ordinary VM now."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El Mac nuevo %@ se ha detenido y conservado: ahora es una VM normal."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le nouveau Mac %@ a été arrêté et conservé : c’est maintenant une VM ordinaire."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il Mac nuovo %@ è stato arrestato e tenuto: ora è una VM come le altre."
+          }
+        }
+      }
+    },
+    "a checkpoint or rollback is in progress" : {
+      "comment" : "Agent Mac: an agent asked for a checkpoint or a rollback while another one runs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Checkpoint oder Rollback läuft bereits"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "a checkpoint or rollback is in progress"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "hay un checkpoint o un rollback en curso"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "un checkpoint ou un rollback est en cours"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "è in corso un checkpoint o un rollback"
           }
         }
       }
@@ -3778,6 +4272,41 @@
         }
       }
     },
+    "Agent activity log cleared." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivitätsprotokoll des Agenten gelöscht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent activity log cleared."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registro de actividad del agente borrado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Journal d’activité de l’agent effacé."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registro delle attività dell’agente cancellato."
+          }
+        }
+      }
+    },
     "Allow a domain for a VM (asks for Touch ID or the Mac password)." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3925,38 +4454,67 @@
         }
       }
     },
-    "An MCP client starts this command itself; use --config to print the entry to add to its configuration. The VM must be running with agent access on (nido agent enable)." : {
+    "An MCP client starts this command itself; use --config to print the entry to add to its configuration. Without --fresh the VM must be running with agent access on (nido agent enable); with --fresh the command makes a new copy of the stopped VM for the session and deletes it at the end." : {
       "comment" : "Agent Mac: discussion of nido mcp.",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dieser Befehl wird vom MCP-Client selbst gestartet; mit --config wird der Eintrag für dessen Konfiguration ausgegeben. Die VM muss laufen und der Agentenzugriff aktiv sein (nido agent enable)."
+            "value" : "Dieser Befehl wird vom MCP-Client selbst gestartet; mit --config wird der Eintrag für dessen Konfiguration ausgegeben. Ohne --fresh muss die VM laufen und der Agentenzugriff aktiv sein (nido agent enable); mit --fresh legt der Befehl für die Sitzung eine Kopie der gestoppten VM an, einen neuen Mac, und löscht sie am Ende."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "An MCP client starts this command itself; use --config to print the entry to add to its configuration. The VM must be running with agent access on (nido agent enable)."
+            "value" : "An MCP client starts this command itself; use --config to print the entry to add to its configuration. Without --fresh the VM must be running with agent access on (nido agent enable); with --fresh the command makes a new copy of the stopped VM for the session and deletes it at the end."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El cliente MCP inicia este comando por sí mismo; con --config se imprime la entrada que hay que añadir a su configuración. La VM debe estar en ejecución con el acceso de agente activado (nido agent enable)."
+            "value" : "El cliente MCP inicia este comando por sí mismo; con --config se imprime la entrada que hay que añadir a su configuración. Sin --fresh la VM debe estar en ejecución con el acceso de agente activado (nido agent enable); con --fresh el comando hace para la sesión una copia nueva de la VM detenida, un Mac nuevo, y la elimina al final."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le client MCP lance lui-même cette commande ; --config affiche l’entrée à ajouter à sa configuration. La VM doit être en cours d’exécution avec l’accès agent activé (nido agent enable)."
+            "value" : "Le client MCP lance lui-même cette commande ; --config affiche l’entrée à ajouter à sa configuration. Sans --fresh, la VM doit être en cours d’exécution avec l’accès agent activé (nido agent enable) ; avec --fresh, la commande fait pour la session une copie de la VM arrêtée, un nouveau Mac, et la supprime à la fin."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Questo comando lo avvia il client MCP; con --config si stampa la voce da aggiungere alla sua configurazione. La VM deve essere in esecuzione con l’accesso agente attivo (nido agent enable)."
+            "value" : "Questo comando lo avvia il client MCP; con --config si stampa la voce da aggiungere alla sua configurazione. Senza --fresh la VM deve essere in esecuzione con l’accesso agente attivo (nido agent enable); con --fresh il comando fa per la sessione una copia della VM ferma, un Mac nuovo, e la elimina alla fine."
+          }
+        }
+      }
+    },
+    "Apple allows at most two macOS VMs at once: stop one first" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple erlaubt höchstens zwei macOS-VMs gleichzeitig: Stoppe zuerst eine"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple permite como máximo dos VM macOS a la vez: detén una primero"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple autorise au plus deux VM macOS à la fois : arrêtez-en une d’abord"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple consente al massimo due VM macOS alla volta: arrestane una prima"
           }
         }
       }
@@ -4104,6 +4662,220 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "CACHE"
+          }
+        }
+      }
+    },
+    "checkpoint %@ saved in %@ s" : {
+      "comment" : "Agent Mac: an agent's checkpoint (a live snapshot of the VM) was saved; its name, then how long it took in seconds.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checkpoint %@ in %@ s gesichert"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "checkpoint %@ saved in %@ s"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "checkpoint %@ guardado en %@ s"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "checkpoint %@ enregistré en %@ s"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "checkpoint %@ salvato in %@ s"
+          }
+        }
+      }
+    },
+    "checkpoint saves the running VM, memory included (the newest 3 are kept); rollback brings it back to the named checkpoint, or the newest, and restarts it; checkpoints lists them. Only an agent’s checkpoints, never your snapshots." : {
+      "comment" : "nido act help: the checkpoint, rollback and checkpoints actions. checkpoint, rollback and checkpoints are command words: keep them in English.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "checkpoint sichert die laufende VM samt Arbeitsspeicher (die 3 neuesten bleiben erhalten); rollback setzt sie auf den genannten oder den neuesten Checkpoint zurück und startet sie neu; checkpoints listet sie auf. Nur die Checkpoints eines Agenten, nie deine Schnappschüsse."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "checkpoint saves the running VM, memory included (the newest 3 are kept); rollback brings it back to the named checkpoint, or the newest, and restarts it; checkpoints lists them. Only an agent’s checkpoints, never your snapshots."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "checkpoint guarda la VM en ejecución, con su memoria (se conservan los 3 más recientes); rollback la devuelve al checkpoint indicado, o al más reciente, y la reinicia; checkpoints los muestra. Solo los checkpoints de un agente, nunca tus instantáneas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "checkpoint enregistre la VM en cours d’exécution, mémoire comprise (les 3 plus récents sont conservés) ; rollback la ramène au checkpoint indiqué, ou au plus récent, et la redémarre ; checkpoints les liste. Seulement les checkpoints d’un agent, jamais vos instantanés."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "checkpoint salva la VM in esecuzione, memoria compresa (si tengono i 3 più recenti); rollback la riporta al checkpoint indicato, o al più recente, e la riavvia; checkpoints li elenca. Solo i checkpoint di un agente, mai i tuoi snapshot."
+          }
+        }
+      }
+    },
+    "Clear the agent activity log of this VM? [y/N] " : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Aktivitätsprotokoll des Agenten dieser VM löschen? [j/N] "
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear the agent activity log of this VM? [y/N] "
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Borrar el registro de actividad del agente de esta VM? [s/N] "
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effacer le journal d’activité de l’agent de cette VM ? [o/N] "
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancellare il registro delle attività dell’agente di questa VM? [s/N] "
+          }
+        }
+      }
+    },
+    "Clear without asking for confirmation." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ohne Rückfrage löschen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear without asking for confirmation."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Borra sin pedir confirmación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efface sans demander confirmation."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancella senza chiedere conferma."
+          }
+        }
+      }
+    },
+    "could not read the copied file" : {
+      "comment" : "Agent Mac: the client could not read the file the VM's owner staged in the bundle for get-file.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "die kopierte Datei konnte nicht gelesen werden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "could not read the copied file"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no se pudo leer el archivo copiado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "impossible de lire le fichier copié"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "impossibile leggere il file copiato"
+          }
+        }
+      }
+    },
+    "could not save the file" : {
+      "comment" : "Agent Mac: writing a copied file's bytes into the VM bundle (agent-files) failed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datei konnte nicht gesichert werden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "could not save the file"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no se pudo guardar el archivo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "impossible d’enregistrer le fichier"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "impossibile salvare il file"
           }
         }
       }
@@ -4682,6 +5454,41 @@
         }
       }
     },
+    "Delete the log of this VM." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löscht das Protokoll dieser VM."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete the log of this VM."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Borra el registro de esta VM."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efface le journal de cette VM."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancella il registro di questa VM."
+          }
+        }
+      }
+    },
     "DNS other than Nido’s" : {
       "comment" : "nido net log: why a connection was blocked.",
       "extractionState" : "manual",
@@ -4856,6 +5663,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Elimina senza chiedere conferma."
+          }
+        }
+      }
+    },
+    "Deleted %@, a fresh Mac left by an earlier session." : {
+      "comment" : "nido mcp --fresh, before making a new copy: a disposable copy left by a session that ended without deleting it; %@ is its VM name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ wurde gelöscht: ein neuer Mac, der von einer früheren Sitzung übrig war."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deleted %@, a fresh Mac left by an earlier session."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se ha eliminado %@, un Mac nuevo que quedó de una sesión anterior."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ a été supprimé : un nouveau Mac laissé par une session précédente."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminato %@, un Mac nuovo rimasto da una sessione precedente."
           }
         }
       }
@@ -5676,6 +6519,42 @@
         }
       }
     },
+    "Fresh Mac %@, a copy of %@: starting without a window (log: %@)." : {
+      "comment" : "nido mcp --fresh, on stderr when the copy starts; the first %@ is the copy's VM name, the second the VM it copies, the third the path of its start log.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neuer Mac %@, eine Kopie von %@: wird ohne Fenster gestartet (Protokoll: %@)."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fresh Mac %@, a copy of %@: starting without a window (log: %@)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac nuevo %@, copia de %@: se arranca sin ventana (registro: %@)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouveau Mac %@, copie de %@ : démarrage sans fenêtre (journal : %@)."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac nuovo %@, copia di %@: avvio senza finestra (registro: %@)."
+          }
+        }
+      }
+    },
     "From the command line, snapshots are created, restored and deleted only while the VM is stopped; a VM running in the app is snapshotted from the app." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5701,6 +6580,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dalla riga di comando si creano, ripristinano ed eliminano solo a VM ferma; una VM accesa nell'app si fotografa dall'app."
+          }
+        }
+      }
+    },
+    "going back to %@: the VM restarts from that moment; wait about 20 seconds, then take a screenshot" : {
+      "comment" : "Agent Mac: an agent asked to roll back to a checkpoint (its name); the VM restarts from it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück zu %@: Die VM startet ab diesem Moment neu; warte etwa 20 Sekunden, dann mache ein Bildschirmfoto"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "going back to %@: the VM restarts from that moment; wait about 20 seconds, then take a screenshot"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "volviendo a %@: la VM se reinicia desde ese momento; espera unos 20 segundos y luego haz una captura de pantalla"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "retour à %@ : la VM redémarre à partir de ce moment ; attendez environ 20 secondes, puis faites une capture d’écran"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "torno a %@: la VM riparte da quel momento; aspetta circa 20 secondi, poi fai uno screenshot"
           }
         }
       }
@@ -6764,6 +7679,41 @@
         }
       }
     },
+    "Nido records each action an agent takes: which one, with what numbers, when and how it ended. It never records typed text (only how many characters), the clipboard or the text of the UI tree; screenshots and zooms keep a small thumbnail." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido zeichnet jede Aktion eines Agenten auf: welche, mit welchen Zahlen, wann und wie sie endete. Nie aufgezeichnet werden eingetippter Text (nur die Zeichenzahl), die Zwischenablage oder der Text des UI-Baums; Screenshots und Zooms behalten eine kleine Vorschau."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido records each action an agent takes: which one, with what numbers, when and how it ended. It never records typed text (only how many characters), the clipboard or the text of the UI tree; screenshots and zooms keep a small thumbnail."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido registra cada acción de un agente: cuál, con qué números, cuándo y cómo terminó. Nunca registra el texto escrito (solo cuántos caracteres), el portapapeles ni el texto del árbol de la interfaz; las capturas y los zooms conservan una miniatura pequeña."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido enregistre chaque action d’un agent : laquelle, avec quels nombres, quand et comment elle s’est terminée. Il n’enregistre jamais le texte saisi (seulement le nombre de caractères), le presse-papiers ni le texte de l’arborescence de l’interface ; les captures et les zooms gardent une petite miniature."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido registra ogni azione di un agente: quale, con quali numeri, quando e come è finita. Non registra mai il testo digitato (solo quanti caratteri), gli appunti o il testo dell’albero dell’interfaccia; screenshot e zoom conservano una piccola miniatura."
+          }
+        }
+      }
+    },
     "NIDO_LANGUAGE (en, it, de, es or fr) sets the language of nido’s messages; without it, nido follows the Mac’s language." : {
       "comment" : "nido --help. en, it, de, es, fr are values: not translated.",
       "extractionState" : "manual",
@@ -7448,6 +8398,150 @@
         }
       }
     },
+    "No agent activity for %@." : {
+      "comment" : "nido agent log: nothing recorded; the VM name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Agent-Aktivität für %@."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No agent activity for %@."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin actividad del agente para %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune activité de l’agent pour %@."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nessuna attività dell’agente per %@."
+          }
+        }
+      }
+    },
+    "no agent checkpoint named %@" : {
+      "comment" : "Agent Mac: an agent asked to roll back to a checkpoint name (as it gave it) that is not one of its own.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Checkpoint des Agenten mit dem Namen %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no agent checkpoint named %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no hay ningún checkpoint del agente llamado %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "aucun checkpoint de l’agent nommé %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nessun checkpoint dell’agente con nome %@"
+          }
+        }
+      }
+    },
+    "no agent checkpoint: take one with checkpoint first" : {
+      "comment" : "Agent Mac: an agent asked to roll back, but it has taken no checkpoint of this VM.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Checkpoint des Agenten: Erstelle zuerst einen mit checkpoint"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no agent checkpoint: take one with checkpoint first"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no hay ningún checkpoint del agente: crea primero uno con checkpoint"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "aucun checkpoint de l’agent : créez-en d’abord un avec checkpoint"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nessun checkpoint dell’agente: creane prima uno con checkpoint"
+          }
+        }
+      }
+    },
+    "no agent checkpoints" : {
+      "comment" : "Agent Mac: what the list_checkpoints MCP tool answers when the agent has taken no checkpoint.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Checkpoints des Agenten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no agent checkpoints"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no hay checkpoints del agente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "aucun checkpoint de l’agent"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nessun checkpoint dell’agente"
+          }
+        }
+      }
+    },
     "No VMs." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7618,6 +8712,41 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nessuno snapshot."
+          }
+        }
+      }
+    },
+    "Not cleared." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht gelöscht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not cleared."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se borró."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non effacé."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non cancellato."
           }
         }
       }
@@ -8111,6 +9240,41 @@
         }
       }
     },
+    "Print the entries as a JSON array." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gibt die Einträge als JSON-Array aus."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Print the entries as a JSON array."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imprime las entradas como un array JSON."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Affiche les entrées sous forme de tableau JSON."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stampa le voci come array JSON."
+          }
+        }
+      }
+    },
     "Print the MCP client configuration for this VM and exit." : {
       "comment" : "Agent Mac: help of nido mcp --config.",
       "extractionState" : "manual",
@@ -8268,6 +9432,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tolto %@ dai domini permessi di %@: le connessioni aperte verso di lui vengono interrotte."
+          }
+        }
+      }
+    },
+    "Also applied to the fresh Macs of %@: %@." : {
+      "comment" : "nido net allow|deny: the change also reached the base VM's fresh copies; the first %@ is the base VM's name, the second the copies' names, comma-separated.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auch auf die neuen Macs von %@ angewendet: %@."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Also applied to the fresh Macs of %@: %@."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "También se ha aplicado a los Mac nuevos de %@: %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Également appliqué aux nouveaux Mac de %@ : %@."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applicato anche ai Mac nuovi di %@: %@."
+          }
+        }
+      }
+    },
+    "Couldn’t apply it to the fresh Mac %@: %@." : {
+      "comment" : "nido net allow|deny: the change did not reach one fresh copy of the base VM; the first %@ is the copy's VM name, the second the reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf den neuen Mac %@ konnte es nicht angewendet werden: %@."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t apply it to the fresh Mac %@: %@."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se ha podido aplicar al Mac nuevo %@: %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de l’appliquer au nouveau Mac %@ : %@."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile applicarlo al Mac nuovo %@: %@."
           }
         }
       }
@@ -9241,6 +10477,42 @@
         }
       }
     },
+    "Serve a new copy of this stopped macOS VM, deleted when the session ends." : {
+      "comment" : "Help of nido mcp --fresh.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stellt eine neue Kopie dieser gestoppten macOS-VM bereit, die am Ende der Sitzung gelöscht wird."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serve a new copy of this stopped macOS VM, deleted when the session ends."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ofrece una copia nueva de esta VM de macOS detenida, que se elimina al terminar la sesión."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Met à disposition une nouvelle copie de cette VM macOS arrêtée, supprimée à la fin de la session."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mette a disposizione una nuova copia di questa VM macOS ferma, eliminata alla fine della sessione."
+          }
+        }
+      }
+    },
     "SHA-512 check failed: the downloaded file doesn’t match the published checksum" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9266,6 +10538,76 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "verifica SHA-512 fallita: il file scaricato non corrisponde al checksum pubblicato"
+          }
+        }
+      }
+    },
+    "Show only the last N entries (default 50)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur die letzten N Einträge anzeigen (Standard 50)."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show only the last N entries (default 50)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muestra solo las últimas N entradas (por defecto 50)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "N’affiche que les N dernières entrées (50 par défaut)."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostra solo le ultime N voci (predefinito 50)."
+          }
+        }
+      }
+    },
+    "Show what an agent did in a VM, oldest first." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeigt, was ein Agent in einer VM getan hat, älteste zuerst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show what an agent did in a VM, oldest first."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muestra lo que hizo un agente en una VM, del más antiguo al más reciente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Montre ce qu’un agent a fait dans une VM, du plus ancien au plus récent."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostra cosa ha fatto un agente in una VM, dal più vecchio."
           }
         }
       }
@@ -9388,38 +10730,38 @@
         }
       }
     },
-    "Serve a running macOS VM to an AI agent as an MCP server on stdin/stdout." : {
+    "Serve a macOS VM to an AI agent as an MCP server on stdin/stdout." : {
       "comment" : "Agent Mac: abstract of nido mcp.",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stellt eine laufende macOS-VM einem KI-Agenten als MCP-Server über stdin/stdout bereit."
+            "value" : "Stellt eine macOS-VM einem KI-Agenten als MCP-Server über stdin/stdout bereit."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Serve a running macOS VM to an AI agent as an MCP server on stdin/stdout."
+            "value" : "Serve a macOS VM to an AI agent as an MCP server on stdin/stdout."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ofrece una VM de macOS en ejecución a un agente de IA como servidor MCP por stdin/stdout."
+            "value" : "Ofrece una VM de macOS a un agente de IA como servidor MCP por stdin/stdout."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Met une VM macOS en cours d’exécution à la disposition d’un agent IA comme serveur MCP sur stdin/stdout."
+            "value" : "Met une VM macOS à la disposition d’un agent IA comme serveur MCP sur stdin/stdout."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mette una VM macOS in esecuzione a disposizione di un agente AI come server MCP su stdin/stdout."
+            "value" : "Mette una VM macOS a disposizione di un agente AI come server MCP su stdin/stdout."
           }
         }
       }
@@ -9983,6 +11325,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Arresto richiesto: se la sospensione non riesce, la VM si arresta subito dopo."
+          }
+        }
+      }
+    },
+    "Stop requested: the VM stops after the agent’s checkpoint." : {
+      "comment" : "nido start: Ctrl-C or nido stop arrived while an agent (Agent Mac) is taking a checkpoint of the VM; the stop is carried out once the checkpoint ends.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stoppen angefordert: Die VM wird nach dem Checkpoint des Agenten gestoppt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop requested: the VM stops after the agent’s checkpoint."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detención solicitada: la VM se detendrá después del checkpoint del agente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrêt demandé : la VM s’arrêtera après le checkpoint de l’agent."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arresto richiesto: la VM si arresta dopo il checkpoint dell’agente."
+          }
+        }
+      }
+    },
+    "Suspend requested: the VM is suspended after the agent’s checkpoint." : {
+      "comment" : "nido start: nido stop --suspend arrived while an agent (Agent Mac) is taking a checkpoint of the VM; the suspend is carried out once the checkpoint ends.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruhezustand angefordert: Die VM wird nach dem Checkpoint des Agenten in den Ruhezustand versetzt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suspend requested: the VM is suspended after the agent’s checkpoint."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suspensión solicitada: la VM se suspenderá después del checkpoint del agente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suspension demandée : la VM sera suspendue après le checkpoint de l’agent."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sospensione richiesta: la VM viene sospesa dopo il checkpoint dell’agente."
           }
         }
       }
@@ -10620,6 +12034,185 @@
         }
       }
     },
+    "the file is larger than 16 MiB" : {
+      "comment" : "Agent Mac: nido act put-file/get-file refuse a file over 16 MiB.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "die Datei ist größer als 16 MiB"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the file is larger than 16 MiB"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "el archivo ocupa más de 16 MiB"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le fichier dépasse 16 Mio"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "il file è più grande di 16 MiB"
+          }
+        }
+      }
+    },
+    "the file’s data is missing, too large or of the wrong size" : {
+      "comment" : "Agent Mac: Nido was about to send a file to Nido Agent without its bytes, with more than 16 MiB, or with a size other than the one stated.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "die Daten der Datei fehlen, sind zu groß oder haben die falsche Größe"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the file’s data is missing, too large or of the wrong size"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "los datos del archivo faltan, son demasiado grandes o no tienen el tamaño indicado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "les données du fichier sont absentes, trop volumineuses ou n’ont pas la bonne taille"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "i dati del file mancano, sono troppi o non hanno la dimensione indicata"
+          }
+        }
+      }
+    },
+    "the fresh Mac %@ isn’t ready after 180 seconds: %@ must log in by itself and have Nido Agent set up (nido agent setup %@)" : {
+      "comment" : "nido mcp --fresh, tool error for the AI agent: the copy didn't answer in time; the first %@ is the copy's VM name, the second and third the VM it copies.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "der neue Mac %@ ist nach 180 Sekunden nicht bereit: %@ muss sich selbst anmelden und Nido Agent eingerichtet haben (nido agent setup %@)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the fresh Mac %@ isn’t ready after 180 seconds: %@ must log in by itself and have Nido Agent set up (nido agent setup %@)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "el Mac nuevo %@ no está listo tras 180 segundos: %@ debe iniciar sesión por sí solo y tener Nido Agent configurado (nido agent setup %@)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le nouveau Mac %@ n’est pas prêt après 180 secondes : %@ doit ouvrir sa session tout seul et avoir Nido Agent configuré (nido agent setup %@)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "il Mac nuovo %@ non è pronto dopo 180 secondi: %@ deve accedere da solo e avere Nido Agent configurato (nido agent setup %@)"
+          }
+        }
+      }
+    },
+    "the fresh Mac %@ stopped: %@" : {
+      "comment" : "nido mcp --fresh: the copy's nido start ended during the session; the first %@ is its VM name, the second the last line of its log or the log's path.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "der neue Mac %@ wurde gestoppt: %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the fresh Mac %@ stopped: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "el Mac nuevo %@ se ha detenido: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le nouveau Mac %@ s’est arrêté : %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "il Mac nuovo %@ si è arrestato: %@"
+          }
+        }
+      }
+    },
+    "the log was not cleared: there is no terminal to ask, use --yes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "das Protokoll wurde nicht gelöscht: kein Terminal zum Nachfragen, verwende --yes"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the log was not cleared: there is no terminal to ask, use --yes"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "el registro no se borró: no hay terminal para preguntar, usa --yes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le journal n’a pas été effacé : pas de terminal pour demander, utilise --yes"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "il registro non è stato cancellato: non c’è un terminale per chiedere, usa --yes"
+          }
+        }
+      }
+    },
     "The Nido Agent in %@ is newer than the one in this Nido: keeping it." : {
       "comment" : "Agent Mac: nido agent setup never downgrades; %@ is the VM name.",
       "extractionState" : "manual",
@@ -10652,6 +12245,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Il Nido Agent in %@ è più recente di quello di questo Nido: viene mantenuto."
+          }
+        }
+      }
+    },
+    "the staged file is missing or invalid" : {
+      "comment" : "Agent Mac: a putFile command named no staged file in the bundle, one that is not Nido’s, or one whose size differs.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "die bereitgestellte Datei fehlt oder ist ungültig"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the staged file is missing or invalid"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "el archivo en tránsito falta o no es válido"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le fichier en transit est absent ou non valide"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "il file in transito manca o non è valido"
           }
         }
       }
@@ -10951,6 +12580,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "La copia ha un nuovo indirizzo di rete e una nuova identità (Linux: cloud-init la configura come una macchina nuova: nome host, chiavi SSH dell'host; macOS: nuovo identificatore della macchina, e il comando elenca i passi da eseguire una volta nel guest per chiavi SSH e nomi). Rosetta viene copiata; cartelle condivise, snapshot e stato sospeso no (la copia parte senza cartelle condivise)."
+          }
+        }
+      }
+    },
+    "The process %@ that started this VM ended: stopping the VM." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Prozess %@, der diese VM gestartet hat, ist beendet: Die VM wird gestoppt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El proceso %@ que inició esta VM ha terminado: deteniendo la VM."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le processus %@ qui a démarré cette VM s’est terminé : arrêt de la VM."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il processo %@ che ha avviato questa VM è terminato: arresto della VM."
           }
         }
       }
@@ -11255,6 +12913,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Questo Nido non può passare una password a ssh (lo strumento nido manca nell’app)"
+          }
+        }
+      }
+    },
+    "this VM’s owner can’t take checkpoints" : {
+      "comment" : "Agent Mac: the process running the VM (Nido or nido start) does not handle an agent's checkpoint, rollback or checkpoints list.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Prozess, der diese VM ausführt, kann keine Checkpoints erstellen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "this VM’s owner can’t take checkpoints"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "el proceso que ejecuta esta VM no puede crear checkpoints"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le processus qui exécute cette VM ne peut pas créer de checkpoints"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "il processo che esegue questa VM non può creare checkpoint"
           }
         }
       }
@@ -12224,6 +13918,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dove salvare l’immagine (un nuovo file; con --download)."
+          }
+        }
+      }
+    },
+    "With --fresh: keep the copy, stopped, when the session ends." : {
+      "comment" : "Help of nido mcp --keep.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit --fresh: Behält die Kopie gestoppt, wenn die Sitzung endet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With --fresh: keep the copy, stopped, when the session ends."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con --fresh: conserva la copia, detenida, al terminar la sesión."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avec --fresh : conserve la copie, arrêtée, à la fin de la session."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con --fresh: tiene la copia, ferma, alla fine della sessione."
           }
         }
       }
@@ -16028,6 +17758,114 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "immagine oltre il limite di %@"
+          }
+        }
+      }
+    },
+    "the answer is too large: ask for fewer elements" : {
+      "comment" : "Agent Mac: an answer above the control channel limit (a ui_tree with too many elements).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Antwort ist zu groß: Frage weniger Elemente an"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the answer is too large: ask for fewer elements"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "la respuesta es demasiado grande: pide menos elementos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "la réponse est trop volumineuse : demandez moins d’éléments"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "la risposta è troppo grande: chiedi meno elementi"
+          }
+        }
+      }
+    },
+    "Nido Agent is too old for files: run nido agent setup %@ to update it" : {
+      "comment" : "Agent Mac: put_file, get_file and list_files need a newer Nido Agent in the VM; %@ is the VM name, nido agent setup is a command.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent ist zu alt für Dateien: Führe nido agent setup %@ aus, um es zu aktualisieren"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent is too old for files: run nido agent setup %@ to update it"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent es demasiado antiguo para los archivos: ejecuta nido agent setup %@ para actualizarlo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent est trop ancien pour les fichiers : exécutez nido agent setup %@ pour le mettre à jour"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent è troppo vecchio per i file: esegui nido agent setup %@ per aggiornarlo"
+          }
+        }
+      }
+    },
+    "Nido Agent is too old for ui_tree: run nido agent setup %@ to update it" : {
+      "comment" : "Agent Mac: ui_tree needs a newer Nido Agent in the VM; %@ is the VM name, nido agent setup is a command.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent ist zu alt für ui_tree: Führe nido agent setup %@ aus, um es zu aktualisieren"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent is too old for ui_tree: run nido agent setup %@ to update it"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent es demasiado antiguo para ui_tree: ejecuta nido agent setup %@ para actualizarlo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent est trop ancien pour ui_tree : exécutez nido agent setup %@ pour le mettre à jour"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent è troppo vecchio per ui_tree: esegui nido agent setup %@ per aggiornarlo"
           }
         }
       }
@@ -21623,38 +23461,38 @@
         }
       }
     },
-    "unknown action “%@”: use status, screenshot, click, drag, scroll, type, key or wait" : {
+    "unknown action “%@”: use status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file or files" : {
       "comment" : "Agent Mac: nido act with an unknown action; %@ is what was typed. Keep the action names untranslated.",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "unbekannte Aktion „%@“: verwende status, screenshot, click, drag, scroll, type, key oder wait"
+            "value" : "unbekannte Aktion „%@“: verwende status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file oder files"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "unknown action “%@”: use status, screenshot, click, drag, scroll, type, key or wait"
+            "value" : "unknown action “%@”: use status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file or files"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "acción desconocida «%@»: usa status, screenshot, click, drag, scroll, type, key o wait"
+            "value" : "acción desconocida «%@»: usa status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file o files"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "action inconnue « %@ » : utilisez status, screenshot, click, drag, scroll, type, key ou wait"
+            "value" : "action inconnue « %@ » : utilisez status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file ou files"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "azione sconosciuta “%@”: usa status, screenshot, click, drag, scroll, type, key o wait"
+            "value" : "azione sconosciuta “%@”: usa status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file o files"
           }
         }
       }
@@ -23494,6 +25332,366 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Se %@ è ferma alla finestra di login (FileVault), accedi dalla sua finestra, poi riprova."
+          }
+        }
+      }
+    },
+    "— session %@ (%@) —" : {
+      "comment" : "nido agent log: line that opens a run of one agent; the short session id, then the client (mcp or act).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "— Sitzung %@ (%@) —"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "— session %@ (%@) —"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "— sesión %@ (%@) —"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "— session %@ (%@) —"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "— sessione %@ (%@) —"
+          }
+        }
+      }
+    },
+    "VM %@ went back to checkpoint %@ (pid %@)." : {
+      "comment" : "nido start: an agent's rollback ended, the VM runs again from the checkpoint. %@: the VM name, the checkpoint name, the process ID.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VM %@ went back to checkpoint %@ (pid %@)."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VM %@ è tornata al checkpoint %@ (pid %@)."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VM %@ ist zu Checkpoint %@ zurückgekehrt (PID %@)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VM %@ ha vuelto al checkpoint %@ (PID %@)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VM %@ revenue au checkpoint %@ (PID %@)."
+          }
+        }
+      }
+    },
+    "couldn’t go back to checkpoint %@: %@; the VM is stopped" : {
+      "comment" : "nido start: an agent's rollback failed and the command exits. %@: the checkpoint name, then the reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "couldn’t go back to checkpoint %@: %@; the VM is stopped"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "impossibile tornare al checkpoint %@: %@; la VM è ferma"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rückkehr zu Checkpoint %@ nicht möglich: %@; die VM ist gestoppt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no se ha podido volver al checkpoint %@: %@; la VM está detenida"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "impossible de revenir au checkpoint %@ : %@ ; la VM est arrêtée"
+          }
+        }
+      }
+    },
+    "the file is larger than 1 MiB: use nido act %@ get-file to copy it to the Mac" : {
+      "comment" : "Agent Mac: MCP get_file refuses a file over 1 MiB; %@ is the VM's name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "die Datei ist größer als 1 MiB: kopiere sie mit nido act %@ get-file auf den Mac"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the file is larger than 1 MiB: use nido act %@ get-file to copy it to the Mac"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "el archivo ocupa más de 1 MiB: usa nido act %@ get-file para copiarlo al Mac"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le fichier dépasse 1 Mio : utilisez nido act %@ get-file pour le copier sur le Mac"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "il file è più grande di 1 MiB: usa nido act %@ get-file per copiarlo sul Mac"
+          }
+        }
+      }
+    },
+    "the file is larger than 1 MiB: use nido act %@ put-file to copy it from the Mac" : {
+      "comment" : "Agent Mac: MCP put_file refuses contents over 1 MiB; %@ is the VM's name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "die Datei ist größer als 1 MiB: kopiere sie mit nido act %@ put-file vom Mac"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the file is larger than 1 MiB: use nido act %@ put-file to copy it from the Mac"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "el archivo ocupa más de 1 MiB: usa nido act %@ put-file para copiarlo desde el Mac"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le fichier dépasse 1 Mio : utilisez nido act %@ put-file pour le copier depuis le Mac"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "il file è più grande di 1 MiB: usa nido act %@ put-file per copiarlo dal Mac"
+          }
+        }
+      }
+    },
+    "the folder is empty" : {
+      "comment" : "Agent Mac: MCP list_files on an empty folder of ~/NidoTransfer.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "der Ordner ist leer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the folder is empty"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "la carpeta está vacía"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le dossier est vide"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "la cartella è vuota"
+          }
+        }
+      }
+    },
+    "%@ already exists: add --force to replace it" : {
+      "comment" : "nido act get-file onto a local path that exists; %@ is the path.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ existiert bereits: füge --force hinzu, um es zu ersetzen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ already exists: add --force to replace it"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ya existe: añade --force para reemplazarlo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ existe déjà : ajoutez --force pour le remplacer"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ esiste già: aggiungi --force per sostituirlo"
+          }
+        }
+      }
+    },
+    "can’t read %@: %@" : {
+      "comment" : "nido act put-file with a local file that can’t be opened; the first %@ is the path, the second the system’s reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ kann nicht gelesen werden: %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "can’t read %@: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no se puede leer %@: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "impossible de lire %@ : %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "non riesco a leggere %@: %@"
+          }
+        }
+      }
+    },
+    "%@ is not a regular file" : {
+      "comment" : "nido act put-file with a local path that is a link, a folder or another kind of file; %@ is the path.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist keine normale Datei"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is not a regular file"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ no es un archivo normal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ n’est pas un fichier ordinaire"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ non è un file normale"
+          }
+        }
+      }
+    },
+    "put-file, get-file and files work in the folder ~/NidoTransfer of the VM: GUEST-PATH is relative to it. At most 16 MiB per file. get-file writes the file for you only (0600) and never replaces an existing file or link unless you add --force." : {
+      "comment" : "nido act --help: the file actions. Keep put-file, get-file, files, GUEST-PATH, ~/NidoTransfer, 0600 and --force as they are.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "put-file, get-file und files arbeiten im Ordner ~/NidoTransfer der VM: GUEST-PATH ist relativ dazu. Höchstens 16 MiB pro Datei. get-file schreibt die Datei nur für dich (0600) und ersetzt nie eine vorhandene Datei oder einen Link, außer du fügst --force hinzu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "put-file, get-file and files work in the folder ~/NidoTransfer of the VM: GUEST-PATH is relative to it. At most 16 MiB per file. get-file writes the file for you only (0600) and never replaces an existing file or link unless you add --force."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "put-file, get-file y files trabajan en la carpeta ~/NidoTransfer de la VM: GUEST-PATH es relativo a ella. Como máximo 16 MiB por archivo. get-file escribe el archivo solo para ti (0600) y nunca reemplaza un archivo o enlace existente salvo que añadas --force."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "put-file, get-file et files travaillent dans le dossier ~/NidoTransfer de la VM : GUEST-PATH est relatif à ce dossier. 16 Mio au plus par fichier. get-file écrit le fichier pour vous seul (0600) et ne remplace jamais un fichier ou un lien existant, sauf si vous ajoutez --force."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "put-file, get-file e files lavorano nella cartella ~/NidoTransfer della VM: GUEST-PATH è relativo a quella. Al massimo 16 MiB per file. get-file scrive il file solo per te (0600) e non sostituisce mai un file o un link esistente, a meno che tu non aggiunga --force."
           }
         }
       }

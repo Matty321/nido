@@ -37,6 +37,16 @@ public struct DomainPattern: Codable, Hashable, Sendable, CustomStringConvertibl
 
     public var description: String { isWildcard ? "*." + name : name }
 
+    /// `text` when it is an exact, non-wildcard name that parses unchanged (lowercase ASCII, no
+    /// trailing dot or spaces, never an IP literal) and the echo strip leaves unchanged: a name
+    /// `nido net allow` takes as it is. Nil otherwise.
+    public static func exactName(_ text: String) -> String? {
+        guard let pattern = try? DomainPattern(text), !pattern.isWildcard, pattern.description == text,
+            ConsoleSanitizer.echoable(text) == text
+        else { return nil }
+        return text
+    }
+
     /// True when `queried` (a DNS name, any case, with or without the trailing dot) is covered.
     /// A name that is not a well-formed host name never matches.
     public func matches(_ queried: String) -> Bool {

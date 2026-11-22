@@ -41,6 +41,7 @@ struct AppCatalogTests {
     /// area joins the list when it is localized; the rest is not localized yet and holds literals the
     /// catalog does not list (docs/LOCALIZATION.md, "The app's catalog and Xcode").
     static let localizedSources = [
+        "Agent/",
         "AI/",
         "AppDelegate.swift",
         "CommandLinkCommands.swift",

@@ -292,7 +292,8 @@ public struct MacAgentSetup: Sendable {
         return MacAgentSetup(
             bundle: bundle, config: config,
             ssh: GuestSSH(bundle: bundle, config: config, runner: SystemProcessRunner()),
-            client: AgentControlClient.forVM(bundle: bundle, config: config), bundledApp: app,
+            client: AgentControlClient.forVM(bundle: bundle, config: config, client: AgentCommand.Client.nido),
+            bundledApp: app,
             // As `nido ssh`: a guest that refuses SSH has Remote Login off. Errors other than
             // "no address yet" are thrown with their own message.
             reach: {

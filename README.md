@@ -4,6 +4,8 @@
 
 Nido is a virtual machine manager for Macs with Apple silicon. It runs Linux and macOS VMs on Apple’s Virtualization framework, from a native app or from the `nido` command in Terminal. It’s careful by default: Nido never goes online on its own, a VM reaches only the domains you allow, and it sees none of your Mac’s folders until you share one.
 
+The name stands for **N**ative **I**solated, **D**efault **O**ffline. *Nido* is also Italian for “nest”.
+
 <p align="center"><img src="docs/screenshots/en/library.png" alt="The library: three virtual machines, one running with the AI bridge active, and two templates" title="The library: three virtual machines, one running with the AI bridge active, and two templates" width="100%"></p>
 
 ## What Nido does
@@ -80,6 +82,14 @@ A macOS VM can be a separate Mac that an AI agent drives while you keep using yo
 When you create a macOS VM on a Mac with macOS 27 from a macOS 27 or later image, the wizard has an account step: your full name, a password that Nido generates (or one you choose) and **Let an agent use this Mac**; the CLI equivalent is `nido create <vm> --ipsw <path> --account "Full Name" --agent`. The first start then skips Setup Assistant: the account exists and logs in by itself. With agent access on, Nido waits for Remote Login, authorizes its SSH key once with that password, installs Nido Agent and shows the progress in the window. The one manual step is in the VM: allow Screen Recording and Accessibility (Settings › Agent shows the password after Touch ID, and `nido agent password <vm>` prints it). On a Mac with macOS 26, or with an older guest, there is no account step; `nido agent setup` and Settings › Agent ask for the account password once if Nido’s key isn’t authorized yet.
 
 If the VM uses FileVault, log in through its window at each start; until then the agent can’t see anything useful. The agent never answers permission or password prompts in the VM: it stops and asks you. What it reads on the VM’s screen is data, not instructions. [docs/SECURITY.md](docs/SECURITY.md) explains the limits.
+
+**Agent Activity** (the list icon in the VM’s toolbar, or **Activity…** in Settings › Agent) and `nido agent log <vm>` show what the agent did, session by session: what it looked at, where it clicked, which keys it pressed. Typed text is never recorded, only its length.
+
+Before a risky step the agent can take a **checkpoint** (the VM with its memory) and, if the step goes wrong, **roll back** to it: the VM restarts from that moment. It keeps at most 3 checkpoints, sees only its own, and never touches your snapshots; its checkpoints carry an **Agent** label in the VM’s snapshot list, where you can restore or delete them.
+
+Files move through one folder of the VM, `~/NidoTransfer`: the agent copies them in and out with `put_file` and `get_file` (up to 1 MiB), you with `nido act <vm> put-file` and `get-file` (up to 16 MiB). There is no shared folder, and the agent never reads or writes files on your Mac this way.
+
+With `nido mcp --fresh <base>` each agent session gets a Mac of its own: Nido makes a copy of the stopped macOS VM `<base>` (Nido Agent already set up, the account logs in by itself), starts it without a window and, when the session ends, deletes it with its files, apps and Keychain item. Add it with `claude mcp add nido-fresh-<base> -- nido mcp --fresh <base>`; the first tool call can wait a few minutes while the copy starts. `--keep` keeps the copy, stopped, as an ordinary VM. Apple allows at most two macOS VMs at once, so at most two sessions run together, one if another macOS VM is running. `<base>` is never started or changed. On the controlled network the agent is told which domains were blocked and asks you to allow one with `nido net allow`; a domain allowed on `<base>` reaches its fresh copies at once.
 
 ## Privacy and the network
 

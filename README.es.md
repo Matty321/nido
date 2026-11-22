@@ -4,6 +4,8 @@
 
 Nido es un gestor de máquinas virtuales para Mac con chip de Apple. Ejecuta VM Linux y macOS con el framework Virtualization de Apple, desde una app nativa o con el comando `nido` en Terminal. Es prudente por omisión: Nido nunca se conecta a la red por su cuenta, una VM solo llega a los dominios que tú permites y no ve ninguna carpeta del Mac hasta que compartas una.
 
+El nombre significa **N**ative **I**solated, **D**efault **O**ffline: nativo, aislado y sin conexión por omisión. Y *nido* quiere decir lo mismo en italiano que en español.
+
 <p align="center"><img src="docs/screenshots/es/library.png" alt="La biblioteca: tres máquinas virtuales, una en marcha con el puente de IA activo, y dos plantillas" title="La biblioteca: tres máquinas virtuales, una en marcha con el puente de IA activo, y dos plantillas" width="100%"></p>
 
 ## Qué hace Nido
@@ -80,6 +82,14 @@ Una VM de macOS puede ser un Mac aparte que un agente de IA maneja mientras tú 
 Al crear una VM de macOS en un Mac con macOS 27 a partir de una imagen de macOS 27 o posterior, el asistente tiene un paso de cuenta: tu nombre completo, una contraseña que genera Nido (o una que elijas) y **Dejar que un agente use este Mac (Nido Agent)**; con el comando: `nido create <vm> --ipsw <ruta> --account "Nombre Apellido" --agent`. El primer arranque se salta el Asistente de Configuración: la cuenta existe e inicia sesión sola. Con el acceso del agente activado, Nido espera a la Sesión remota, autoriza su clave SSH una vez con esa contraseña, instala Nido Agent y muestra el progreso en la ventana. El único paso manual está en la VM: permitir Grabación de pantalla y Accesibilidad (Ajustes › Agente muestra la contraseña tras Touch ID, y `nido agent password <vm>` la imprime). En un Mac con macOS 26, o con un invitado más antiguo, no hay paso de cuenta; `nido agent setup` y Ajustes › Agente piden una vez la contraseña de la cuenta si la clave de Nido aún no está autorizada.
 
 Si la VM usa FileVault, inicia sesión desde su ventana en cada arranque; hasta entonces el agente no ve nada útil. El agente nunca responde a las solicitudes de permiso o contraseña de la VM: se detiene y te pregunta. Lo que lee en la pantalla de la VM son datos, no instrucciones. [docs/SECURITY.md](docs/SECURITY.md) explica los límites.
+
+**Actividad del agente** (el icono de lista en la barra de la VM, o **Actividad…** en Ajustes › Agente) y `nido agent log <vm>` muestran lo que hizo el agente, sesión por sesión: qué miró, dónde hizo clic, qué teclas pulsó. El texto escrito nunca se registra, solo su longitud.
+
+Antes de un paso arriesgado el agente puede crear un **punto de control** (la VM con su memoria) y, si el paso sale mal, **volver** a él: la VM se reinicia desde ese momento. Guarda como máximo 3, solo ve los suyos y nunca toca tus instantáneas; sus puntos de control llevan la etiqueta **Agente** en la lista de instantáneas de la VM, donde puedes restaurarlos o eliminarlos.
+
+Los archivos pasan por una sola carpeta de la VM, `~/NidoTransfer`: el agente los copia dentro y fuera con `put_file` y `get_file` (hasta 1 MiB), tú con `nido act <vm> put-file` y `get-file` (hasta 16 MiB). No hay ninguna carpeta compartida, y por esta vía el agente nunca lee ni escribe archivos en tu Mac.
+
+Con `nido mcp --fresh <base>` cada sesión del agente tiene un Mac propio: Nido hace una copia de la VM de macOS detenida `<base>` (Nido Agent ya instalado, la cuenta inicia sesión sola), la inicia sin ventana y, cuando la sesión termina, la elimina junto con sus archivos, sus apps y su elemento del llavero. Añádela con `claude mcp add nido-fresh-<base> -- nido mcp --fresh <base>`; la primera llamada a una herramienta puede esperar unos minutos mientras la copia arranca. `--keep` conserva la copia, detenida, como una VM normal. Apple permite como máximo dos VM de macOS a la vez, así que como máximo dos sesiones a la vez, una si otra VM de macOS está en ejecución. `<base>` nunca se inicia ni se modifica. En la red controlada el agente sabe qué dominios se bloquearon y te pide permitir uno con `nido net allow`; un dominio permitido en `<base>` llega al instante a sus copias nuevas.
 
 ## Privacidad y red
 

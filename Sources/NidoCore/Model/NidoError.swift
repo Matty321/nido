@@ -111,6 +111,10 @@ public enum NidoError: Error, Equatable, Sendable {
     case serialConsoleRequired
     /// `nido template save` (or the app) on a macOS VM: templates are Linux-only in M3b.
     case macTemplatesUnavailable
+    /// Apple's limit of two running macOS VMs per Mac is reached: Virtualization refused to start
+    /// or restore one more (`VZError.Code.virtualMachineLimitExceeded`), or a fresh Mac was asked
+    /// while two already run.
+    case macVMLimitReached
     /// The text is not a domain the controlled network can allow: an exact name or `*.suffix`,
     /// at least two labels, no IP literal (see `DomainPattern`).
     case invalidDomain(String)

@@ -125,6 +125,13 @@ public struct VMConfig: Codable, Sendable, Equatable {
     /// it is sent at most once per VM. Optional and additive, no schema bump; not in
     /// `stateHash()`. Clones keep it: their disk is already set up (or still is not).
     public var macProvisioningSent: Bool?
+    /// true: a fresh Mac of `nido mcp --fresh`, deleted when its session ends or by the sweep.
+    /// Optional and additive, no schema bump; not in `stateHash()`. Clones never inherit it.
+    public var disposable: Bool?
+    /// The `id` of the VM a fresh Mac was copied from, set together with `disposable`; while the
+    /// copy is disposable, the base's allow/deny reaches it. Optional, no schema bump, not in
+    /// `stateHash()`. Cleared with `disposable` (`DisposableVMs.claim`); clones never inherit it.
+    public var freshBaseID: UUID?
 
     public init(
         schemaVersion: Int = VMConfig.currentSchemaVersion,
@@ -158,7 +165,9 @@ public struct VMConfig: Codable, Sendable, Equatable {
         agentAccess: Bool? = nil,
         guestKeyboardLayoutID: String? = nil,
         macAccountFullName: String? = nil,
-        macProvisioningSent: Bool? = nil
+        macProvisioningSent: Bool? = nil,
+        disposable: Bool? = nil,
+        freshBaseID: UUID? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.id = id
@@ -192,6 +201,8 @@ public struct VMConfig: Codable, Sendable, Equatable {
         self.guestKeyboardLayoutID = guestKeyboardLayoutID
         self.macAccountFullName = macAccountFullName
         self.macProvisioningSent = macProvisioningSent
+        self.disposable = disposable
+        self.freshBaseID = freshBaseID
     }
 
     /// The distribution of a Linux VM (Debian 13 when none is recorded); nil for macOS and for
@@ -210,7 +221,7 @@ public struct VMConfig: Codable, Sendable, Equatable {
         case minimumCPUCount, minimumMemoryBytes, controlledNetwork
         case distributionID = "distribution"
         case backgroundRequestsOff, agentAccess, guestKeyboardLayoutID
-        case macAccountFullName, macProvisioningSent
+        case macAccountFullName, macProvisioningSent, disposable, freshBaseID
     }
 
     /// Fields missing from the file (older schemas) take their defaults; a missing
@@ -250,6 +261,8 @@ public struct VMConfig: Codable, Sendable, Equatable {
         guestKeyboardLayoutID = (try? c.decodeIfPresent(String.self, forKey: .guestKeyboardLayoutID)) ?? nil
         macAccountFullName = (try? c.decodeIfPresent(String.self, forKey: .macAccountFullName)) ?? nil
         macProvisioningSent = (try? c.decodeIfPresent(Bool.self, forKey: .macProvisioningSent)) ?? nil
+        disposable = (try? c.decodeIfPresent(Bool.self, forKey: .disposable)) ?? nil
+        freshBaseID = (try? c.decodeIfPresent(UUID.self, forKey: .freshBaseID)) ?? nil
     }
 
     /// Accepts a guest account name for `sshUser`: `^[a-z_][a-z0-9_-]{0,31}$` (ASCII only), so it

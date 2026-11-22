@@ -81,6 +81,10 @@ final class SnapshotsModel {
 
     var isWorking: Bool { window.isSnapshotting || creatingName != nil }
 
+    /// A checkpoint an agent took (its row carries the "Agent" label); restored or deleted here
+    /// like any snapshot.
+    func isAgent(_ snapshot: Snapshot) -> Bool { snapshot.isAgentCheckpoint }
+
     /// The VM runs in this app (or is starting, stopping…): a snapshot keeps its memory.
     var runsInApp: Bool { !window.isGone }
 

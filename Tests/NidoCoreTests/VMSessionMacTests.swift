@@ -49,6 +49,21 @@ import Virtualization
         #expect(app.attachedStateHash == f.config.effectiveStateHash(attachedShareNames: [], rosettaAttached: false))
     }
 
+    /// Virtualization's "too many VMs" refusal (Apple's limit of two running macOS VMs) becomes
+    /// `.macVMLimitReached`; every other error is passed on as it is.
+    @Test func limitErrorIsTranslated() {
+        let limit = NSError(domain: VZErrorDomain, code: 6)
+        #expect(VMSession.translatedStartError(limit) as? NidoError == .macVMLimitReached)
+
+        let other = VMSession.translatedStartError(NSError(domain: VZErrorDomain, code: 1)) as NSError
+        #expect(other.domain == VZErrorDomain)
+        #expect(other.code == 1)
+
+        let posix = VMSession.translatedStartError(POSIXError(.EIO))
+        #expect((posix as? POSIXError)?.code == .EIO)
+        #expect((posix as NSError).domain == NSPOSIXErrorDomain)
+    }
+
     /// Live shared-folder changes use the macOS automount device, not Linux's `nido` tag.
     @MainActor
     @Test(.enabled(if: canCreateVirtualMachines, "needs the virtualization entitlement"))

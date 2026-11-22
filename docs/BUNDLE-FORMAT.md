@@ -38,13 +38,16 @@ Labels such as M3a or M3c name Nido's development milestones: M1 the `nido` comm
   state.vzvmsave       (M3a, optional) the machine's saved state (suspended VM or restored snapshot)
   snapshots/           (M3a) 0700
     <uuid>/            one complete snapshot (0700)
-      meta.json        Snapshot (see below), 0600
+      meta.json        Snapshot (see below), 0600; `createdBy: "agent"` for an agent checkpoint (0.9.4)
       disk.img         clonefile of the disk, 0600
       nvram.efi        clonefile of the NVRAM, 0600 (Linux)
       auxiliary-storage.img  (M3b) clonefile of the auxiliary storage, 0600 (macOS)
       state.vzvmsave   only for a snapshot with saved state (VM running or suspended), 0600
     .<uuid>.partial/   snapshot being built (ignored by listing and restore)
     .<uuid>.deleting/  snapshot being deleted
+  agent-shots/         (0.9.0, macOS) the agent's latest screenshots, 0700, at most 20 PNGs, 0600
+  agent-log/           (0.9.4, macOS) the agent's activity log: `agent-log.jsonl` (+ `agent-log.1.jsonl`, 2 MiB each) and `thumbs/` (JPEG, at most 1000), 0700, files 0600; not copied by a clone or a template
+  agent-files/         (0.9.4, macOS) files in transit between `nido mcp`/`nido act` and the VM's owner, `<uuid>.bin` 0600, removed when read, swept after 10 minutes; not copied by a clone or a template
   .config.json.<uuid>.tmp            atomic write of config.json in progress
   .<file>.restore-<tag>.new / .old   (M3a) copies and originals of a restore in progress (see "Snapshots")
   .restore-<tag>.commit              (M3a) marker of a committed restore

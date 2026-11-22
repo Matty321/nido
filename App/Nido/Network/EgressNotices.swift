@@ -161,40 +161,6 @@ enum EgressNoticeText {
     }
 }
 
-/// Where the app stopped reading a VM's `egress.log`: the time of the last line read and how
-/// many lines with exactly that time it read (the log's times are whole seconds). Lines are
-/// appended in order, so the lines after the cursor are the new ones.
-struct EgressLogCursor: Codable, Equatable, Sendable {
-    var time: Date
-    var seen: Int
-
-    /// The lines of `entries` (oldest first, as `EgressLog.readEntries`) after `cursor`, and the
-    /// cursor after them. Without a cursor, only lines from the second of `since` on are new (the
-    /// app was not watching this VM before; the log's times are whole seconds, so a block of
-    /// that very second is not skipped).
-    static func newEntries(
-        _ entries: [EgressLogEntry], after cursor: EgressLogCursor?, since: Date
-    ) -> (entries: [EgressLogEntry], cursor: EgressLogCursor?) {
-        let start = cursor ?? EgressLogCursor(
-            time: Date(timeIntervalSince1970: floor(since.timeIntervalSince1970)), seen: 0)
-        var atStart = 0
-        var fresh: [EgressLogEntry] = []
-        for entry in entries {
-            if entry.time < start.time { continue }
-            if entry.time == start.time {
-                atStart += 1
-                if atStart <= start.seen { continue }
-            }
-            fresh.append(entry)
-        }
-        guard let last = entries.last else { return ([], cursor) }
-        let seen = entries.reversed().prefix { $0.time == last.time }.count
-        // A log that went back in time (rotation lost, clock changed) starts over from its end.
-        if last.time < start.time { return ([], EgressLogCursor(time: last.time, seen: seen)) }
-        return (fresh, EgressLogCursor(time: last.time, seen: seen))
-    }
-}
-
 /// Merges notices for a person: per VM, destination and port, at most one notification every
 /// `window` seconds; the blocks in between are counted and posted when the window is over
 /// (`flush`), so a block never goes without a notice and is never counted twice. A VM gets
@@ -352,6 +318,8 @@ enum EgressPolicyEdits {
 
     /// Adds `text` (a host name or `*.suffix`) to the list of `vm` after the owner's
     /// confirmation, asked only when the pattern is valid, the list loads, has room and lacks it.
+    /// Once written, it reaches the disposable fresh copies of `vm` too (`FreshCopies`, best
+    /// effort: the outcome is the base's).
     static func allow(
         _ text: String, vm: String, bundle: VMBundle, authenticator: any OwnerAuthenticator
     ) async -> AllowOutcome {
@@ -369,12 +337,13 @@ enum EgressPolicyEdits {
             reason: String(localized: "add \(shown) to the allowed domains of the VM \(ConsoleSanitizer.echoable(vm))",
                            comment: "The end of the system’s Touch ID sentence “Nido is trying to …”: a domain, then the VM’s name."))
         else { return .cancelled }
+        let add: @Sendable (inout EgressPolicy) throws -> Void = { policy in
+            guard !policy.allow.contains(pattern) else { return }
+            guard policy.allow.count < EgressPolicy.maxPatterns else { throw ListFull() }
+            policy.allow.append(pattern)
+        }
         do {
-            try await write(bundle) { policy in
-                guard !policy.allow.contains(pattern) else { return }
-                guard policy.allow.count < EgressPolicy.maxPatterns else { throw ListFull() }
-                policy.allow.append(pattern)
-            }
+            try await write(bundle, add)
         } catch is ListFull {
             return .full
         } catch NidoError.invalidEgressPolicy {
@@ -382,18 +351,32 @@ enum EgressPolicyEdits {
         } catch {
             return .failed(sentence(error))
         }
+        await propagate(from: bundle, add)
         return .added(shown)
     }
 
     private struct ListFull: Error {}
 
     /// Removes exactly `pattern` (no confirmation: the list only narrows; an exact name never
-    /// removes a wildcard). Returns the list as written.
+    /// removes a wildcard). Returns the list as written. Once written, it is removed from the
+    /// disposable fresh copies of the VM too (`FreshCopies`, best effort).
     @discardableResult
     static func remove(_ pattern: DomainPattern, bundle: VMBundle) async throws -> EgressPolicy {
-        try await write(bundle) { policy in
+        let narrow: @Sendable (inout EgressPolicy) throws -> Void = { policy in
             policy.allow.removeAll { $0 == pattern }
         }
+        let written = try await write(bundle, narrow)
+        await propagate(from: bundle, narrow)
+        return written
+    }
+
+    /// `FreshCopies.propagate` off the main actor, after the base was written. A copy that
+    /// fails keeps its list: the app's outcome is the base's.
+    @concurrent
+    private static func propagate(
+        from bundle: VMBundle, _ edit: @escaping @Sendable (inout EgressPolicy) throws -> Void
+    ) async {
+        _ = FreshCopies.propagate(from: bundle, paths: NidoPaths(root: bundle.url.deletingLastPathComponent()), edit)
     }
 
     /// Whether writing `base` (`EgressPolicy.base(for:)`, or `EgressPolicy.macOSBase`) over

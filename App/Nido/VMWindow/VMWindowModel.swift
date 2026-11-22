@@ -45,11 +45,13 @@ protocol VMSessionHandle: AnyObject {
     /// The machine whose screen the window shows (a macOS guest); nil for a headless session.
     var displayMachine: VZVirtualMachine? { get }
     /// Serves the agent control socket for a macOS VM with agent access on (`AgentHost`); nil for
-    /// every other session, including the fakes of the UI tests. `onActivity` is true while the
-    /// agent's command runs (`AgentHost.startIfEnabled`); it is called from any thread.
+    /// every other session, including the fakes of the UI tests. `checkpoints` answers the agent's
+    /// `checkpoint`, `checkpoints` and `rollback` (the window's, the same for every session).
+    /// `onActivity` is true while the agent's command runs (`AgentHost.startIfEnabled`); it is
+    /// called from any thread.
     func startAgentHost(
-        bundle: VMBundle, config: VMConfig, onWarning: (String) -> Void,
-        onActivity: @escaping @Sendable (Bool) -> Void
+        bundle: VMBundle, config: VMConfig, checkpoints: (any AgentCheckpointHandling)?,
+        onWarning: (String) -> Void, onActivity: @escaping @Sendable (Bool) -> Void
     ) -> AgentControlServer?
     /// Puts `text` on the guest's clipboard through Nido Agent, over this session's own vsock
     /// (`AgentHost.setClipboard`); `notRunning` for every other session, including the fakes.
@@ -68,8 +70,8 @@ extension VMSessionHandle {
     var aiBridgeAttached: Bool? { nil }
     var displayMachine: VZVirtualMachine? { nil }
     func startAgentHost(
-        bundle: VMBundle, config: VMConfig, onWarning: (String) -> Void,
-        onActivity: @escaping @Sendable (Bool) -> Void
+        bundle: VMBundle, config: VMConfig, checkpoints: (any AgentCheckpointHandling)?,
+        onWarning: (String) -> Void, onActivity: @escaping @Sendable (Bool) -> Void
     ) -> AgentControlServer? { nil }
     func setGuestClipboard(_ text: String, clearAfter: Int) async -> AgentAnswer { .failure(.notRunning, "") }
     func updateSharedFolders(_ folders: [SharedFolder]) throws -> [String] {
@@ -89,11 +91,12 @@ extension VMSession: VMSessionHandle {
     var displayMachine: VZVirtualMachine? { guest == .macos ? virtualMachine : nil }
 
     func startAgentHost(
-        bundle: VMBundle, config: VMConfig, onWarning: (String) -> Void,
-        onActivity: @escaping @Sendable (Bool) -> Void
+        bundle: VMBundle, config: VMConfig, checkpoints: (any AgentCheckpointHandling)?,
+        onWarning: (String) -> Void, onActivity: @escaping @Sendable (Bool) -> Void
     ) -> AgentControlServer? {
         AgentHost.startIfEnabled(
-            session: self, bundle: bundle, config: config, onWarning: onWarning, onActivity: onActivity)
+            session: self, bundle: bundle, config: config, checkpoints: checkpoints, onWarning: onWarning,
+            onActivity: onActivity)
     }
 
     func setGuestClipboard(_ text: String, clearAfter: Int) async -> AgentAnswer {
@@ -239,9 +242,17 @@ final class VMWindowModel {
     /// The agent control socket of the live session (a macOS VM with agent access on); stopped
     /// wherever the session is let go.
     private var agentServer: AgentControlServer?
-    /// True while an agent command runs and for `agentBannerHold` after the last one: the window
-    /// shows "An agent is using this VM". False at once when the session ends.
-    private(set) var agentActive = false
+    /// True while an agent command runs and for `agentBannerHold` after the last one. False at
+    /// once when the session ends.
+    private var agentCommandActive = false
+    /// The window shows "An agent is using this VM": while an agent's command runs (and for
+    /// `agentBannerHold` after it), while it takes a checkpoint, and while it goes back to one.
+    var agentActive: Bool { agentCommandActive || agentCheckpointRunning || rollbackBanner != nil }
+    /// True while the agent's checkpoint waits for or takes its turn (`agentCheckpoint`).
+    private(set) var agentCheckpointRunning = false
+    /// "The agent is going back to <checkpoint>…" while an agent's rollback runs (accepted until
+    /// the VM runs again from the checkpoint, or the rollback failed); nil otherwise.
+    private(set) var rollbackBanner: String?
     /// Nido Agent's first-run setup after a start that sent the guest its account (macOS 27
     /// guest with agent access on): what the thin strip over the screen shows; nil otherwise.
     enum FirstRunSetup: Equatable {
@@ -269,6 +280,10 @@ final class VMWindowModel {
     /// the guest's resolution instead of following the window, so the agent's screenshots and
     /// coordinates stay valid while the user resizes the window.
     private(set) var freezesGuestDisplay = false
+    /// The toolbar's "Agent Activity" button: shown while the live session has agent access on
+    /// (a macOS guest, from the config the session started with), the only time an agent can act
+    /// in it.
+    private(set) var showsAgentActivity = false
     /// How long the banner stays after the last command.
     nonisolated static let agentBannerHold: Duration = .seconds(3)
     /// The newest activity value applied; an older one that hops late is dropped.
@@ -369,6 +384,27 @@ final class VMWindowModel {
     /// The RAM check before a start (`MemoryHeadroom.check`), run off the main actor; nil when
     /// the VM's config cannot be read or it is a template (the start then says why).
     @ObservationIgnored private let checkHeadroom: @Sendable (VMBundle) -> MemoryHeadroom?
+    /// The agent checkpoints of this window's VM: one for the window, not per session, so a
+    /// checkpoint or a rollback in progress spans the restart. Made at the first start of a macOS
+    /// VM with agent access on.
+    @ObservationIgnored private var checkpointCoordinator: AgentCheckpointCoordinator?
+    /// `checkpointCoordinator` as every session's agent socket takes it.
+    @ObservationIgnored private var checkpointHandler: WindowCheckpointHandler?
+    /// How long an accepted rollback waits before it stops the VM (the coordinator's grace).
+    @ObservationIgnored private let rollbackGrace: Duration
+    /// An agent's rollback stopped the session and has not ended yet.
+    @ObservationIgnored private var rollingBack = false
+    /// The user stopped the VM (or the app quits) during the rollback: nothing more is restored
+    /// or started.
+    @ObservationIgnored private var rollbackStopRequested = false
+    /// The user's Starts that wait for the rollback in progress to end (`start()`).
+    @ObservationIgnored private var rollbackWaiters: [CheckedContinuation<Void, Never>] = []
+    /// The user's last word during the rollback was Start (not Stop): if the rollback ends with
+    /// the VM stopped, not failed, the VM starts then.
+    @ObservationIgnored private var startAfterRollbackRequested = false
+    /// The snapshot operation that runs is the agent's (its checkpoint, its rollback's restore),
+    /// not the user's: the agent's session stays usable for it.
+    @ObservationIgnored private var agentSnapshotWork = false
 
     init(
         name: VMName, paths: NidoPaths, factory: any SessionFactory, passwords: any GuestPasswordStore,
@@ -378,8 +414,10 @@ final class VMWindowModel {
         agentHoldSleep: @escaping @Sendable (Duration) async -> Void = { try? await Task.sleep(for: $0) },
         firstRunSetup: (@Sendable (
             VMBundle, VMConfig, @escaping @Sendable (MacAgentSetupEvent) -> Void
-        ) async throws -> Bool)? = nil
+        ) async throws -> Bool)? = nil,
+        rollbackGrace: Duration = .milliseconds(500)
     ) {
+        self.rollbackGrace = rollbackGrace
         self.agentHoldSleep = agentHoldSleep
         self.firstRunSetupRunner = firstRunSetup ?? { bundle, config, onEvent in
             try await VMWindowModel.liveFirstRunSetup(
@@ -499,13 +537,33 @@ final class VMWindowModel {
 
     /// Starts the VM when nothing runs it; ignored while it is alive (starting, running, paused…).
     /// A lock held by another process (`nido start`, another Nido) ends in `.error`, without a session.
+    ///
+    /// During an agent's rollback (the VM stopped, restored, then started again by the rollback)
+    /// it waits for the rollback to end instead: started now, the VM would boot without the
+    /// checkpoint and its restore would fail, or race the rollback's own start. Once the rollback
+    /// ended the VM runs, or the window shows why it could not go back (Retry starts it); only
+    /// when the user's Stop ended the rollback, and this Start came after it, does the VM start.
     func start() async {
+        if rollingBack {
+            startAfterRollbackRequested = true
+            await withCheckedContinuation { rollbackWaiters.append($0) }
+            // Taken by the first Start that waited: the others find the VM starting.
+            let requested = startAfterRollbackRequested
+            startAfterRollbackRequested = false
+            guard requested, state == .stopped else { return }
+        }
+        await startSession()
+    }
+
+    /// `start()` without waiting for a rollback: the rollback's own start.
+    private func startSession() async {
         // A snapshot holds the bundle lock (stopped) or the machine (live): start after it.
         await waitForSnapshot()
         guard state.isSettled, session == nil, !refusesStart else { return }
         errorDetail = nil
         warnings = []
         freezesGuestDisplay = false
+        showsAgentActivity = false
         isSuspended = false
         stopBeforeSession = false
         state = .starting
@@ -527,6 +585,9 @@ final class VMWindowModel {
             // An interrupted snapshot restore is finished or undone first; refused (with the
             // files to inspect) when it left anything behind.
             try SnapshotStore(bundle: bundle).recoverBeforeUse()
+            // A fresh Mac left by an agent session becomes an ordinary VM once the user starts
+            // it: no session end or sweep deletes it later.
+            try DisposableVMs.claim(bundle)
             // The config the session is built from decides the guest (the factory reads it too).
             if let config = try? bundle.readConfig() {
                 resolveGuest(config.guest)
@@ -548,6 +609,7 @@ final class VMWindowModel {
         warnings = created.warnings
         if let agentTarget {
             freezesGuestDisplay = guest == .macos && agentTarget.config.agentAccess == true
+            showsAgentActivity = guest == .macos && agentTarget.config.agentAccess == true
             agentGeneration += 1
             agentSequence = 0
             let generation = agentGeneration
@@ -556,6 +618,7 @@ final class VMWindowModel {
             let counter = Mutex((running: 0, sequence: 0))
             agentServer = created.startAgentHost(
                 bundle: agentTarget.bundle, config: agentTarget.config,
+                checkpoints: showsAgentActivity ? checkpointHandling() : nil,
                 onWarning: { [weak self] in self?.warnings.append($0) },
                 onActivity: { [weak self] running in
                     // From the connection's thread; a late call of an old session is dropped.
@@ -762,6 +825,13 @@ final class VMWindowModel {
     /// closing the window during "Arresto in corso" still waits for the guest. Also stops a
     /// machine left running behind an `.error` (failed pause, resume or forced stop).
     func stop() async {
+        // The user's stop wins over an agent's rollback in progress: nothing more is restored or
+        // started (also when this stop finds the VM already stopped by the rollback), nor by a
+        // Start of the user's that came before it.
+        if rollingBack {
+            rollbackStopRequested = true
+            startAfterRollbackRequested = false
+        }
         // A snapshot or a suspend in progress ends first (a live snapshot resumes the VM when it
         // is done; a suspend stops it itself or leaves it running), also one that starts meanwhile.
         while true {
@@ -951,15 +1021,18 @@ final class VMWindowModel {
     /// "Ripristina" (confirmed): only with no machine behind this window; the store refuses a VM
     /// run elsewhere. A snapshot with its saved state leaves the VM suspended.
     func restoreSnapshot(_ id: UUID) async throws {
-        try await exclusive { [self] in
-            guard isGone else { throw NidoError.vmMustBeStopped(name.rawValue) }
-            let bundle = try VMBundle.open(name, paths: paths)
-            // A template is restored only after "Modifica modello" (its disk is the one
-            // new VMs are copied from).
-            if (try? bundle.readConfig())?.isTemplate == true { throw TemplateLockedError(name: name.rawValue) }
-            try await SnapshotStore(bundle: bundle).restoreAsync(id, owner: .app)
-            refreshSuspendedState(bundle)
-        }
+        try await exclusive { [self] in try await performRestore(id) }
+    }
+
+    /// The restore itself, inside `exclusive`: the user's (confirmed) or an agent's rollback.
+    private func performRestore(_ id: UUID) async throws {
+        guard isGone else { throw NidoError.vmMustBeStopped(name.rawValue) }
+        let bundle = try VMBundle.open(name, paths: paths)
+        // A template is restored only after "Modifica modello" (its disk is the one
+        // new VMs are copied from).
+        if (try? bundle.readConfig())?.isTemplate == true { throw TemplateLockedError(name: name.rawValue) }
+        try await SnapshotStore(bundle: bundle).restoreAsync(id, owner: .app)
+        refreshSuspendedState(bundle)
     }
 
     /// "Elimina" (confirmed): only with no machine behind this window (the store takes the bundle
@@ -1270,6 +1343,7 @@ final class VMWindowModel {
         agentServer = nil
         clearAgentActivity()
         freezesGuestDisplay = false
+        showsAgentActivity = false
         warnings = []
         terminal?.stop()
         terminal = nil
@@ -1288,24 +1362,224 @@ final class VMWindowModel {
         agentHoldTask?.cancel()
         agentHoldTask = nil
         if busy {
-            agentActive = true
+            agentCommandActive = true
             return
         }
         agentHoldTask = Task { [weak self, agentHoldSleep] in
             await agentHoldSleep(Self.agentBannerHold)
             guard !Task.isCancelled else { return }
-            self?.agentActive = false
+            self?.agentCommandActive = false
         }
     }
 
-    /// The session ends: the banner goes at once, nothing is left to hold.
+    /// The session ends: the banner of the agent's commands goes at once, nothing is left to hold
+    /// (a checkpoint or a rollback in progress keeps its own).
     private func clearAgentActivity() {
         agentGeneration += 1
         agentHoldTask?.cancel()
         agentHoldTask = nil
         agentSequence = 0
-        agentActive = false
+        agentCommandActive = false
     }
+
+    // MARK: - Agent checkpoints
+
+    /// The window's checkpoint handling, made with its coordinator at the first agent start.
+    private func checkpointHandling() -> WindowCheckpointHandler {
+        if let checkpointHandler { return checkpointHandler }
+        let coordinator = AgentCheckpointCoordinator(owner: self, rollbackGrace: rollbackGrace)
+        let handler = WindowCheckpointHandler(model: self)
+        checkpointCoordinator = coordinator
+        checkpointHandler = handler
+        return handler
+    }
+
+    /// What the coordinator answers while busy (the same text), for a checkpoint still waiting
+    /// for its turn here.
+    private static var agentBusy: AgentAnswer {
+        .failure(.notReady, String(localized: "a checkpoint or rollback is in progress",
+                                   comment: "The answer to an agent: a lowercase sentence without a final period."))
+    }
+
+    /// The agent's `checkpoint`: one snapshot operation among the others (`exclusive`), so it never
+    /// interleaves with the user's; a Suspend, Stop or snapshot of the user that runs goes first.
+    /// The window says an agent is using the VM meanwhile.
+    func agentCheckpoint(name: String?) async -> AgentAnswer {
+        guard let coordinator = checkpointCoordinator else { return Self.agentNotRunning(self.name) }
+        guard !agentCheckpointRunning, !coordinator.isBusy else { return Self.agentBusy }
+        agentCheckpointRunning = true
+        defer { agentCheckpointRunning = false }
+        do {
+            return try await exclusive { [self] in
+                agentSnapshotWork = true
+                defer { agentSnapshotWork = false }
+                return await coordinator.checkpoint(name: name)
+            }
+        } catch {
+            // Nido is quitting.
+            return .failure(.notRunning, error.localizedDescription)
+        }
+    }
+
+    func agentCheckpoints() async -> AgentAnswer {
+        guard let coordinator = checkpointCoordinator else { return Self.agentNotRunning(name) }
+        return await coordinator.checkpoints()
+    }
+
+    /// The agent's `rollback`: accepted at once, then the coordinator stops, restores and starts
+    /// the VM through `AgentRollbackOwner`; the window says where the agent is going back to.
+    func agentRollback(name: String?) async -> AgentAnswer {
+        guard let coordinator = checkpointCoordinator else { return Self.agentNotRunning(self.name) }
+        guard !agentCheckpointRunning else { return Self.agentBusy }
+        let answer = await coordinator.rollback(name: name)
+        // Not when it already ended (the end clears the banner, and it is never set again).
+        if answer.ok, coordinator.isBusy, let target = answer.checkpoint?.name {
+            rollbackBanner = String(localized: "The agent is going back to \(target)…",
+                                    comment: "Over the VM's screen while an agent's rollback runs; %@ is the checkpoint's name.")
+        }
+        return answer
+    }
+
+    private static func agentNotRunning(_ name: VMName) -> AgentAnswer {
+        .failure(.notRunning, NidoError.notRunning(name.rawValue).localizedDescription)
+    }
+
+    /// A user's action on the machine runs or waits: a Suspend, a Stop, or a snapshot operation of
+    /// the user's. It wins over the agent: no checkpoint is taken, no rollback starts.
+    private var userActionInProgress: Bool {
+        isSuspending || suspendTask != nil || stopTask != nil || (isSnapshotting && !agentSnapshotWork)
+    }
+}
+
+// MARK: - AgentRollbackOwner
+
+extension VMWindowModel: AgentRollbackOwner {
+    var bundle: VMBundle { VMBundle(url: paths.bundleURL(for: name)) }
+
+    /// An agent's rollback stopped the VM and will start it again in this model: the store keeps
+    /// the model although no machine runs meanwhile.
+    var isRollingBack: Bool { rollingBack }
+
+    /// The running (or paused) session, unless a user's action runs, the app quits or a rollback
+    /// stopped it.
+    var liveStateSaver: (any MachineStateSaving)? {
+        guard !rollingBack, !refusesStart, !userActionInProgress, let session,
+              session.state == .running || session.state == .paused
+        else { return nil }
+        return session.stateSaver
+    }
+
+    /// Forced, never a suspend; refused while a user's action runs or once the app quits.
+    func stopForRollback() async throws {
+        guard !rollingBack, !refusesStart, !userActionInProgress, let session,
+              session.state == .running || session.state == .paused
+        else { throw NidoError.notRunning(name.rawValue) }
+        rollingBack = true
+        rollbackStopRequested = false
+        // As the user's stop, so that whatever waits for a stop (a snapshot, a suspend) waits.
+        let task = Task {
+            await session.stop(gracePeriod: .zero)
+            if self.session === session { self.apply(session.state) }
+            self.stopTask = nil
+        }
+        stopTask = task
+        await task.value
+        // A failed forced stop: the machine may still run (the error screen says so).
+        guard isGone else { throw NidoError.vmMustBeStopped(name.rawValue) }
+    }
+
+    /// The user's restore without its confirmation, one snapshot operation among the others.
+    func restoreForRollback(_ id: UUID) async throws {
+        guard !rollbackStopRequested, !refusesStart else { throw NidoError.notRunning(name.rawValue) }
+        try await exclusive { [self] in
+            agentSnapshotWork = true
+            defer { agentSnapshotWork = false }
+            // The user's stop came while this waited for its turn.
+            guard !rollbackStopRequested else { throw NidoError.notRunning(name.rawValue) }
+            try await performRestore(id)
+        }
+    }
+
+    /// The usual start, which resumes from the checkpoint's saved state.
+    func startAfterRollback() async throws {
+        guard !rollbackStopRequested, !refusesStart else { throw NidoError.notRunning(name.rawValue) }
+        await startSession()
+        switch state {
+        case .running, .paused:
+            return
+        case .error(let message):
+            throw RollbackStartError(message: message)
+        default:
+            throw NidoError.notRunning(name.rawValue)
+        }
+    }
+
+    /// The banner goes. A rollback that failed after it stopped the VM leaves it stopped with the
+    /// error screen, unless the user stopped it meanwhile or the start's own error is shown. The
+    /// user's Starts that waited for it go on (`start()`).
+    func rollbackDidEnd(target: String, error: (any Error)?) {
+        let stoppedTheVM = rollingBack
+        let userStopped = rollbackStopRequested || refusesStart
+        rollingBack = false
+        rollbackStopRequested = false
+        rollbackBanner = nil
+        defer {
+            let waiters = rollbackWaiters
+            rollbackWaiters = []
+            for waiter in waiters { waiter.resume() }
+        }
+        guard let error, stoppedTheVM, !userStopped, isGone else { return }
+        if case .error = state { return }
+        let message = SnapshotsModel.message(for: error, vm: name.rawValue, operation: .restore)
+        errorDetail = message
+        apply(.error(message))
+        errorTitle = String(localized: "The agent couldn’t go back to \(target)",
+                            comment: "Heading of a VM's window after an agent's rollback failed; %@ is the checkpoint's name.")
+    }
+
+    /// The start after a rollback ended in an error (shown by the window as any failed start).
+    struct RollbackStartError: LocalizedError {
+        let message: String
+        var errorDescription: String? { message }
+    }
+}
+
+/// The window's answers to the agent's `checkpoint`, `checkpoints` and `rollback`, for every
+/// session's agent socket: each call hops to the main actor. Holds the window weakly (the
+/// window's sessions hold this).
+@MainActor
+final class WindowCheckpointHandler: AgentCheckpointHandling {
+    private weak var model: VMWindowModel?
+    private let vm: String
+
+    init(model: VMWindowModel) {
+        self.model = model
+        vm = model.name.rawValue
+    }
+
+    nonisolated func checkpoint(name: String?) async -> AgentAnswer { await takeCheckpoint(name) }
+    nonisolated func checkpoints() async -> AgentAnswer { await listCheckpoints() }
+    nonisolated func rollback(name: String?) async -> AgentAnswer { await goBack(name) }
+
+    private func takeCheckpoint(_ checkpoint: String?) async -> AgentAnswer {
+        guard let model else { return gone }
+        return await model.agentCheckpoint(name: checkpoint)
+    }
+
+    private func listCheckpoints() async -> AgentAnswer {
+        guard let model else { return gone }
+        return await model.agentCheckpoints()
+    }
+
+    private func goBack(_ checkpoint: String?) async -> AgentAnswer {
+        guard let model else { return gone }
+        return await model.agentRollback(name: checkpoint)
+    }
+
+    private var gone: AgentAnswer { .failure(.notRunning, NidoError.notRunning(vm).localizedDescription) }
+}
+
+extension VMWindowModel {
 
     // MARK: - Monitor and AI (M3c)
 

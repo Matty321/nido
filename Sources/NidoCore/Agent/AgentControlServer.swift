@@ -6,7 +6,8 @@ import Synchronization
 
 /// The per-VM Unix socket through which `nido act` and `nido mcp` drive a macOS guest. It is
 /// served by the process that owns the running VM (`nido start` or Nido.app), which forwards each
-/// command to Nido Agent in the guest (`perform`, an `AgentClient` in production).
+/// command to Nido Agent in the guest (`perform`, an `AgentClient` in production), but for the
+/// checkpoint ops, which the owner answers itself (`AgentCheckpointHandling`).
 ///
 /// The socket is a security boundary: whoever can write to it can click and type in the guest.
 /// So it lives in a 0700 directory of this user (`<user temp dir>/nido-agent`, see
@@ -21,7 +22,8 @@ import Synchronization
 /// helper or of the transport are answered and the connection stays open.
 ///
 /// Commands of every connection go through one `AgentGate`, one at a time: two agents (or an
-/// agent and the user's `nido act`) never interleave a click with another's screenshot.
+/// agent and the user's `nido act`) never interleave a click with another's screenshot. The gate
+/// also records each command it handles in the VM's activity log (`AgentActivityLog`).
 public final class AgentControlServer: Sendable {
     /// `<the user's temporary folder>/nido-agent`: per-user, private, and short enough for the
     /// socket path. The folder is `confstr(_CS_DARWIN_USER_TEMP_DIR)`, not `$TMPDIR`: the owner
@@ -55,6 +57,10 @@ public final class AgentControlServer: Sendable {
     /// The longest command line accepted, without its `\n`. A `type` action of a long text fits;
     /// a client cannot make the owner buffer more than this.
     static let maxLineBytes = 64 * 1024
+
+    /// The longest `AgentAnswer` line (a `uiTree` of 1000 elements with long names is far above
+    /// `maxLineBytes`, which only bounds the commands the server reads).
+    static let maxAnswerBytes = 2 * 1024 * 1024
     /// Connections served at once. Each has a thread blocked in `read`; more are closed at once.
     static let maxConnections = 32
     /// How long writing an answer may block on a client that stopped reading.
@@ -79,23 +85,34 @@ public final class AgentControlServer: Sendable {
     /// process that died is replaced, one another running owner serves is not (`claim`). Throws
     /// `.unsafePath` for a path too long for a socket, `.agentSocketInUse` when another owner
     /// serves the name, and a `POSIXError` when the socket cannot be made.
+    ///
+    /// `checkpoints` answers `checkpoint`, `checkpoints` and `rollback` (the owner's own work,
+    /// never forwarded to the helper); without it they are refused (`badRequest`).
     public static func start(
         bundle: VMBundle, vmID: UUID,
         perform: @escaping @Sendable (AgentRequest) async throws(AgentFailure) -> (AgentReply, Data?),
+        checkpoints: (any AgentCheckpointHandling)? = nil,
         root: URL = defaultRoot
     ) throws -> AgentControlServer {
-        try start(bundle: bundle, vmID: vmID, perform: perform, root: root, sendTimeoutSeconds: sendTimeoutSeconds)
+        try start(bundle: bundle, vmID: vmID, perform: perform, checkpoints: checkpoints, root: root,
+                  sendTimeoutSeconds: sendTimeoutSeconds)
     }
 
-    /// `start` with the send timeout injectable (tests).
+    /// `start` with the send timeout, the activity log's clock and its writer injectable (tests).
     static func start(
         bundle: VMBundle, vmID: UUID,
         perform: @escaping @Sendable (AgentRequest) async throws(AgentFailure) -> (AgentReply, Data?),
-        root: URL, sendTimeoutSeconds: Int
+        checkpoints: (any AgentCheckpointHandling)? = nil,
+        root: URL, sendTimeoutSeconds: Int, now: @escaping @Sendable () -> Date = { Date() },
+        appendLog: AgentActivityWriter.Append? = nil
     ) throws -> AgentControlServer {
         let url = socketURL(vmID: vmID, root: root)
         guard url.path.utf8.count <= maxSocketPathBytes else { throw NidoError.unsafePath(url.path) }
         let vmName = try bundle.readConfig().name.rawValue
+        // Files a previous owner staged and nobody read (it crashed, or its clients went away).
+        AgentFiles.sweep(in: bundle, olderThan: AgentFiles.maxAge)
+        let log = appendLog.map { AgentActivityWriter(vmName: vmName, append: $0) }
+            ?? AgentActivityWriter(bundle: bundle, vmName: vmName)
         try prepareDirectory(root)
         // Held until the socket listens: two owners starting at once never both find the name
         // free, and none removes a socket another has bound but not yet listened on.
@@ -131,9 +148,10 @@ public final class AgentControlServer: Sendable {
             let core = Core(
                 listenFD: fd, wakeRead: wake[0], wakeWrite: wake[1], socketURL: url,
                 socketID: (info.st_dev, info.st_ino), vmID: vmID,
-                bundlePath: AgentCommand.bundlePath(bundle.url), vmName: vmName,
+                bundle: bundle, bundlePath: AgentCommand.bundlePath(bundle.url), vmName: vmName,
                 sendTimeoutSeconds: sendTimeoutSeconds,
-                gate: AgentGate(bundle: bundle, vmName: vmName, perform: perform))
+                gate: AgentGate(bundle: bundle, vmName: vmName, perform: perform, checkpoints: checkpoints,
+                                now: now, log: log))
             Thread { core.acceptLoop() }.start()
             return AgentControlServer(core: core)
         } catch {
@@ -150,6 +168,11 @@ public final class AgentControlServer: Sendable {
     /// Idempotent; also run on deinit.
     public func stop() {
         core.stop()
+    }
+
+    /// Returns once the activity log has every entry handed to it so far (tests).
+    func waitForLog() {
+        core.gate.log.flush()
     }
 
     // MARK: - Directory
@@ -264,6 +287,8 @@ public final class AgentControlServer: Sendable {
         let vmName: String
         let sendTimeoutSeconds: Int
         let gate: AgentGate
+        /// The served bundle, for its staged files (`AgentFiles`).
+        let bundle: VMBundle
         private let acceptEnded = DispatchSemaphore(value: 0)
 
         private struct State {
@@ -273,7 +298,9 @@ public final class AgentControlServer: Sendable {
         private let state = Mutex(State())
 
         init(listenFD: Int32, wakeRead: Int32, wakeWrite: Int32, socketURL: URL, socketID: (dev_t, ino_t),
-             vmID: UUID, bundlePath: String, vmName: String, sendTimeoutSeconds: Int, gate: AgentGate) {
+             vmID: UUID, bundle: VMBundle, bundlePath: String, vmName: String, sendTimeoutSeconds: Int,
+             gate: AgentGate) {
+            self.bundle = bundle
             self.bundlePath = bundlePath
             self.listenFD = listenFD
             self.wakeRead = wakeRead
@@ -303,6 +330,9 @@ public final class AgentControlServer: Sendable {
             _ = Darwin.close(listenFD)
             _ = Darwin.close(wakeRead)
             _ = Darwin.close(wakeWrite)
+            // The last entries reach the disk before the owner goes on (the app may quit).
+            gate.log.flush()
+            AgentFiles.sweep(in: bundle, olderThan: AgentFiles.maxAge)
         }
 
         /// Removes the socket only if it is still ours: a new owner of the same VM may already
@@ -386,6 +416,8 @@ public final class AgentControlServer: Sendable {
                 _ = Darwin.close(fd)
             }
             var reader = LineReader(fd: fd, limit: AgentControlServer.maxLineBytes)
+            // The activity log's session of this connection, set by its first command.
+            var session: String?
             while true {
                 let command: AgentCommand
                 switch reader.next() {
@@ -408,19 +440,27 @@ public final class AgentControlServer: Sendable {
                     }
                     command = decoded
                 }
-                guard let outcome = run(command) else { return }
-                guard Self.write(outcome.answer, to: fd), !outcome.close else { return }
+                guard let outcome = run(command, session: session) else { return }
+                session = outcome.session
+                guard Self.write(outcome.answer, to: fd) else {
+                    // The client went away (it gave up waiting, was interrupted): nobody will
+                    // read the file staged for it.
+                    if let staged = outcome.answer.staged { AgentFiles.remove(staged, in: bundle) }
+                    return
+                }
+                guard !outcome.close else { return }
             }
         }
 
         /// Runs `command` through the gate, blocking this (non-cooperative) connection thread
-        /// until it is done. Nil once the server is stopping.
-        private func run(_ command: AgentCommand) -> AgentGate.Outcome? {
+        /// until it is done. `session` is the connection's, nil before its first command. Nil
+        /// once the server is stopping.
+        private func run(_ command: AgentCommand, session: String?) -> AgentGate.Outcome? {
             let result = Mutex<AgentGate.Outcome?>(nil)
             let done = DispatchSemaphore(value: 0)
             let gate = gate
             Task { [self] in
-                let outcome = await gate.run(command, stopped: { self.isStopped })
+                let outcome = await gate.run(command, connectionSession: session, stopped: { self.isStopped })
                 result.withLock { $0 = outcome }
                 done.signal()
             }
@@ -432,6 +472,12 @@ public final class AgentControlServer: Sendable {
         /// `sendTimeoutSeconds`.
         private static func write(_ answer: AgentAnswer, to fd: Int32) -> Bool {
             guard var line = try? JSONEncoder().encode(answer) else { return false }
+            if line.count > AgentControlServer.maxAnswerBytes {
+                // The client would give up on this line as a lost connection: say what is wrong.
+                let failure = AgentAnswer.failure(.internalError, L10n.string("the answer is too large: ask for fewer elements"))
+                guard let small = try? JSONEncoder().encode(failure) else { return false }
+                line = small
+            }
             line.append(0x0A)
             return line.withUnsafeBytes { raw -> Bool in
                 var offset = 0
@@ -486,37 +532,116 @@ struct LineReader {
 /// The one place commands run, in arrival order, one at a time across all connections. An actor
 /// alone is not enough (it lets another call in at every `await`, here the helper round trip),
 /// so it also holds a FIFO lock: `run` waits its turn, then keeps the turn across `perform`.
+///
+/// Each command handled is handed to the activity log's writer within its turn, so entries keep
+/// the order of the commands and never interleave; the writer appends them on a queue of its own
+/// (`AgentActivityWriter`), so the answer never waits for the disk. Its session: the one the client sends (a `nido
+/// mcp` run, one connection per command), else the connection's, else, for `act`, the last `act`
+/// session when its last entry is less than `actSessionReuse` old (each `nido act` is a
+/// connection of its own), else a new one.
 actor AgentGate {
     struct Outcome: Sendable {
         var answer: AgentAnswer
         /// Close the connection after the answer.
         var close: Bool
+        /// The PNG of a screenshot or zoom the agent got, for the log's thumbnail.
+        var png: Data? = nil
+        /// The activity log's session of the command.
+        var session: String? = nil
     }
+
+    /// How long after an `act` entry the next `act` command joins its session.
+    static let actSessionReuse: TimeInterval = 10 * 60
+    /// The longest session id a client may send.
+    static let maxSessionCharacters = 64
 
     private let bundle: VMBundle
     /// The name at start, used when `config.json` cannot be read.
     private let vmName: String
     private let perform: @Sendable (AgentRequest) async throws(AgentFailure) -> (AgentReply, Data?)
+    /// The owner's checkpoints; nil when the owner takes none.
+    private let checkpoints: (any AgentCheckpointHandling)?
     /// The sizes of the last screenshot the agent saw: the coordinates of the next click, drag or
     /// scroll refer to that image, and the helper maps them back to points with it.
     private var lastShot: (image: PixelSize, screen: ScreenSize)?
     private var busy = false
     private var waiting: [CheckedContinuation<Void, Never>] = []
+    private let now: @Sendable () -> Date
+    /// The last `act` entry's session and time.
+    private var lastAct: (session: String, time: Date)?
+    /// Writes the activity log off the turn.
+    nonisolated let log: AgentActivityWriter
 
     init(bundle: VMBundle, vmName: String,
-         perform: @escaping @Sendable (AgentRequest) async throws(AgentFailure) -> (AgentReply, Data?)) {
+         perform: @escaping @Sendable (AgentRequest) async throws(AgentFailure) -> (AgentReply, Data?),
+         checkpoints: (any AgentCheckpointHandling)? = nil,
+         now: @escaping @Sendable () -> Date = { Date() }, log: AgentActivityWriter) {
         self.bundle = bundle
         self.vmName = vmName
         self.perform = perform
+        self.checkpoints = checkpoints
+        self.now = now
+        self.log = log
     }
 
     /// Nil when `stopped()` is true by the time the command's turn comes: the server is going
-    /// away and the command must not reach the guest.
-    func run(_ command: AgentCommand, stopped: @Sendable () -> Bool) async -> Outcome? {
+    /// away and the command must not reach the guest. `connectionSession` is the session of the
+    /// command's connection (nil before its first command); the outcome carries the one used.
+    func run(_ command: AgentCommand, connectionSession: String?, stopped: @Sendable () -> Bool) async -> Outcome? {
         await acquire()
         defer { release() }
         guard !stopped() else { return nil }
-        return await handle(command.action)
+        let time = now()
+        let started = ContinuousClock.now
+        var outcome = await handle(command)
+        let elapsed = started.duration(to: .now).components
+        let ms = Int(elapsed.seconds) * 1000 + Int(elapsed.attoseconds / 1_000_000_000_000_000)
+        outcome.session = record(command, outcome: outcome, connectionSession: connectionSession, time: time, ms: ms)
+        outcome.png = nil
+        return outcome
+    }
+
+    /// Hands `command`'s entry to the log's writer (but for `setClipboard` and Nido's own
+    /// `status` checks) and returns its session. Writing it never delays nor changes the answer.
+    private func record(_ command: AgentCommand, outcome: Outcome, connectionSession: String?, time: Date,
+                        ms: Int) -> String {
+        let client = Self.clientKind(command.client)
+        let session: String
+        if let sent = Self.validSession(command.session) {
+            session = sent
+        } else if let connectionSession {
+            session = connectionSession
+        } else if client == AgentCommand.Client.act, let lastAct,
+            case let age = time.timeIntervalSince(lastAct.time), age >= 0, age < Self.actSessionReuse {
+            session = lastAct.session
+        } else {
+            session = UUID().uuidString.lowercased()
+        }
+        if client == AgentCommand.Client.act { lastAct = (session, time) }
+
+        if client == AgentCommand.Client.nido, command.action == .status { return session }
+        guard let entry = AgentActivityEntry.make(
+            action: command.action, answer: outcome.answer, session: session, client: client, time: time, ms: ms)
+        else { return session }
+        log.enqueue(entry, png: outcome.png)
+        return session
+    }
+
+    /// `client` as the log records it: `mcp` or `nido` as sent, anything else (none included) `act`.
+    static func clientKind(_ client: String?) -> String {
+        switch client {
+        case AgentCommand.Client.mcp: AgentCommand.Client.mcp
+        case AgentCommand.Client.nido: AgentCommand.Client.nido
+        default: AgentCommand.Client.act
+        }
+    }
+
+    /// A session id a client sent, when it is a short token (ASCII letters, digits, `-`, `_`).
+    static func validSession(_ session: String?) -> String? {
+        guard let session, !session.isEmpty, session.utf8.count <= maxSessionCharacters,
+            session.unicodeScalars.allSatisfy({ $0.isASCII && (CharacterSet.alphanumerics.contains($0) || $0 == "-" || $0 == "_") })
+        else { return nil }
+        return session
     }
 
     private func acquire() async {
@@ -536,7 +661,8 @@ actor AgentGate {
         }
     }
 
-    private func handle(_ action: AgentAction) async -> Outcome {
+    private func handle(_ command: AgentCommand) async -> Outcome {
+        let action = command.action
         // The guest's clipboard is the owner's alone (Settings › Agent, after Touch ID): an agent
         // or `nido act` never writes it. Answered without the text.
         if case .setClipboard = action {
@@ -550,7 +676,22 @@ actor AgentGate {
                 .agentAccessOff, L10n.string("Agent access is off for \(name): turn it on with nido agent enable \(name)")),
                 close: true)
         }
+        if let answer = await answerCheckpoint(action) {
+            return Outcome(answer: answer, close: false)
+        }
         var request = AgentRequest(v: AgentProtocol.version, action: action)
+        if case .putFile(_, let size) = action {
+            // The bytes wait in the bundle under the name the client sent: only a staged file's
+            // name, read from the staging folder without following a symlink, and only as many
+            // bytes as the command says. Taken (so deleted) before anything reaches the helper.
+            guard let staged = command.staged, let data = try? AgentFiles.take(staged, in: bundle),
+                data.count == size
+            else {
+                return Outcome(answer: .failure(.badRequest, L10n.string("the staged file is missing or invalid")),
+                               close: false)
+            }
+            request.payload = data
+        }
         if Self.carriesPoint(action) {
             guard let lastShot else {
                 return Outcome(answer: .failure(
@@ -560,8 +701,8 @@ actor AgentGate {
             request.image = lastShot.image
             request.screen = lastShot.screen
         }
-        if case .zoom = action {
-            // A helper older than the zoom op answers "unknown action": ask its version first,
+        if let minimum = Self.minimumHelperVersion(for: action) {
+            // A helper older than the op answers "unknown action": ask its version first,
             // through the same path, so the op never reaches it. Nothing interleaves: this is one turn.
             let statusRequest = AgentRequest(v: AgentProtocol.version, action: .status)
             do {
@@ -573,10 +714,18 @@ actor AgentGate {
                                    close: false)
                 }
                 guard let version,
-                      MacAgentInstaller.compareVersions(version, AgentProtocol.minimumZoomHelperVersion) >= 0 else {
-                    return Outcome(answer: .failure(.versionMismatch, L10n.string(
-                        "Nido Agent is too old to zoom: run nido agent setup \(config.name.rawValue) to update it")),
-                        close: false)
+                      MacAgentInstaller.compareVersions(version, minimum) >= 0 else {
+                    let name = config.name.rawValue
+                    let message: String
+                    switch action {
+                    case .uiTree:
+                        message = L10n.string("Nido Agent is too old for ui_tree: run nido agent setup \(name) to update it")
+                    case .putFile, .getFile, .listFiles:
+                        message = L10n.string("Nido Agent is too old for files: run nido agent setup \(name) to update it")
+                    default:
+                        message = L10n.string("Nido Agent is too old to zoom: run nido agent setup \(name) to update it")
+                    }
+                    return Outcome(answer: .failure(.versionMismatch, message), close: false)
                 }
             } catch where error.code == .versionMismatch {
                 return Outcome(answer: .failure(.versionMismatch, L10n.string(
@@ -588,9 +737,9 @@ actor AgentGate {
         }
 
         let reply: AgentReply
-        let png: Data?
+        let frame: Data?
         do {
-            (reply, png) = try await perform(request)
+            (reply, frame) = try await perform(request)
         } catch where error.code == .versionMismatch {
             // `AgentClient` does not know the VM: the command that updates the helper is named here.
             return Outcome(answer: .failure(.versionMismatch, L10n.string(
@@ -600,9 +749,23 @@ actor AgentGate {
             return Outcome(answer: .failure(error.code, error.message), close: false)
         }
         var answer = AgentAnswer(ok: reply.ok, status: reply.status, image: reply.image, screen: reply.screen,
-                                 error: reply.error, message: reply.message)
+                                 error: reply.error, message: reply.message, tree: reply.tree, files: reply.files,
+                                 truncated: reply.truncated, bytes: reply.bytes)
+        if case .getFile = action, reply.ok {
+            // The bytes go to the client through the bundle, never in the answer's line.
+            guard let data = frame else {
+                return Outcome(answer: .failure(.internalError, L10n.string("could not talk to Nido Agent")), close: false)
+            }
+            do {
+                answer.staged = try AgentFiles.stage(data, in: bundle)
+            } catch {
+                return Outcome(answer: .failure(.internalError, L10n.string("could not save the file")), close: false)
+            }
+            answer.bytes = data.count
+            return Outcome(answer: answer, close: false)
+        }
         if action.isImageAction, reply.ok {
-            guard let png, let image = reply.image, let screen = reply.screen else {
+            guard let png = frame, let image = reply.image, let screen = reply.screen else {
                 return Outcome(answer: .failure(.internalError, L10n.string("could not talk to Nido Agent")), close: false)
             }
             do {
@@ -612,17 +775,45 @@ actor AgentGate {
             }
             // A zoom never changes what coordinates refer to.
             if case .screenshot = action { lastShot = (image, screen) }
+            return Outcome(answer: answer, close: false, png: png)
         }
         return Outcome(answer: answer, close: false)
+    }
+
+    /// The owner's answer to a checkpoint op (nil for any other action): checkpoints are the
+    /// owner's own work, never Nido Agent's. An owner that takes none refuses them.
+    private func answerCheckpoint(_ action: AgentAction) async -> AgentAnswer? {
+        let refused = AgentAnswer.failure(.badRequest, L10n.string("this VM’s owner can’t take checkpoints"))
+        switch action {
+        case .checkpoint(let name):
+            return await checkpoints?.checkpoint(name: name) ?? refused
+        case .rollback(let name):
+            return await checkpoints?.rollback(name: name) ?? refused
+        case .checkpoints:
+            return await checkpoints?.checkpoints() ?? refused
+        default:
+            return nil
+        }
+    }
+
+    /// The first Nido Agent that understands `action`, or nil when every helper does.
+    static func minimumHelperVersion(for action: AgentAction) -> String? {
+        switch action {
+        case .zoom: AgentProtocol.minimumZoomHelperVersion
+        case .uiTree: AgentProtocol.minimumUITreeHelperVersion
+        case .putFile, .getFile, .listFiles: AgentProtocol.minimumFilesHelperVersion
+        default: nil
+        }
     }
 
     /// Actions whose coordinates refer to the last screenshot. A scroll without a point scrolls
     /// where the pointer is and needs none.
     static func carriesPoint(_ action: AgentAction) -> Bool {
         switch action {
-        case .click, .drag, .zoom: true
+        case .click, .drag, .zoom, .uiTree: true
         case .scroll(_, _, let x, let y): x != nil || y != nil
-        case .status, .screenshot, .type, .key, .setClipboard: false
+        case .status, .screenshot, .type, .key, .setClipboard, .checkpoint, .rollback, .checkpoints,
+             .putFile, .getFile, .listFiles: false
         }
     }
 }

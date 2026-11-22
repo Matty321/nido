@@ -26,7 +26,8 @@ public struct AgentClient: Sendable {
 
     /// The owner's limit on a reply of the helper.
     public static let defaultTimeout: Duration = .seconds(10)
-    /// The owner's limit on a reply that brings an image (a screenshot or a zoom).
+    /// The owner's limit on a reply that brings an image (a screenshot or a zoom), or on a
+    /// file's transfer (`putFile`, `getFile`: at most 16 MiB).
     public static let defaultImageTimeout: Duration = .seconds(15)
 
     public init(channel: any GuestChannel, timeout: Duration = defaultTimeout,
@@ -36,15 +37,24 @@ public struct AgentClient: Sendable {
         self.screenshotTimeout = screenshotTimeout
     }
 
-    /// Sends `request` and returns the helper's reply, plus the PNG that follows a successful
-    /// screenshot reply. Throws `AgentFailure` for transport problems and for a helper that
-    /// speaks another protocol version (`.versionMismatch`).
-    public func perform(_ request: AgentRequest) async throws(AgentFailure) -> (reply: AgentReply, png: Data?) {
+    /// Sends `request` and returns the helper's reply, plus the data frame that follows a
+    /// successful screenshot, zoom or `getFile` reply (the PNG, the file's bytes). A `putFile`
+    /// sends `request.payload` as a frame after the request: it must be there, `size` bytes long,
+    /// at most `AgentProtocol.maxTransferBytes`, or nothing is sent (`.badRequest`). Throws
+    /// `AgentFailure` for transport problems and for a helper that speaks another protocol
+    /// version (`.versionMismatch`).
+    public func perform(_ request: AgentRequest) async throws(AgentFailure) -> (reply: AgentReply, data: Data?) {
+        if case .putFile(_, let size) = request.action {
+            // The guest closes the connection on a size it refuses: never send one.
+            guard let payload = request.payload, payload.count == size, size <= AgentProtocol.maxTransferBytes else {
+                throw AgentFailure(code: .badRequest, message: L10n.string("the file’s data is missing, too large or of the wrong size"))
+            }
+        }
         let limit: Duration
-        limit = request.action.isImageAction ? screenshotTimeout : timeout
+        limit = request.action.isImageAction || request.action.isTransferAction ? screenshotTimeout : timeout
         let channel = channel
         let connection = Connection()
-        let result: (reply: AgentReply, png: Data?)
+        let result: (reply: AgentReply, data: Data?)
         do {
             result = try await Deadline.run(limit) {
                 let handle: FileHandle
@@ -73,7 +83,7 @@ public struct AgentClient: Sendable {
     // MARK: - I/O (off the caller's actor)
 
     @concurrent
-    private static func exchange(_ handle: FileHandle, _ request: AgentRequest) async throws -> (reply: AgentReply, png: Data?) {
+    private static func exchange(_ handle: FileHandle, _ request: AgentRequest) async throws -> (reply: AgentReply, data: Data?) {
         let fd = handle.fileDescriptor
         // A guest that drops the connection must give EPIPE, not kill the app with SIGPIPE.
         var one: Int32 = 1
@@ -81,9 +91,24 @@ public struct AgentClient: Sendable {
             throw AgentFrame.FrameError.io(errno: errno)
         }
         try AgentFrame.writeJSON(request, to: fd)
+        // A guest that refuses the bytes closes the connection: EPIPE, a failure like any other.
+        if case .putFile = request.action, let payload = request.payload {
+            try AgentFrame.write(payload, to: fd)
+        }
         let reply = try AgentFrame.readJSON(AgentReply.self, from: fd)
-        guard request.action.isImageAction, reply.ok else { return (reply, nil) }
-        return (reply, try AgentFrame.read(from: fd))
+        guard reply.ok else { return (reply, nil) }
+        switch request.action {
+        case .getFile(_, let maxBytes):
+            let data = try AgentFrame.read(from: fd, maxBytes: max(0, min(maxBytes, AgentProtocol.maxTransferBytes)))
+            guard reply.bytes == data.count else {
+                throw AgentFailure(code: .internalError, message: L10n.string("could not talk to Nido Agent"))
+            }
+            return (reply, data)
+        case _ where request.action.isImageAction:
+            return (reply, try AgentFrame.read(from: fd))
+        default:
+            return (reply, nil)
+        }
     }
 
     // MARK: - Errors
@@ -146,9 +171,18 @@ public struct AgentClient: Sendable {
 
 extension AgentAction {
     /// Actions the helper answers with a reply and then a PNG frame (a screenshot or a zoom).
+    /// A `uiTree` answers with a reply only.
     var isImageAction: Bool {
         switch self {
         case .screenshot, .zoom: true
+        default: false
+        }
+    }
+
+    /// Actions that carry a file's bytes after the request (`putFile`) or the reply (`getFile`).
+    var isTransferAction: Bool {
+        switch self {
+        case .putFile, .getFile: true
         default: false
         }
     }

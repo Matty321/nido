@@ -243,6 +243,9 @@ public struct VMCloner: Sendable {
             config.aiBridge = nil
             // Agent access is a per-VM opt-in: a clone does not inherit it.
             config.agentAccess = nil
+            // A fresh Mac's copy is an ordinary VM: it is never disposable.
+            config.disposable = nil
+            config.freshBaseID = nil
             config.pendingProvisioning = nil
             config.isTemplate = false
             config.sshPublicKeyPath = keyPath

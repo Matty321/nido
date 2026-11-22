@@ -119,6 +119,9 @@ import Testing
                 return $0.queue.isEmpty ? $0.last : $0.queue.removeFirst()
             }
         }
+        // The setup never moves files.
+        func putFile(_ data: Data, to path: String) throws -> AgentAnswer { .failure(.badRequest, "x") }
+        func getFile(_ path: String, maxBytes: Int) throws -> (AgentAnswer, Data?) { (.failure(.badRequest, "x"), nil) }
     }
 
     private struct Rig {

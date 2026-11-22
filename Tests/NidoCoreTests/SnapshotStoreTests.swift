@@ -866,3 +866,93 @@ extension SnapshotStoreTests {
         #expect(BundleLock.holder(env.bundle) == nil)
     }
 }
+
+/// Agent checkpoints: the marking, and the operations under a lock the caller already holds.
+extension SnapshotStoreTests {
+    @Test func snapshotCreatedByOptional() throws {
+        // A meta.json written before the marking existed: made by the user.
+        let old = #"{"configHash":"h","createdAt":"2026-11-01T10:00:00Z","hasSavedState":false,"id":"0D8C3D5E-4F9B-4C1A-9E2B-6A7F1D2C3B4A","name":"prima"}"#
+        let decoded = try Snapshot.decode(Data(old.utf8))
+        #expect(decoded.createdBy == nil)
+        #expect(!decoded.isAgentCheckpoint)
+        let agent = Snapshot(id: UUID(), name: "agent-1", createdAt: Date(timeIntervalSince1970: 1_800_000_000),
+                             hasSavedState: true, configHash: "h", createdBy: Snapshot.agentCreator)
+        let data = try agent.encoded()
+        #expect(String(decoding: data, as: UTF8.self).contains(#""createdBy" : "agent""#))
+        let back = try Snapshot.decode(data)
+        #expect(back == agent)
+        #expect(back.createdBy == "agent")
+        #expect(back.isAgentCheckpoint)
+        // A user's snapshot writes no createdBy: an older Nido reads it as before.
+        let user = Snapshot(id: UUID(), name: "u", createdAt: Date(), hasSavedState: false, configHash: "h")
+        #expect(!String(decoding: try user.encoded(), as: UTF8.self).contains("createdBy"))
+    }
+
+    @Test @MainActor func liveCreateRecordsItsCreator() async throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let user = try await env.store().create(name: "user", owner: .cli, session: nil)
+        let lock = try BundleLock.acquire(env.bundle, owner: .app)
+        defer { lock.release() }
+        let session = FakeStateSession(bundle: env.bundle)
+        let agent = try await env.store().create(
+            name: "agent-1", owner: .app, session: session, createdBy: Snapshot.agentCreator)
+        #expect(agent.createdBy == "agent")
+        let listed = try env.store().list()
+        #expect(listed.first(where: { $0.id == agent.id })?.isAgentCheckpoint == true)
+        #expect(listed.first(where: { $0.id == user.id })?.createdBy == nil)
+    }
+
+    @Test func restoreHoldingLock() async throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let snapshot = try await env.store().create(name: "prima", owner: .cli, session: nil)
+        try env.write("disk-v2", to: env.bundle.diskURL)
+        let lock = try BundleLock.acquire(env.bundle, owner: .cli)
+        defer { lock.release() }
+        // The lock-taking restore still refuses a VM whose lock is held.
+        #expect(throws: NidoError.vmMustBeStopped("vm")) { try env.store().restore(snapshot.id, owner: .cli) }
+        #expect(env.read(env.bundle.diskURL) == "disk-v2")
+        try env.store().restore(snapshot.id, holding: lock)
+        #expect(env.read(env.bundle.diskURL) == "disk-v1")
+        #expect(env.read(env.bundle.nvramURL) == "nvram-v1")
+        #expect(env.leftovers().isEmpty)
+        // Still held by the caller afterwards.
+        #expect(BundleLock.holder(env.bundle)?.pid == getpid())
+    }
+
+    @Test func deleteHoldingLock() async throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let first = try await env.store().create(name: "uno", owner: .cli, session: nil)
+        let second = try await env.store().create(name: "due", owner: .cli, session: nil)
+        let lock = try BundleLock.acquire(env.bundle, owner: .cli)
+        defer { lock.release() }
+        #expect(throws: NidoError.vmMustBeStopped("vm")) { try env.store().delete(first.id, owner: .cli) }
+        try env.store().delete(first.id, holding: lock)
+        #expect(try env.store().list().map(\.id) == [second.id])
+        // deleteLive: the VM runs in this process, which holds its lock.
+        try env.store().deleteLive(second.id)
+        #expect(try env.store().list().isEmpty)
+        #expect(BundleLock.holder(env.bundle)?.pid == getpid())
+    }
+
+    @Test func heldLockOperationsRefuseAnotherBundlesLock() async throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let other = try Env()
+        defer { other.cleanup() }
+        let snapshot = try await env.store().create(name: "prima", owner: .cli, session: nil)
+        let foreign = try BundleLock.acquire(other.bundle, owner: .cli)
+        defer { foreign.release() }
+        #expect(throws: NidoError.notRunning("vm")) { try env.store().restore(snapshot.id, holding: foreign) }
+        #expect(throws: NidoError.notRunning("vm")) { try env.store().delete(snapshot.id, holding: foreign) }
+        // A released lock is not held either.
+        let released = try BundleLock.acquire(env.bundle, owner: .cli)
+        released.release()
+        #expect(throws: NidoError.notRunning("vm")) { try env.store().restore(snapshot.id, holding: released) }
+        // deleteLive without the VM running in this process: refused, nothing removed.
+        #expect(throws: NidoError.notRunning("vm")) { try env.store().deleteLive(snapshot.id) }
+        #expect(try env.store().list().map(\.id) == [snapshot.id])
+    }
+}

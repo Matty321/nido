@@ -39,7 +39,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let dispatcher = AgentDispatcher(
             screen: ScreenCapture(), input: InputPoster(), permissions: permissions,
-            clipboard: ClipboardSetter(pasteboard: SystemPasteboard()))
+            clipboard: ClipboardSetter(pasteboard: SystemPasteboard()), accessibility: AXSource(),
+            transfer: TransferFolder(root: TransferFolder.userFolder),
+            screenLocked: { ScreenCapture.screenLocked() })
         let listener = VsockListener(dispatcher: dispatcher) { [weak self] state in
             Task { @MainActor in self?.listenerStateChanged(state) }
         }

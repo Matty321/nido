@@ -2,6 +2,23 @@
 
 Todas las versiones de Nido, de la más reciente a la más antigua. La primera vez que Nido se abre tras una actualización, muestra las novedades de la versión instalada (para volver a verlas, elige Ayuda › Novedades de Nido).
 
+## [0.9.4] – 2026-11-22
+
+### Un Mac para agentes
+- **Un agente puede leer los controles de la app en pantalla.** La nueva acción `ui_tree` (la herramienta MCP `ui_tree`, o `nido act <vm> ui-tree`) enumera los botones, campos y textos de la app en primer plano, con su nombre y posición. El valor de un campo de contraseña nunca sale de la VM.
+- **Mira lo que hizo un agente.** **Actividad del agente** (el icono de lista en la barra de la VM, o **Actividad…** en Ajustes › Agent) y `nido agent log <vm>` muestran las acciones de cada sesión: qué miró el agente, dónde hizo clic, qué teclas pulsó. El texto escrito nunca se registra, solo su longitud.
+- **Puntos de control.** Antes de un paso arriesgado, un agente puede guardar la VM con su memoria (`checkpoint`) y volver a ese momento si el paso sale mal (`rollback`). Guarda como máximo 3, solo ve los suyos y nunca toca tus instantáneas; en la lista de instantáneas llevan la etiqueta **Agente**.
+- **Archivos dentro y fuera.** `put_file` y `get_file` copian archivos dentro y fuera de `~/NidoTransfer` en la VM (hasta 1 MiB para un agente; `nido act <vm> put-file` y `get-file` hasta 16 MiB). No hay carpeta compartida.
+- **Un Mac nuevo para cada sesión.** `nido mcp --fresh <base>` da a cada sesión del agente su propia copia de una VM macOS detenida, iniciada sin ventana y eliminada con sus archivos al terminar la sesión. `--keep` conserva la copia como una VM normal.
+- **El agente sabe qué bloqueó la red.** En la red controlada, un agente sabe qué dominios bloqueó Nido; así se detiene y te pide que ejecutes `nido net allow` en lugar de creer que el sitio no funciona. Un dominio permitido en una base llega al instante a sus copias nuevas.
+
+### Correcciones
+- **Cuando la pantalla de la VM está bloqueada, el agente lo sabe**, en lugar de recibir un error de captura.
+- **Iniciar una tercera VM macOS explica el límite de Apple**: como máximo dos VM macOS a la vez.
+
+### Nido Agent 1.0.6
+- Añade `ui_tree` (1.0.5) y la transferencia de archivos (1.0.6). Actualízalo desde **Ajustes › Agent** de la VM o con `nido agent setup <vm>`.
+
 ## [0.9.3] – 2026-11-17
 
 ### Un Mac para agentes

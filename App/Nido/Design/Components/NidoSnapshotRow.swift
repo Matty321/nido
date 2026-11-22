@@ -13,6 +13,8 @@ struct NidoSnapshotRow: View {
 
     let name: String
     let kind: Kind
+    /// A checkpoint an agent took: an "Agent" label after the date.
+    var isAgent = false
     var canRestore = true
     var canDelete = true
     /// Why Delete is off (help tag).
@@ -57,14 +59,13 @@ struct NidoSnapshotRow: View {
             case .normal(let date, let savedState):
                 caption(Text(verbatim: date)).monospacedDigit()
                 if savedState {
-                    Text("with saved state")
-                        .font(.nido(Theme.TypeSize.caption, .semibold))
-                        .foregroundStyle(Theme.Color.accent)
-                        .padding(.horizontal, Theme.Space.s)
-                        .frame(height: Theme.Layout.snapshotPillHeight)
-                        .background(Theme.Color.background, in: Capsule())
-                        .overlay(Capsule().strokeBorder(Theme.Color.border, lineWidth: Theme.Layout.hairline))
+                    pill(Text("with saved state"))
                         .accessibilityIdentifier("snapshot-saved-state")
+                }
+                if isAgent {
+                    // The same word as Settings › Agent, in every language.
+                    pill(Text("Agent"))
+                        .accessibilityIdentifier("snapshot-agent-label")
                 }
             case .current(let status, let note):
                 NidoStatusBadge(status: status)
@@ -73,6 +74,16 @@ struct NidoSnapshotRow: View {
                 caption(Text("Creating…"))
             }
         }
+    }
+
+    private func pill(_ text: Text) -> some View {
+        text
+            .font(.nido(Theme.TypeSize.caption, .semibold))
+            .foregroundStyle(Theme.Color.accent)
+            .padding(.horizontal, Theme.Space.s)
+            .frame(height: Theme.Layout.snapshotPillHeight)
+            .background(Theme.Color.background, in: Capsule())
+            .overlay(Capsule().strokeBorder(Theme.Color.border, lineWidth: Theme.Layout.hairline))
     }
 
     private func caption(_ text: Text) -> some View {

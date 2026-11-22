@@ -49,7 +49,8 @@ public enum SuspendedState {
 
     /// Starts `machine` (a session that never ran), resuming the saved state of `bundle` when it
     /// belongs to this machine; otherwise discards it and boots from cold. Errors other than a
-    /// refused state (`.restoreFailed`, which discards) are thrown.
+    /// refused state (`.restoreFailed`, which discards) are thrown; `.macVMLimitReached` during
+    /// the restore keeps the saved state resumable (hash written back, file kept).
     @MainActor
     public static func boot(_ machine: some SuspendableMachine, bundle: VMBundle) async throws -> BootOutcome {
         try await boot(machine, bundle: bundle, syncDirectory: SnapshotStore.syncDirectoryNow)
@@ -78,6 +79,12 @@ public enum SuspendedState {
             try syncDirectory(bundle.url)
             do {
                 try await machine.restoreMachineState(from: bundle.stateURL)
+            } catch NidoError.macVMLimitReached {
+                // Apple's limit refused the machine before it ran: the state is untouched and
+                // still belongs to this machine, so it stays resumable for a later start. The
+                // only error that keeps it; no cold start.
+                try bundle.updateConfig { $0.suspendedConfigHash = saved }
+                throw NidoError.macVMLimitReached
             } catch NidoError.restoreFailed(let reason) {
                 removeState(bundle)
                 // A stop asked meanwhile (R-M3A-22): no cold start.

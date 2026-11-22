@@ -205,7 +205,7 @@ final class VMSessionStore {
     func forget(_ name: VMName) {
         // A VM made later with this name must not see this one's key, failure or installer.
         if guestToolsModels[name]?.isBusy != true { guestToolsModels[name] = nil }
-        guard let model = models[name], model.isGone, !model.isSnapshotting else { return }
+        guard let model = models[name], model.isGone, !model.isSnapshotting, !model.isRollingBack else { return }
         models[name] = nil
         snapshotWindows[name] = nil
     }
@@ -273,9 +273,12 @@ final class VMSessionStore {
     }
 
     /// The window of `name` went away: its model is dropped once the VM is gone. A model whose
-    /// machine may still run stays, since dropping it would release the lock it holds.
+    /// machine may still run stays, since dropping it would release the lock it holds; so does one
+    /// whose VM an agent's rollback is about to start again.
     func windowClosed(_ name: VMName) {
-        guard let model = models[name], model.isGone, !model.isSnapshotting, snapshotWindows[name] == nil else {
+        guard let model = models[name], model.isGone, !model.isSnapshotting, !model.isRollingBack,
+              snapshotWindows[name] == nil
+        else {
             return
         }
         models[name] = nil

@@ -59,6 +59,22 @@ public struct VMBundle: Sendable {
     public var snapshotsURL: URL { url.appendingPathComponent("snapshots", isDirectory: true) }
     /// `agent-shots/`: the last screenshots an agent took of a macOS guest, see `AgentShots`.
     public var agentShotsURL: URL { url.appendingPathComponent("agent-shots", isDirectory: true) }
+    /// `agent-files/`: a file on its way between `nido act`/`nido mcp` and the VM's owner, for a
+    /// few seconds (at most 10 minutes), see `AgentFiles`.
+    public var agentFilesURL: URL { url.appendingPathComponent("agent-files", isDirectory: true) }
+    /// `agent-log/`: what an agent did in a macOS guest and its thumbnails, see `AgentActivityLog`.
+    public var agentLogURL: URL { url.appendingPathComponent("agent-log", isDirectory: true) }
+
+    /// `fresh-start.log`: stdout and stderr of the `nido start` that `nido mcp --fresh` launches.
+    public var freshStartLogURL: URL { url.appendingPathComponent("fresh-start.log") }
+
+    /// Opens `fresh-start.log` for writing (0600, truncated, no symlink: `.unsafePath` otherwise).
+    /// The descriptor closes when the handle is released.
+    public func openFreshStartLog() throws -> FileHandle {
+        let fd = try PrivateFile.open(
+            freshStartLogURL, flags: O_WRONLY | O_CREAT | O_TRUNC, label: "fresh-start.log")
+        return FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+    }
 
     private static let suffix = ".nidovm"
 

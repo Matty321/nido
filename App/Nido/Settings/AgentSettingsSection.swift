@@ -9,6 +9,8 @@ struct AgentSettingsSection: View {
     @Bindable var model: AgentSettingsModel
     /// The typed password: handed to the setup at once and emptied, never kept.
     @State private var typedPassword = ""
+    /// The Agent Activity panel while shown.
+    @State private var activity: AgentActivityModel?
 
     var body: some View {
         Group {
@@ -28,8 +30,13 @@ struct AgentSettingsSection: View {
                 NidoNotice(kind: .warning, verbatim: notice, identifier: "agent-password-not-saved")
             }
             if model.agentAccess { helper }
+            // The log stays after agent access is turned off: what agents did can be read later.
+            activityRow
             // The stored password is shown with agent access off too.
             passwordRows
+        }
+        .sheet(isPresented: Binding(get: { activity != nil }, set: { if !$0 { activity = nil } })) {
+            if let activity { AgentActivityView(model: activity) }
         }
         // The shown password and the typed one go with the pane.
         .onDisappear {
@@ -99,6 +106,20 @@ struct AgentSettingsSection: View {
 }
 
 extension AgentSettingsSection {
+    /// "Activity…": the Agent Activity panel of this VM.
+    fileprivate var activityRow: some View {
+        NidoInfoRow(
+            verbatim: String(localized: "Activity log"),
+            note: String(localized: "Each action of an agent in this VM: when, what and the outcome. Typed text is never recorded.")) {
+            NidoButton("Activity…") {
+                activity = AgentActivityModel(bundle: model.bundle, name: model.name)
+            }
+            .accessibilityIdentifier("agent-activity-open")
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("agent-activity-row")
+    }
+
     /// The account's password: a field when the setup asks for it, and "Show password" (after
     /// Touch ID) when one is stored, agent access on or off.
     @ViewBuilder fileprivate var passwordRows: some View {

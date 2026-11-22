@@ -88,7 +88,8 @@ final class AgentSettingsModel {
     @ObservationIgnored private let passwords: any GuestPasswordStore
     @ObservationIgnored private let authenticator: any OwnerAuthenticator
     @ObservationIgnored private var passwordStateLoaded = false
-    @ObservationIgnored private let bundle: VMBundle
+    /// The VM's folder (also for the Agent Activity panel).
+    @ObservationIgnored let bundle: VMBundle
     @ObservationIgnored private let isRunning: @MainActor () -> Bool
     /// Whether the VM runs in this app (only its session reaches the guest's clipboard).
     @ObservationIgnored private let runsInApp: @MainActor () -> Bool
@@ -752,7 +753,8 @@ final class AgentSettingsModel {
     /// The question of `refresh` for `bundle`: the helper's `status`, asked on a dispatch queue (it
     /// blocks); a failure is a failed answer.
     nonisolated static func liveStatus(bundle: VMBundle, config: VMConfig) -> @Sendable () async -> AgentAnswer {
-        let client = AgentControlClient.forVM(bundle: bundle, config: config)
+        // Nido's own check: not an agent's action, kept out of the activity log.
+        let client = AgentControlClient.forVM(bundle: bundle, config: config, client: AgentCommand.Client.nido)
         return {
             await withCheckedContinuation { continuation in
                 DispatchQueue.global(qos: .userInitiated).async {

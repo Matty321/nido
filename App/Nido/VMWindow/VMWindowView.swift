@@ -98,6 +98,8 @@ struct VMWindowView: View {
     @State private var runsElsewhere: Bool?
     /// The guest's screen of a macOS VM, for "Digita nella VM".
     @State private var display = MacDisplayController()
+    /// The Agent Activity panel while shown (toolbar button, agent access on).
+    @State private var agentActivity: AgentActivityModel?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -106,13 +108,17 @@ struct VMWindowView: View {
                 Color.clear.frame(height: Theme.Layout.titleBarHeight)
                     // Over the strip, never in the layout: the screen keeps its size.
                     .overlay {
-                        if let setup = model.firstRunSetup {
+                        if let rollback = model.rollbackBanner {
+                            // The VM stops and starts again under it: it says why.
+                            AgentBanner(rollback: rollback)
+                        } else if let setup = model.firstRunSetup {
                             FirstRunSetupStrip(state: setup, notice: model.firstRunNotice)
                         } else if model.agentActive {
                             AgentBanner()
                         }
                     }
                     .animation(.default, value: model.agentActive)
+                    .animation(.default, value: model.rollbackBanner)
                     .animation(.default, value: model.firstRunSetup)
                 toolbar
                 if model.showsViewTabs { tabs }
@@ -141,10 +147,11 @@ struct VMWindowView: View {
             // clicks.
             Group {
                 if window.isFullScreen, model.agentActive {
-                    AgentBanner().padding(.top, Theme.Space.s)
+                    AgentBanner(rollback: model.rollbackBanner).padding(.top, Theme.Space.s)
                 }
             }
             .animation(.default, value: model.agentActive)
+            .animation(.default, value: model.rollbackBanner)
             .allowsHitTesting(false)
         }
         .background(Theme.Color.surface)
@@ -181,6 +188,9 @@ struct VMWindowView: View {
                 actionLabel: String(localized: "Start Anyway"),
                 onCancel: { model.cancelHeadroomStart() },
                 onConfirm: { Task { await model.startAnyway() } })
+        }
+        .sheet(isPresented: showingAgentActivity) {
+            if let agentActivity { AgentActivityView(model: agentActivity) }
         }
         .task(id: tab) { await watchOtherProcess() }
         .onAppear { showRequestedLog() }
@@ -314,7 +324,7 @@ struct VMWindowView: View {
     // MARK: - Toolbar (Components.swift VMToolbar)
 
     private var toolbar: some View {
-        VMToolbar(model: model, window: window, perform: perform)
+        VMToolbar(model: model, window: window, perform: perform, onAgentActivity: showAgentActivity)
     }
 
     /// S11: the same toolbar in full screen, in a title bar accessory under the window's title
@@ -326,7 +336,20 @@ struct VMWindowView: View {
     private func fullScreenToolbar() -> NSTitlebarAccessoryViewController {
         // Its own hosting view: the toolbar gets the model and the bridge, not this view's state.
         let (model, window) = (model, window)
-        return TitlebarAccessory.bottom { VMToolbar(model: model, window: window, perform: perform) }
+        return TitlebarAccessory.bottom {
+            VMToolbar(model: model, window: window, perform: perform, onAgentActivity: showAgentActivity)
+        }
+    }
+
+    /// "Agent Activity": the VM's log, read while the panel is shown.
+    private func showAgentActivity() {
+        guard agentActivity == nil else { return }
+        agentActivity = AgentActivityModel(
+            bundle: VMBundle(url: model.paths.bundleURL(for: model.name)), name: model.name.rawValue)
+    }
+
+    private var showingAgentActivity: Binding<Bool> {
+        Binding(get: { agentActivity != nil }, set: { if !$0 { agentActivity = nil } })
     }
 
     private func perform(_ action: VMWindowModel.ToolbarAction) {
@@ -459,6 +482,8 @@ private struct VMToolbar: View {
     let model: VMWindowModel
     let window: WindowBridge
     let perform: @MainActor (VMWindowModel.ToolbarAction) -> Void
+    /// Opens the Agent Activity panel.
+    let onAgentActivity: @MainActor () -> Void
 
     var body: some View {
         HStack(spacing: Theme.Space.s) {
@@ -471,6 +496,7 @@ private struct VMToolbar: View {
             badge.layoutPriority(1)
             if !model.warnings.isEmpty { warningLabel }
             Spacer(minLength: 0)
+            if model.showsAgentActivity { agentActivityButton }
             // Every button when they fit; otherwise the run controls and "Altro".
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: Theme.Space.s) { toolbarButtons(model.toolbarButtons) }
@@ -485,6 +511,18 @@ private struct VMToolbar: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("vm-toolbar")
+    }
+
+    /// What agents did in the VM (icon only; its name on hover and for VoiceOver).
+    private var agentActivityButton: some View {
+        Button(action: onAgentActivity) {
+            Image(systemName: "list.bullet.rectangle")
+                .accessibilityHidden(true)
+        }
+        .buttonStyle(NidoButtonStyle(kind: .secondary))
+        .help(Text("Agent Activity"))
+        .accessibilityLabel(Text("Agent Activity"))
+        .accessibilityIdentifier("vm-agent-activity")
     }
 
     private func toolbarButtons(_ buttons: [VMWindowModel.ToolbarButton]) -> some View {

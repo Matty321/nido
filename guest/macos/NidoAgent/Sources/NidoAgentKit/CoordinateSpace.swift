@@ -60,4 +60,23 @@ public struct CoordinateSpace: Equatable, Sendable {
         guard x1 - x0 >= 1, y1 - y0 >= 1 else { return nil }
         return CGRect(x: x0, y: y0, width: x1 - x0, height: y1 - y0)
     }
+
+    /// Converts a display point to screenshot space: the inverse of `toDisplay`, not clamped.
+    public func toImage(x: Double, y: Double) -> (x: Double, y: Double) {
+        (x * Double(image.width) / Double(display.width), y * Double(image.height) / Double(display.height))
+    }
+
+    /// Converts a region in display points to whole screenshot pixels, clamped to the image.
+    /// Nil when the region is empty, not finite, or less than one pixel is left on the image.
+    public func toImageRect(_ rect: CGRect) -> PixelRect? {
+        let values = [rect.origin.x, rect.origin.y, rect.size.width, rect.size.height].map(Double.init)
+        guard values.allSatisfy(\.isFinite), values[2] > 0, values[3] > 0 else { return nil }
+        let w = Double(image.width), h = Double(image.height)
+        let p0 = toImage(x: values[0], y: values[1])
+        let p1 = toImage(x: values[0] + values[2], y: values[1] + values[3])
+        let x0 = min(max(p0.x, 0), w).rounded(), y0 = min(max(p0.y, 0), h).rounded()
+        let x1 = min(max(p1.x, 0), w).rounded(), y1 = min(max(p1.y, 0), h).rounded()
+        guard x1 - x0 >= 1, y1 - y0 >= 1 else { return nil }
+        return PixelRect(x: Int(x0), y: Int(y0), w: Int(x1 - x0), h: Int(y1 - y0))
+    }
 }

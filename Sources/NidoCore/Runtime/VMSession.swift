@@ -282,9 +282,21 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
             // A stop() issued while starting owns the state from then on.
             if state == .starting { state = .running }
         } catch {
+            let error = Self.translatedStartError(error)
             if state == .starting { state = .error(error.localizedDescription) }
             throw error
         }
+    }
+
+    /// Virtualization's refusal to run one more VM (`VZError.Code.virtualMachineLimitExceeded`:
+    /// Apple allows two running macOS VMs per Mac) as `.macVMLimitReached`, which says what to do;
+    /// any other error unchanged.
+    nonisolated static func translatedStartError(_ error: any Error) -> any Error {
+        let nsError = error as NSError
+        guard nsError.domain == VZErrorDomain,
+              nsError.code == VZError.Code.virtualMachineLimitExceeded.rawValue
+        else { return error }
+        return NidoError.macVMLimitReached
     }
 
     /// The provisioning plan for this start, or nil. The Keychain is read only when every other
@@ -423,6 +435,8 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
     /// configuration that does not match, a newer format) leaves the session `.stopped` (its
     /// console open, ready for `start()`) and is
     /// thrown as `.restoreFailed(<reason>)`: the caller discards the state and starts from cold.
+    /// Apple's limit of two running macOS VMs is thrown as `.macVMLimitReached` instead: the
+    /// machine was refused, not the state, which the caller keeps for a later start.
     /// A `stop` called while the restore runs waits for it and is carried out then: a restored
     /// machine is force-stopped instead of left paused (the guest never runs); after a failure
     /// `stopRequestedDuringRestore` tells the caller not to start it (the console is closed).
@@ -438,6 +452,10 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
         } catch {
             restoreWindow.end()
             if restoreWindow.isRequested { serialConsole?.close() }
+            // Apple's VM limit refuses the machine, not the state: the caller keeps it.
+            if case NidoError.macVMLimitReached = Self.translatedStartError(error) {
+                throw NidoError.macVMLimitReached
+            }
             throw NidoError.restoreFailed(error.localizedDescription)
         }
         hasRun = true

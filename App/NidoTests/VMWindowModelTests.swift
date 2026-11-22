@@ -31,11 +31,14 @@ final class FakeSession: VMSessionHandle, MachineStateSaving {
     var machineIsGone = true
     /// The activity callback `startAgentHost` was given (the agent runs a command: true, then false).
     private(set) var agentActivity: (@Sendable (Bool) -> Void)?
+    /// The checkpoint handling `startAgentHost` was given (the agent's `checkpoint`, `rollback`).
+    private(set) var checkpointHandling: (any AgentCheckpointHandling)?
     func startAgentHost(
-        bundle: VMBundle, config: VMConfig, onWarning: (String) -> Void,
-        onActivity: @escaping @Sendable (Bool) -> Void
+        bundle: VMBundle, config: VMConfig, checkpoints: (any AgentCheckpointHandling)?,
+        onWarning: (String) -> Void, onActivity: @escaping @Sendable (Bool) -> Void
     ) -> AgentControlServer? {
         agentActivity = onActivity
+        checkpointHandling = checkpoints
         return nil
     }
     /// What the configuration left out (shown in the window's bar).
@@ -121,6 +124,9 @@ final class FakeSession: VMSessionHandle, MachineStateSaving {
     /// When set, `suspend` fails after pausing and the VM goes on running.
     var suspendFailure: String?
     private(set) var suspendCount = 0
+    /// When true, `suspend` waits for `finishSuspend()` once paused (a large memory being saved).
+    var holdsSuspend = false
+    private var suspendGate: CheckedContinuation<Void, Never>?
 
     func startOrResume() async throws -> SuspendedState.BootOutcome {
         // `SuspendedState.boot` failing before the machine runs (config unreadable or unwritable).
@@ -180,7 +186,11 @@ final class FakeSession: VMSessionHandle, MachineStateSaving {
         events.append("suspend")
         if let suspendUnsupported { throw NidoError.suspendFailed(suspendUnsupported) }
         state = .paused
-        await Task.yield()
+        if holdsSuspend {
+            await withCheckedContinuation { suspendGate = $0 }
+        } else {
+            await Task.yield()
+        }
         if let suspendFailure {
             state = .running
             throw NidoError.suspendFailed(suspendFailure)
@@ -213,6 +223,12 @@ final class FakeSession: VMSessionHandle, MachineStateSaving {
     func finishSave() {
         saveGate?.resume()
         saveGate = nil
+    }
+
+    /// Lets a held `suspend` finish.
+    func finishSuspend() {
+        suspendGate?.resume()
+        suspendGate = nil
     }
 
     /// Lets a held `stop` finish.
@@ -291,6 +307,13 @@ struct VMWindowModelTests {
     private func model(_ root: TempRoot, _ factory: FakeSessionFactory,
                        name: String = "debian-13") throws -> VMWindowModel {
         VMWindowModel(name: try VMName(name), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
+    }
+
+    /// Apple's limit of two running macOS VMs is shown with NidoCore's own text.
+    @Test func limitErrorIsShownAsIs() throws {
+        let error = NidoError.macVMLimitReached
+        #expect(VMWindowModel.message(for: error, name: try VMName("macos-27"))
+            == error.localizedDescription)
     }
 
     // MARK: - Agent banner and frozen display
@@ -711,6 +734,20 @@ struct VMWindowModelTests {
         }
     }
 
+    /// The toolbar's "Agent Activity" button: only while the live session has agent access on.
+    @Test func agentActivityFollowsTheSession() async throws {
+        for access in [true as Bool?, nil, false] {
+            let root = try macRoot(agentAccess: access)
+            let factory = FakeSessionFactory()
+            let (model, _) = try agentModel(root, factory)
+            #expect(!model.showsAgentActivity, "before start")
+            await model.start()
+            #expect(model.showsAgentActivity == (access == true))
+            factory.made[0].guestStops()
+            #expect(!model.showsAgentActivity, "after the session")
+        }
+    }
+
     @Test func startTakesAppLock() async throws {
         let root = try TempRoot()
         let factory = FakeSessionFactory()
@@ -723,6 +760,23 @@ struct VMWindowModelTests {
         #expect(try root.holder("debian-13") == LockHolder(pid: getpid(), owner: .app))
         #expect(factory.made.count == 1)
         #expect(factory.bundles.first?.lastPathComponent == "debian-13.nidovm")
+    }
+
+    /// A fresh Mac left by an agent session, started by the user: an ordinary VM from now on.
+    @Test func startClaimsADisposableVM() async throws {
+        let root = try TempRoot(vms: ["mac"])
+        try root.bundle("mac").writeConfig(VMConfig(
+            id: UUID(), name: try VMName("mac"), guest: .macos, cpuCount: 2, memoryBytes: 4 << 30,
+            diskBytes: 8 << 30, macAddress: "7a:80:2e:82:30:a5", agentAccess: true, disposable: true))
+        let factory = FakeSessionFactory()
+        let model = try model(root, factory, name: "mac")
+
+        await model.start()
+
+        #expect(model.state == .running)
+        let config = try root.bundle("mac").readConfig()
+        #expect(config.disposable == nil)
+        #expect(config.agentAccess == true)
     }
 
     /// A shared folder missing on the Mac: the VM starts, the bar says so until it stops.

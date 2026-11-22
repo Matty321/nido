@@ -10,6 +10,8 @@ public enum CLIError: Error, Equatable, Sendable {
     case unknownImage(String)
     case invalidRoot(String)
     case vmFailed(String)
+    /// `nido start`: an agent's rollback to `checkpoint` failed (`reason`, localized); the VM is stopped.
+    case rollbackFailed(checkpoint: String, reason: String)
     /// `nido stop --suspend` did not end with a suspended VM (the message says what happened).
     case suspendNotCompleted(String)
     /// `create --ipsw` with an option of the Linux creation (image, template, profile).
@@ -40,6 +42,12 @@ public enum CLIError: Error, Equatable, Sendable {
     case tooManyDomains
     /// `nido act` or `nido mcp` on a VM whose agent access is off (the value is the VM name).
     case agentAccessOff(String)
+    /// `nido mcp --fresh` on a base VM with a saved state (the value is the VM name): its copy
+    /// would start from a disk in the middle of a session.
+    case freshBaseSuspended(String)
+    /// `nido mcp --fresh` on a base that is itself a fresh Mac of a session (the value is the VM
+    /// name): its own session or a sweep would delete it under this one.
+    case freshBaseIsFresh(String)
     /// `nido agent setup`: Nido's key is not authorized and there is no password to do it with.
     case agentPasswordNeeded(String)
     /// `nido agent setup`: the nido tool that answers ssh's password prompt is missing.
@@ -58,6 +66,14 @@ public enum CLIError: Error, Equatable, Sendable {
     case unknownAgentAction(String)
     /// `nido act` with a missing argument or an option it does not take; the value is the syntax.
     case agentUsage(String)
+    /// `nido agent log --clear` without `--yes` and without a terminal to ask.
+    case agentLogClearNeedsConfirmation
+    /// `nido agent log --limit` with something other than a whole number of at least 1.
+    case agentLogLimitInvalid
+    /// `nido agent log --clear` together with `--limit` or `--json`.
+    case agentLogClearConflict
+    /// `nido agent log --yes` without `--clear`.
+    case agentLogYesWithoutClear
     /// `nido act` with a value that is not a number (the name of the argument).
     case agentNotANumber(String)
     /// `nido act` with an integer outside its range (name, lowest, highest).
@@ -66,6 +82,15 @@ public enum CLIError: Error, Equatable, Sendable {
     case outputExists(String)
     /// `nido act screenshot --output` with an answer that names no file to copy.
     case noScreenshotFile
+    /// `nido act put-file` with a local file over `AgentProtocol.maxTransferBytes`.
+    case agentFileTooLarge
+    /// `nido act put-file` with a local path that is a link, a folder or anything but a regular file.
+    case notARegularFile(String)
+    /// `nido act put-file` with a local file that can't be opened (missing, no permission); the
+    /// values are the path and the system's reason.
+    case localFileUnreadable(String, String)
+    /// `nido act get-file` without `--force` onto a path that exists (a file, a link).
+    case localFileExists(String)
     /// `nido image macos --output` or `--yes` without `--download` (the value is the option).
     case macImageOptionNeedsDownload(String)
     /// `create --account` on a Mac older than macOS 27.
@@ -106,6 +131,8 @@ extension CLIError: LocalizedError {
             L10n.string("NIDO_ROOT must be the absolute path of an existing directory: \(path)")
         case .vmFailed(let reason):
             L10n.string("the VM stopped with an error: \(reason)")
+        case .rollbackFailed(let checkpoint, let reason):
+            L10n.string("couldn’t go back to checkpoint \(checkpoint): \(reason); the VM is stopped")
         case .suspendNotCompleted(let message):
             message
         case .ipswConflict:
@@ -136,6 +163,10 @@ extension CLIError: LocalizedError {
             L10n.string("the list already has \(EgressPolicy.maxPatterns) domains, the maximum: remove some with nido net deny")
         case .agentAccessOff(let vm):
             L10n.string("Agent access is off for \(vm): turn it on with nido agent enable \(vm)")
+        case .freshBaseSuspended(let vm):
+            L10n.string("\(vm) is suspended: start it with nido start \(vm) and shut it down, then try again")
+        case .freshBaseIsFresh(let vm):
+            L10n.string("\(vm) is a fresh Mac of another session: use the VM it was copied from")
         case .agentPasswordNeeded(let vm):
             L10n.string("Nido’s key isn’t authorized in \(vm) yet: run `nido agent setup \(vm)` in a terminal to enter the password of its account once")
         case .agentAskpassMissing:
@@ -149,9 +180,17 @@ extension CLIError: LocalizedError {
         case .agentNotServed(let message):
             message
         case .unknownAgentAction(let name):
-            L10n.string("unknown action “\(ConsoleSanitizer.echoable(name))”: use status, screenshot, click, drag, scroll, type, key or wait")
+            L10n.string("unknown action “\(ConsoleSanitizer.echoable(name))”: use status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file or files")
         case .agentUsage(let syntax):
             L10n.string("usage: nido act <vm> \(syntax)")
+        case .agentLogClearNeedsConfirmation:
+            L10n.string("the log was not cleared: there is no terminal to ask, use --yes")
+        case .agentLogLimitInvalid:
+            L10n.string("--limit must be a whole number, at least 1")
+        case .agentLogClearConflict:
+            L10n.string("--clear can’t be combined with --limit or --json")
+        case .agentLogYesWithoutClear:
+            L10n.string("--yes only goes with --clear")
         case .agentNotANumber(let name):
             L10n.string("\(name) must be a number")
         case .agentOutOfRange(let name, let low, let high):
@@ -160,6 +199,14 @@ extension CLIError: LocalizedError {
             L10n.string("\(ConsoleSanitizer.echoable(path)) already exists: nido doesn’t overwrite it")
         case .noScreenshotFile:
             L10n.string("the answer names no screenshot file to copy")
+        case .agentFileTooLarge:
+            L10n.string("the file is larger than 16 MiB")
+        case .notARegularFile(let path):
+            L10n.string("\(ConsoleSanitizer.echoable(path)) is not a regular file")
+        case .localFileUnreadable(let path, let reason):
+            L10n.string("can’t read \(ConsoleSanitizer.echoable(path)): \(reason)")
+        case .localFileExists(let path):
+            L10n.string("\(ConsoleSanitizer.echoable(path)) already exists: add --force to replace it")
         case .macImageOptionNeedsDownload(let option):
             L10n.string("\(option) works only with --download")
         case .accountNeedsHost27:

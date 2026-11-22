@@ -16,14 +16,26 @@ public struct Snapshot: Codable, Identifiable, Sendable, Equatable {
     /// attached (`VMSession.attachedStateHash`, ruling R-M3A-12). Otherwise `stateHash()` of the
     /// config at the time (informational).
     public let configHash: String
+    /// Who took it: `agentCreator` for an agent checkpoint (`AgentCheckpointCoordinator`); nil for
+    /// the user's own snapshots, and for every `meta.json` written before the field existed.
+    public let createdBy: String?
 
-    public init(id: UUID, name: String, createdAt: Date, hasSavedState: Bool, configHash: String) {
+    /// `createdBy` of a snapshot an agent took: the only snapshots an agent lists, restores and
+    /// (through the checkpoint limit) deletes.
+    public static let agentCreator = "agent"
+
+    public init(id: UUID, name: String, createdAt: Date, hasSavedState: Bool, configHash: String,
+                createdBy: String? = nil) {
         self.id = id
         self.name = name
         self.createdAt = createdAt
         self.hasSavedState = hasSavedState
         self.configHash = configHash
+        self.createdBy = createdBy
     }
+
+    /// Taken by an agent (`createdBy == agentCreator`).
+    public var isAgentCheckpoint: Bool { createdBy == Self.agentCreator }
 
     /// Largest accepted `meta.json`.
     static let maxMetaSize = 64 * 1024

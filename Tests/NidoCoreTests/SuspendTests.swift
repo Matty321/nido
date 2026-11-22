@@ -296,6 +296,30 @@ final class FakeSuspendableMachine: SuspendableMachine {
         #expect(try env.hash() == nil)
     }
 
+    /// Apple's limit of two running macOS VMs refused the restore: the machine never ran, so the
+    /// saved state stays resumable (hash written back, file kept) and nothing starts from cold.
+    @Test @MainActor func limitDuringRestoreKeepsTheSavedState() async throws {
+        let env = try Env(guest: .macos)
+        defer { env.cleanup() }
+        try env.suspend(hash: "fake-hash")
+        let machine = FakeSuspendableMachine(bundle: env.bundle, state: .stopped)
+        machine.restoreError = .macVMLimitReached
+        await #expect(throws: NidoError.macVMLimitReached) {
+            _ = try await SuspendedState.boot(machine, bundle: env.bundle)
+        }
+        #expect(machine.calls == ["restore"])
+        #expect(!machine.calls.contains("start"))
+        #expect(env.stateExists)
+        #expect(try env.hash() == "fake-hash")
+        #expect(env.bundle.stateFileLooksValid())
+
+        // Once a slot is free, the next start resumes the same state.
+        machine.restoreError = nil
+        #expect(try await SuspendedState.boot(machine, bundle: env.bundle) == .resumed)
+        #expect(machine.calls == ["restore", "restore", "resume"])
+        #expect(!env.stateExists)
+    }
+
     @Test @MainActor func stateWithoutHashIsDiscarded() async throws {
         let env = try Env()
         defer { env.cleanup() }

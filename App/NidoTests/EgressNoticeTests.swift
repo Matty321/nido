@@ -109,26 +109,6 @@ private struct Fixture {
         #expect(EgressNoticeText.summaryNotice(for: entry(.suppressed, ip: nil, port: nil, lostBlocks: 0), vm: "agenti") == nil)
     }
 
-    @Test func cursorReadsOnlyNewLines() {
-        let t0 = Date(timeIntervalSince1970: 1_800_000_000)
-        let lines = [entry(.name, domain: "a.org", at: t0), entry(.name, domain: "b.org", at: t0.addingTimeInterval(1)),
-                     entry(.name, domain: "c.org", at: t0.addingTimeInterval(1))]
-        // Never watched: only lines from the second of `since` on.
-        var (fresh, cursor) = EgressLogCursor.newEntries(lines, after: nil, since: t0.addingTimeInterval(1))
-        #expect(fresh.map(\.domain) == ["b.org", "c.org"])
-        #expect(cursor == EgressLogCursor(time: t0.addingTimeInterval(1), seen: 2))
-        // Same file: nothing new; one more line in the same second: just that one.
-        (fresh, cursor) = EgressLogCursor.newEntries(lines, after: cursor, since: t0)
-        #expect(fresh.isEmpty)
-        let more = lines + [entry(.name, domain: "d.org", at: t0.addingTimeInterval(1))]
-        (fresh, cursor) = EgressLogCursor.newEntries(more, after: cursor, since: t0)
-        #expect(fresh.map(\.domain) == ["d.org"])
-        // A log that went back in time starts over from its end.
-        (fresh, cursor) = EgressLogCursor.newEntries([entry(.name, at: t0.addingTimeInterval(-50))], after: cursor, since: t0)
-        #expect(fresh.isEmpty)
-        #expect(cursor?.time == t0.addingTimeInterval(-50))
-    }
-
     /// Repeats inside the window are counted and posted when it is over: the posted counts add
     /// up to every block; many destinations at once become one summary for the rest.
     @Test func batcherMergesWithoutLosingBlocks() {
@@ -205,15 +185,6 @@ private struct Fixture {
         #expect(EgressMonitor.actionDomain("1.2.3.4") == nil)
         #expect(EgressMonitor.actionDomain(42) == nil)
         #expect(EgressMonitor.actionDomain(nil) == nil)
-    }
-
-    /// No cursor: the second of `since` counts whole, so a block logged in that same second is
-    /// not skipped.
-    @Test func sameSecondBlockIsNotSkipped() {
-        let t0 = Date(timeIntervalSince1970: 1_800_000_000)
-        let lines = [entry(.name, domain: "a.org", at: t0.addingTimeInterval(-1)), entry(.name, domain: "b.org", at: t0)]
-        let (fresh, _) = EgressLogCursor.newEntries(lines, after: nil, since: t0.addingTimeInterval(0.7))
-        #expect(fresh.map(\.domain) == ["b.org"])
     }
 
     /// Overflow of a batch: the counts posted add up to the blocks, never more (no block counted
@@ -321,6 +292,36 @@ private struct Fixture {
         try await EgressPolicyEdits.remove(try DomainPattern("example.com"), bundle: fx.bundle)
         #expect(fx.policy?.allow.map(\.description) == ["deb.debian.org"])
         #expect(owner.reasons.count == 1)
+    }
+
+    /// Adding and removing on a base reach its disposable fresh copy (`freshBaseID`); a VM that
+    /// is not a copy of it keeps its list.
+    @Test func editsReachTheFreshCopies() async throws {
+        let fx = try Fixture(); defer { fx.cleanup() }
+        try fx.writePolicy(["deb.debian.org"])
+        let baseID = try fx.bundle.readConfig().id
+        func vm(_ name: String, freshBaseID: UUID?) throws -> VMBundle {
+            let config = VMConfig(
+                id: UUID(), name: try VMName(name), guest: .linux, cpuCount: 2, memoryBytes: 4 << 30,
+                diskBytes: 16 << 30, macAddress: "52:54:00:12:34:59", controlledNetwork: true,
+                disposable: freshBaseID != nil ? true : nil, freshBaseID: freshBaseID)
+            let bundle = try VMBundle.create(config: config, paths: fx.paths)
+            try EgressPolicyStore.replace(
+                bundle: bundle, with: EgressPolicy(v: EgressPolicy.currentVersion, allow: [try DomainPattern("deb.debian.org")]))
+            return bundle
+        }
+        let copy = try vm("agenti-fresh-abcd", freshBaseID: baseID)
+        let other = try vm("altra", freshBaseID: nil)
+
+        #expect(await EgressPolicyEdits.allow("example.com", vm: "agenti", bundle: fx.bundle,
+                                              authenticator: FakeAuthenticator(answer: true)) == .added("example.com"))
+        #expect(EgressPolicyStore.load(bundle: copy)?.allow.map(\.description) == ["deb.debian.org", "example.com"])
+        #expect(EgressPolicyStore.load(bundle: other)?.allow.map(\.description) == ["deb.debian.org"])
+
+        try await EgressPolicyEdits.remove(try DomainPattern("deb.debian.org"), bundle: fx.bundle)
+        #expect(fx.policy?.allow.map(\.description) == ["example.com"])
+        #expect(EgressPolicyStore.load(bundle: copy)?.allow.map(\.description) == ["example.com"])
+        #expect(EgressPolicyStore.load(bundle: other)?.allow.map(\.description) == ["deb.debian.org"])
     }
 
     /// A damaged `egress.json` is never taken for an empty list: adding refuses it without asking;

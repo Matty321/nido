@@ -21,6 +21,10 @@ import Testing
         .scroll(dx: 1, dy: 2, x: 3, y: 4),
         .type(text: "hi"), .key(combo: "cmd+space"),
         .setClipboard(text: "abcde-fghjk", clearAfter: 60),
+        .zoom(x: 1, y: 2, width: 3, height: 4, maxLongEdge: 800),
+        .uiTree(maxElements: 300),
+        .putFile(path: "a/b.txt", size: 3), .getFile(path: "a/b.txt", maxBytes: 1 << 20),
+        .listFiles(path: nil), .listFiles(path: "a"),
     ]
     for a in actions {
         let data = try JSONEncoder().encode(a)
@@ -55,6 +59,15 @@ import Testing
     #expect(AgentProtocol.maxLongEdgeRange == 64...4096)
     #expect(AgentProtocol.maxLongEdgeRange.contains(AgentProtocol.defaultMaxLongEdge))
     #expect(AgentProtocol.maxWaitMilliseconds == 10_000)
+    #expect(AgentProtocol.uiTreeElementsRange == 1...1000)
+    #expect(AgentProtocol.defaultUITreeElements == 300)
+    #expect(AgentProtocol.uiTreeElementsRange.contains(AgentProtocol.defaultUITreeElements))
+    #expect(AgentProtocol.minimumUITreeHelperVersion == "1.0.5")
+    #expect(AgentProtocol.minimumFilesHelperVersion == "1.0.6")
+    #expect(AgentProtocol.helperVersion == "1.0.6")
+    #expect(AgentProtocol.maxTransferBytes == 16 << 20)
+    #expect(AgentProtocol.maxTransferBytes < AgentProtocol.maxFrameBytes)
+    #expect(AgentProtocol.maxListedFiles == 500)
 }
 
 /// The version the helper reports in `status` is the one in its bundle's Info.plist, which the

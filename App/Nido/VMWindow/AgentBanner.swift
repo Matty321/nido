@@ -5,17 +5,30 @@ import SwiftUI
 /// of the display) while an agent drives the VM (`VMWindowModel.agentActive`). It is an overlay
 /// in the notice's info style, small enough for the 28 pt strip, so the screen below never
 /// changes size when it comes and goes. It takes no clicks; there is no lock.
+///
+/// While an agent's rollback runs (`VMWindowModel.rollbackBanner`) it says where the agent is
+/// going back to instead: the VM stops and starts again under it.
 struct AgentBanner: View {
+    /// "The agent is going back to <checkpoint>…", or nil for the usual text.
+    var rollback: String?
+
     var body: some View {
         HStack(spacing: Theme.Space.s) {
             Circle()
                 .fill(Theme.Color.accent)
                 .frame(width: Theme.Layout.noticeDot, height: Theme.Layout.noticeDot)
                 .accessibilityHidden(true)
-            Text("An agent is using this VM")
-                .font(.nido(Theme.TypeSize.caption, .semibold))
-                .foregroundStyle(Theme.Color.textPrimary)
-                .lineLimit(1)
+            Group {
+                if let rollback {
+                    Text(verbatim: rollback)
+                        .truncationMode(.middle)
+                } else {
+                    Text("An agent is using this VM")
+                }
+            }
+            .font(.nido(Theme.TypeSize.caption, .semibold))
+            .foregroundStyle(Theme.Color.textPrimary)
+            .lineLimit(1)
         }
         .padding(.horizontal, Theme.Space.m)
         .frame(height: Theme.Layout.titleBarHeight - Theme.Space.s)
@@ -26,7 +39,7 @@ struct AgentBanner: View {
         }
         .allowsHitTesting(false)
         .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("agent-banner")
+        .accessibilityIdentifier(rollback == nil ? "agent-banner" : "agent-rollback-banner")
         .transition(.opacity)
     }
 }

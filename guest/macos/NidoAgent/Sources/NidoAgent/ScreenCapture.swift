@@ -22,6 +22,14 @@ struct ScreenCapture: ScreenSource {
         }
     }
 
+    /// Whether this session shows the lock screen: the window server's session dictionary has
+    /// `CGSSessionScreenIsLocked` set (it is absent when unlocked). The dispatcher's
+    /// `screenLocked`.
+    static func screenLocked() -> Bool {
+        guard let session = CGSessionCopyCurrentDictionary() as? [String: Any] else { return false }
+        return (session["CGSSessionScreenIsLocked"] as? NSNumber)?.boolValue ?? false
+    }
+
     func screenSize() -> ScreenSize {
         let size = CGDisplayBounds(CGMainDisplayID()).size
         return ScreenSize(width: Int(size.width.rounded()), height: Int(size.height.rounded()))

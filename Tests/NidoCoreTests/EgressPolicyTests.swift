@@ -22,6 +22,17 @@ import Testing
         #expect(try !pattern("debian.org").isWildcard)
     }
 
+    @Test func exactNameKeepsOnlyNamesThatParseUnchanged() {
+        #expect(DomainPattern.exactName("example.com") == "example.com")
+        #expect(DomainPattern.exactName("xn--bcher-kva.de") == "xn--bcher-kva.de")
+        for text in [
+            "*.example.com", "Example.COM", "example.com.", " example.com", "bücher.de", "exa\u{200B}mple.com",
+            "1.2.3.4", "_dns.resolver.arpa", "localhost", "...", "-", "",
+        ] {
+            #expect(DomainPattern.exactName(text) == nil, "\(text)")
+        }
+    }
+
     @Test func unicodeNamesBecomePunycode() throws {
         #expect(try pattern("bücher.de").description == "xn--bcher-kva.de")
         #expect(try pattern("*.BÜCHER.de").description == "*.xn--bcher-kva.de")

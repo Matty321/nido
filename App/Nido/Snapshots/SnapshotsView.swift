@@ -167,6 +167,7 @@ struct SnapshotsView: View {
                             name: snapshot.name,
                             kind: .normal(date: SnapshotsModel.dateText(snapshot.createdAt),
                                           savedState: snapshot.hasSavedState),
+                            isAgent: model.isAgent(snapshot),
                             canRestore: model.canRestore, canDelete: model.canDelete,
                             deleteHelp: model.deleteLockedNote,
                             onRestore: { model.requestRestore(snapshot) },

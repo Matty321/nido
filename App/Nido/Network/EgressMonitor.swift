@@ -237,12 +237,11 @@ final class EgressMonitor {
 
     /// The domain of an "Allow" action, checked again when the action arrives (the payload
     /// comes back from the system): an exact, non-wildcard name that `DomainPattern` keeps as it
-    /// is and the echo strip leaves unchanged; nil otherwise (the action then does nothing).
+    /// is and the echo strip leaves unchanged (`DomainPattern.exactName`); nil otherwise (the
+    /// action then does nothing).
     nonisolated static func actionDomain(_ value: Any?) -> String? {
-        guard let text = value as? String, let pattern = try? DomainPattern(text), !pattern.isWildcard,
-            pattern.description == text, ConsoleSanitizer.echoable(text) == text
-        else { return nil }
-        return text
+        guard let text = value as? String else { return nil }
+        return DomainPattern.exactName(text)
     }
 
     static func outcomeNotice(_ outcome: EgressPolicyEdits.AllowOutcome, vm: String) -> EgressBlockNotice {

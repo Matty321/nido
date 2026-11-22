@@ -459,3 +459,303 @@ private func zoomRequest(_ x: Double, _ y: Double, _ w: Double, _ h: Double) -> 
     let (reply, _) = await d.handle(zoomRequest(10, 20, 100, 50))
     #expect(reply.error == .screenChanged)
 }
+
+// MARK: - uiTree
+
+/// Answers a fixed tree and records what it was asked for.
+private final class FakeAccessibility: AccessibilitySource, @unchecked Sendable {
+    private let lock = NSLock()
+    private var calls: [(space: CoordinateSpace, maxElements: Int)] = []
+    var recorded: [(space: CoordinateSpace, maxElements: Int)] { lock.withLock { calls } }
+    let tree = UITree(app: "Finder", elements: [
+        UIElement(id: 0, role: "button", name: "Save", value: nil, enabled: true, focused: false,
+                  frame: PixelRect(x: 50, y: 100, w: 40, h: 12)),
+    ], truncated: false)
+    var failure: (any Error)?
+
+    func uiTree(space: CoordinateSpace, maxElements: Int) async throws -> UITree {
+        lock.withLock { calls.append((space, maxElements)) }
+        if let failure { throw failure }
+        return tree
+    }
+}
+
+private struct NoFrontmostApp: Error {}
+
+private func uiTreeDispatcher(_ accessibility: FakeAccessibility, screen: FakeScreen = FakeScreen(size: zoomShotScreen),
+                              permissions: FakePermissions = FakePermissions()) -> AgentDispatcher {
+    AgentDispatcher(screen: screen, input: FakeInput(), permissions: permissions, accessibility: accessibility)
+}
+
+private func uiTreeRequest(_ maxElements: Int = 300) -> AgentRequest {
+    AgentRequest(action: .uiTree(maxElements: maxElements), image: zoomShotImage, screen: zoomShotScreen)
+}
+
+@Test func uiTreeNeedsLastShot() async {
+    let accessibility = FakeAccessibility()
+    let (reply, png) = await uiTreeDispatcher(accessibility).handle(AgentRequest(action: .uiTree(maxElements: 300)))
+    #expect(reply.ok == false)
+    #expect(reply.error == .noScreenshot)
+    #expect(reply.message?.contains("take a screenshot first") == true)
+    #expect(png == nil)
+    #expect(accessibility.recorded.isEmpty)
+}
+
+@Test func uiTreeNeedsAccessibility() async {
+    let accessibility = FakeAccessibility()
+    let d = uiTreeDispatcher(accessibility, permissions: FakePermissions(screenRecording: true, accessibility: false))
+    let (reply, png) = await d.handle(uiTreeRequest())
+    #expect(reply.ok == false)
+    #expect(reply.error == .permissionMissing)
+    #expect(reply.message?.contains("Accessibility") == true)
+    #expect(png == nil)
+    #expect(accessibility.recorded.isEmpty)
+}
+
+/// Reading the tree needs no Screen Recording: it never captures the screen.
+@Test func uiTreeReturnsTree() async {
+    let accessibility = FakeAccessibility()
+    let d = uiTreeDispatcher(accessibility, permissions: FakePermissions(screenRecording: false, accessibility: true))
+    let (reply, png) = await d.handle(uiTreeRequest(42))
+    #expect(reply.ok == true)
+    #expect(reply.tree == accessibility.tree)
+    #expect(reply.image == nil)
+    #expect(png == nil)
+    #expect(accessibility.recorded.count == 1)
+    #expect(accessibility.recorded.first?.maxElements == 42)
+    #expect(accessibility.recorded.first?.space == CoordinateSpace(display: PixelSize(1024, 640), maxLongEdge: 512))
+}
+
+@Test func uiTreeMaxElementsOutOfRangeRefused() async {
+    for bad in [0, -1, 1001] {
+        let accessibility = FakeAccessibility()
+        let (reply, _) = await uiTreeDispatcher(accessibility).handle(uiTreeRequest(bad))
+        #expect(reply.error == .badRequest)
+        #expect(reply.message?.contains("1 to 1000") == true)
+        #expect(accessibility.recorded.isEmpty)
+    }
+    for good in [1, 1000] {
+        let (reply, _) = await uiTreeDispatcher(FakeAccessibility()).handle(uiTreeRequest(good))
+        #expect(reply.ok == true)
+    }
+}
+
+@Test func uiTreeWhenScreenChangedIsScreenChanged() async {
+    let accessibility = FakeAccessibility()
+    let d = uiTreeDispatcher(accessibility, screen: FakeScreen(size: ScreenSize(width: 1920, height: 1200)))
+    let (reply, _) = await d.handle(uiTreeRequest())
+    #expect(reply.error == .screenChanged)
+    #expect(accessibility.recorded.isEmpty)
+}
+
+@Test func uiTreeFailureIsInternalError() async {
+    let accessibility = FakeAccessibility()
+    accessibility.failure = NoFrontmostApp()
+    let (reply, _) = await uiTreeDispatcher(accessibility).handle(uiTreeRequest())
+    #expect(reply.ok == false)
+    #expect(reply.error == .internalError)
+    #expect(reply.tree == nil)
+}
+
+/// A helper without an accessibility reader (the dispatcher's default) refuses, it never pretends.
+@Test func uiTreeWithoutSourceFails() async {
+    let d = AgentDispatcher(screen: FakeScreen(size: zoomShotScreen), input: FakeInput(), permissions: FakePermissions())
+    let (reply, _) = await d.handle(uiTreeRequest())
+    #expect(reply.ok == false)
+    #expect(reply.error == .internalError)
+}
+
+// MARK: - Locked screen
+
+private func lockedDispatcher(_ locked: Bool, accessibility: FakeAccessibility = FakeAccessibility(),
+                              input: FakeInput = FakeInput()) -> AgentDispatcher {
+    AgentDispatcher(screen: FakeScreen(size: zoomShotScreen), input: input, permissions: FakePermissions(),
+                    accessibility: accessibility, screenLocked: { locked })
+}
+
+/// On a locked screen the capture fails ("the main display is not shareable") and the tree is
+/// that of the lock screen: the three say so, without capturing or walking anything.
+@Test func lockedScreenRefusesScreenshotZoomAndUITree() async {
+    let accessibility = FakeAccessibility()
+    let d = lockedDispatcher(true, accessibility: accessibility)
+    for request in [AgentRequest(action: .screenshot(maxLongEdge: 1280)), zoomRequest(0, 0, 100, 100),
+                    uiTreeRequest(), AgentRequest(action: .uiTree(maxElements: 300))] {
+        let (reply, png) = await d.handle(request)
+        #expect(reply.ok == false)
+        #expect(reply.error == .notReady)
+        #expect(reply.message == "the VM's screen is locked: log in through its window")
+        #expect(png == nil)
+    }
+    #expect(accessibility.recorded.isEmpty)
+}
+
+@Test func unlockedScreenIsCaptured() async {
+    let d = lockedDispatcher(false)
+    #expect(await d.handle(AgentRequest(action: .screenshot(maxLongEdge: 1280))).0.ok)
+    #expect(await d.handle(zoomRequest(0, 0, 100, 100)).0.ok)
+    #expect(await d.handle(uiTreeRequest()).0.ok)
+}
+
+/// Input and status are not refused: they work on the lock screen as on any other.
+@Test func lockedScreenLeavesInputAndStatusAlone() async {
+    let input = FakeInput()
+    let d = lockedDispatcher(true, input: input)
+    #expect(await d.handle(AgentRequest(action: .status)).0.ok)
+    let actions: [AgentRequest] = [
+        AgentRequest(action: .click(x: 10, y: 10, button: .left, count: 1), image: zoomShotImage, screen: zoomShotScreen),
+        AgentRequest(action: .scroll(dx: 0, dy: -10, x: nil, y: nil)),
+        AgentRequest(action: .type(text: "a")),
+        AgentRequest(action: .key(combo: "tab")),
+    ]
+    for request in actions {
+        #expect(await d.handle(request).0.ok)
+    }
+    #expect(input.recorded.count == 4)
+}
+
+/// Checkpoints are the VM owner's: one that reaches Nido Agent is refused, nothing is touched.
+@Test func checkpointOpsAreHostOnly() async {
+    let input = FakeInput()
+    let d = dispatcher(input: input)
+    for action in [AgentAction.checkpoint(name: nil), .rollback(name: "x"), .checkpoints] {
+        let (reply, png) = await d.handle(AgentRequest(action: action))
+        #expect(reply.ok == false)
+        #expect(reply.error == .badRequest)
+        #expect(reply.message == "host-only action")
+        #expect(png == nil)
+    }
+    #expect(input.recorded.isEmpty)
+}
+
+// MARK: - Files
+
+/// A dispatcher whose transfer folder is a fresh temporary directory; `cleanup` removes it.
+private func fileDispatcher(permissions: FakePermissions = FakePermissions(), locked: Bool = false)
+    -> (AgentDispatcher, root: URL, cleanup: () -> Void) {
+    let base = FileManager.default.temporaryDirectory.appendingPathComponent("nido-dispatch-\(UUID().uuidString)")
+    try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+    let root = base.appendingPathComponent("NidoTransfer")
+    let d = AgentDispatcher(screen: FakeScreen(), input: FakeInput(), permissions: permissions,
+                            transfer: TransferFolder(root: root), screenLocked: { locked })
+    return (d, root, { try? FileManager.default.removeItem(at: base) })
+}
+
+@Test func putFileWritesTheDataFrame() async throws {
+    let (d, root, cleanup) = fileDispatcher()
+    defer { cleanup() }
+    let bytes = Data("hello\u{0}world".utf8)
+    let (reply, out) = await d.handle(AgentRequest(action: .putFile(path: "in/hello.bin", size: bytes.count)), data: bytes)
+    #expect(reply.ok)
+    #expect(reply.bytes == bytes.count)
+    #expect(out == nil)
+    #expect(try Data(contentsOf: root.appendingPathComponent("in/hello.bin")) == bytes)
+}
+
+@Test func putFileSizeMismatchWritesNothing() async {
+    let (d, root, cleanup) = fileDispatcher()
+    defer { cleanup() }
+    let cases: [(Int, Data?)] = [(5, Data("abcd".utf8)), (3, Data("abcd".utf8)), (4, nil)]
+    for (size, data) in cases {
+        let (reply, _) = await d.handle(AgentRequest(action: .putFile(path: "f.txt", size: size)), data: data)
+        #expect(reply.ok == false)
+        #expect(reply.error == .badRequest)
+    }
+    let (tooBig, _) = await d.handle(
+        AgentRequest(action: .putFile(path: "f.txt", size: AgentProtocol.maxTransferBytes + 1)),
+        data: Data(count: AgentProtocol.maxTransferBytes + 1))
+    #expect(tooBig.error == .badRequest)
+    #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("f.txt").path))
+}
+
+@Test func putFileBadPathRefused() async {
+    let (d, _, cleanup) = fileDispatcher()
+    defer { cleanup() }
+    for path in ["/etc/passwd", "../x", "a//b", ""] {
+        let (reply, _) = await d.handle(AgentRequest(action: .putFile(path: path, size: 1)), data: Data("x".utf8))
+        #expect(reply.error == .badRequest, "\(path)")
+    }
+}
+
+@Test func getFileReturnsBytesAndData() async throws {
+    let (d, _, cleanup) = fileDispatcher()
+    defer { cleanup() }
+    let bytes = Data((0..<300).map { UInt8($0 % 256) })
+    _ = await d.handle(AgentRequest(action: .putFile(path: "out.bin", size: bytes.count)), data: bytes)
+    let (reply, out) = await d.handle(AgentRequest(action: .getFile(path: "out.bin", maxBytes: 1 << 20)))
+    #expect(reply.ok)
+    #expect(reply.bytes == 300)
+    #expect(out == bytes)
+
+    let (small, none) = await d.handle(AgentRequest(action: .getFile(path: "out.bin", maxBytes: 299)))
+    #expect(small.error == .badRequest)
+    #expect(none == nil)
+    let (missing, _) = await d.handle(AgentRequest(action: .getFile(path: "nope", maxBytes: 1 << 20)))
+    #expect(missing.error == .badRequest)
+    for maxBytes in [0, -1, AgentProtocol.maxTransferBytes + 1] {
+        let (bad, _) = await d.handle(AgentRequest(action: .getFile(path: "out.bin", maxBytes: maxBytes)))
+        #expect(bad.error == .badRequest, "\(maxBytes)")
+    }
+}
+
+/// An empty file still has its data frame (zero bytes), so the host always reads one.
+@Test func getFileOfAnEmptyFileHasAnEmptyFrame() async {
+    let (d, _, cleanup) = fileDispatcher()
+    defer { cleanup() }
+    _ = await d.handle(AgentRequest(action: .putFile(path: "empty", size: 0)), data: Data())
+    let (reply, out) = await d.handle(AgentRequest(action: .getFile(path: "empty", maxBytes: 10)))
+    #expect(reply.ok)
+    #expect(reply.bytes == 0)
+    #expect(out == Data())
+}
+
+@Test func listFilesAnswersEntries() async {
+    let (d, _, cleanup) = fileDispatcher()
+    defer { cleanup() }
+    _ = await d.handle(AgentRequest(action: .putFile(path: "docs/a.txt", size: 1)), data: Data("a".utf8))
+    let (top, out) = await d.handle(AgentRequest(action: .listFiles(path: nil)))
+    #expect(top.ok)
+    #expect(top.files?.map(\.name) == ["docs"])
+    #expect(top.files?.first?.kind == "folder")
+    #expect(top.truncated == false)
+    #expect(out == nil)
+    let (inner, _) = await d.handle(AgentRequest(action: .listFiles(path: "docs")))
+    #expect(inner.files?.map(\.name) == ["a.txt"])
+    let (bad, _) = await d.handle(AgentRequest(action: .listFiles(path: "../")))
+    #expect(bad.error == .badRequest)
+}
+
+/// Files need no permission and work on a locked screen: nothing is captured or posted.
+@Test func filesNeedNoPermissionNorUnlockedScreen() async {
+    let (d, _, cleanup) = fileDispatcher(permissions: FakePermissions(screenRecording: false, accessibility: false),
+                                         locked: true)
+    defer { cleanup() }
+    #expect(await d.handle(AgentRequest(action: .putFile(path: "a", size: 1)), data: Data("a".utf8)).0.ok)
+    #expect(await d.handle(AgentRequest(action: .getFile(path: "a", maxBytes: 1))).0.ok)
+    #expect(await d.handle(AgentRequest(action: .listFiles(path: nil))).0.ok)
+}
+
+/// A helper built without a transfer folder refuses, it never pretends.
+@Test func filesWithoutFolderFail() async {
+    let d = dispatcher()
+    let cases: [(AgentAction, Data?)] = [
+        (.putFile(path: "a", size: 1), Data("a".utf8)), (.getFile(path: "a", maxBytes: 1), nil), (.listFiles(path: nil), nil),
+    ]
+    for (action, data) in cases {
+        let (reply, out) = await d.handle(AgentRequest(action: action), data: data)
+        #expect(reply.error == .internalError)
+        #expect(out == nil)
+    }
+}
+
+/// Data that comes with another op is ignored, and the old ops answer as before.
+@Test func oldOpsUnaffectedByFiles() async {
+    let input = FakeInput()
+    let d = dispatcher(input: input)
+    let (status, _) = await d.handle(AgentRequest(action: .status), data: Data("x".utf8))
+    #expect(status.ok)
+    #expect(status.status?.helperVersion == "1.0.6")
+    #expect(status.files == nil && status.bytes == nil && status.truncated == nil)
+    let (typed, _) = await d.handle(AgentRequest(action: .type(text: "hi")))
+    #expect(typed.ok)
+    #expect(input.recorded.count == 1)
+}

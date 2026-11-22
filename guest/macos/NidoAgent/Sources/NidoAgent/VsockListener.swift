@@ -6,8 +6,8 @@ import NidoAgentKit
 import os
 
 /// Listens on vsock port 7710 for the host (the process that owns the VM). One connection per
-/// request: read one `AgentRequest` frame, write one `AgentReply` frame (plus the PNG of a
-/// screenshot), close. Connections are served one at a time on a dedicated thread.
+/// request: read one `AgentRequest` frame (plus the bytes of a `putFile`), write one `AgentReply`
+/// frame (plus the PNG of a screenshot or the bytes of a `getFile`), close. Connections are served one at a time on a dedicated thread.
 final class VsockListener: Sendable {
     enum State: Equatable, Sendable {
         case starting
@@ -136,7 +136,7 @@ final class VsockListener: Sendable {
             frame = try AgentFrame.read(from: fd, maxBytes: Self.maxRequestBytes)
         } catch {
             if case .tooLarge = error as? AgentFrame.FrameError {
-                write(AgentReply(ok: false, error: .badRequest, message: "the request is too large"), png: nil, to: fd)
+                write(AgentReply(ok: false, error: .badRequest, message: "the request is too large"), data: nil, to: fd)
             } else {
                 // The host went away or stalled; there is nobody to answer.
                 Log.listener.error("could not read a request: \(String(describing: error), privacy: .public)")
@@ -146,17 +146,41 @@ final class VsockListener: Sendable {
 
         switch AgentDispatcher.decodeRequest(frame) {
         case .refused(let reply):
-            write(reply, png: nil, to: fd)
+            write(reply, data: nil, to: fd)
         case .request(let request):
-            let (reply, png) = handle(request)
-            write(reply, png: png, to: fd)
+            var data: Data?
+            switch AgentDispatcher.dataFrame(after: request) {
+            case .nothing:
+                break
+            case .refused(let reply):
+                // A size out of bounds: nothing is read, and the connection closes after the
+                // answer (the bytes the host may still be sending are dropped with it).
+                write(reply, data: nil, to: fd)
+                return
+            case .frame(let maxBytes):
+                // Read whole whatever its length, up to the bound, so the reply stays in step;
+                // the dispatcher refuses one that does not match `size`. A longer frame is
+                // refused from its header alone and the connection closes: nothing is written.
+                do {
+                    data = try AgentFrame.read(from: fd, maxBytes: maxBytes)
+                } catch {
+                    if case .tooLarge = error as? AgentFrame.FrameError {
+                        write(AgentDispatcher.sizeRefusal, data: nil, to: fd)
+                    } else {
+                        Log.listener.error("could not read a file's bytes: \(String(describing: error), privacy: .public)")
+                    }
+                    return
+                }
+            }
+            let (reply, out) = handle(request, data: data)
+            write(reply, data: out, to: fd)
         }
     }
 
     /// Runs the async dispatcher from this (non-async) thread and waits for it, bounded.
     /// One request at a time for real: while a timed-out request's task is still running,
     /// new requests are refused, so its late input never interleaves with new input.
-    private func handle(_ request: AgentRequest) -> (AgentReply, Data?) {
+    private func handle(_ request: AgentRequest, data: Data?) -> (AgentReply, Data?) {
         let wasBusy = busy.withLock { busy in
             defer { busy = true }
             return busy
@@ -170,7 +194,7 @@ final class VsockListener: Sendable {
         let dispatcher = dispatcher
         let busy = busy
         Task.detached {
-            let outcome = await dispatcher.handle(request)
+            let outcome = await dispatcher.handle(request, data: data)
             result.withLock { $0 = outcome }
             // Clear before signalling, so the next request never sees a finished task as busy.
             busy.withLock { $0 = false }
@@ -183,10 +207,12 @@ final class VsockListener: Sendable {
         return outcome
     }
 
-    private func write(_ reply: AgentReply, png: Data?, to fd: Int32) {
+    /// The reply, then `data` (a screenshot's PNG, a `getFile`'s bytes, possibly empty) as a
+    /// second frame when there is one.
+    private func write(_ reply: AgentReply, data: Data?, to fd: Int32) {
         do {
             try AgentFrame.writeJSON(reply, to: fd)
-            if let png { try AgentFrame.write(png, to: fd) }
+            if let data { try AgentFrame.write(data, to: fd) }
         } catch {
             Log.listener.error("could not write the reply: \(String(describing: error), privacy: .public)")
         }

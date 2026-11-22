@@ -3,9 +3,13 @@ import Foundation
 
 public enum AgentProtocol {
     public static let version = 1
-    public static let helperVersion = "1.0.4"
+    public static let helperVersion = "1.0.6"
     /// The first Nido Agent that understands `zoom`.
     public static let minimumZoomHelperVersion = "1.0.4"
+    /// The first Nido Agent that understands `uiTree`.
+    public static let minimumUITreeHelperVersion = "1.0.5"
+    /// The first Nido Agent that understands `putFile`, `getFile` and `listFiles`.
+    public static let minimumFilesHelperVersion = "1.0.6"
     public static let port: UInt32 = 7710
     public static let maxFrameBytes = 32 << 20
     public static let defaultMaxLongEdge = 1280
@@ -15,6 +19,14 @@ public enum AgentProtocol {
     /// The longest `wait` of `nido act` and of the MCP tool, in milliseconds. Done on the Mac;
     /// the helper never waits.
     public static let maxWaitMilliseconds = 10_000
+    /// How many elements a `uiTree` may be asked for (`nido act ui-tree --max`, the MCP tool's
+    /// `max_elements`).
+    public static let uiTreeElementsRange = 1...1000
+    public static let defaultUITreeElements = 300
+    /// The largest file `putFile` writes and `getFile` reads (`nido act put-file`/`get-file`).
+    public static let maxTransferBytes = 16 << 20
+    /// The most entries a `listFiles` answer carries, newest first; `truncated` beyond.
+    public static let maxListedFiles = 500
 }
 
 /// Screen size in points.
@@ -44,9 +56,32 @@ public enum AgentAction: Codable, Equatable, Sendable {
     /// coordinate space: clicks keep referring to the latest screenshot. Nido Agent 1.0.3 and
     /// older answer `badRequest`.
     case zoom(x: Double, y: Double, width: Double, height: Double, maxLongEdge: Int)
+    /// The controls of the frontmost app's windows (Accessibility), at most `maxElements` of
+    /// them, with frames in pixels of the latest screenshot. Never changes the coordinate space.
+    /// Nido Agent 1.0.4 and older answer `badRequest`.
+    case uiTree(maxElements: Int)
+    /// Host-only: the VM's owner takes a live snapshot marked as made by an agent, named `name`
+    /// or `agent-<yyyyMMdd-HHmmss>`. Never sent to Nido Agent, which answers `badRequest`.
+    case checkpoint(name: String?)
+    /// Host-only: the owner goes back to the agent checkpoint `name` (the newest when nil),
+    /// restarting the VM. Never sent to Nido Agent.
+    case rollback(name: String?)
+    /// Host-only: the agent checkpoints, newest first. Never sent to Nido Agent.
+    case checkpoints
+    /// Writes the bytes of the binary frame that follows the request (exactly `size` of them, at
+    /// most `AgentProtocol.maxTransferBytes`) to `path` in `~/NidoTransfer`, replacing a file
+    /// there. Nido Agent 1.0.5 and older answer `badRequest` (and never read the frame).
+    case putFile(path: String, size: Int)
+    /// The file at `path` in `~/NidoTransfer`, at most `maxBytes`: the reply carries `bytes`
+    /// and is followed by one binary frame with them. Nido Agent 1.0.5 and older answer `badRequest`.
+    case getFile(path: String, maxBytes: Int)
+    /// One level of `~/NidoTransfer` (its top when `path` is nil), newest first. Nido Agent 1.0.5
+    /// and older answer `badRequest`.
+    case listFiles(path: String?)
 
     private enum CodingKeys: String, CodingKey {
         case op, maxLongEdge, x, y, width, height, button, count, fromX, fromY, toX, toY, dx, dy, text, combo, clearAfter
+        case maxElements, name, path, size, maxBytes
     }
 
     public init(from decoder: Decoder) throws {
@@ -80,6 +115,21 @@ public enum AgentAction: Codable, Equatable, Sendable {
                          width: try c.decode(Double.self, forKey: .width),
                          height: try c.decode(Double.self, forKey: .height),
                          maxLongEdge: try c.decode(Int.self, forKey: .maxLongEdge))
+        case "uiTree":
+            self = .uiTree(maxElements: try c.decode(Int.self, forKey: .maxElements))
+        case "checkpoint":
+            self = .checkpoint(name: try c.decodeIfPresent(String.self, forKey: .name))
+        case "rollback":
+            self = .rollback(name: try c.decodeIfPresent(String.self, forKey: .name))
+        case "checkpoints":
+            self = .checkpoints
+        case "putFile":
+            self = .putFile(path: try c.decode(String.self, forKey: .path), size: try c.decode(Int.self, forKey: .size))
+        case "getFile":
+            self = .getFile(path: try c.decode(String.self, forKey: .path),
+                            maxBytes: try c.decode(Int.self, forKey: .maxBytes))
+        case "listFiles":
+            self = .listFiles(path: try c.decodeIfPresent(String.self, forKey: .path))
         default:
             throw DecodingError.dataCorruptedError(forKey: .op, in: c, debugDescription: "unknown op '\(op)'")
         }
@@ -128,6 +178,28 @@ public enum AgentAction: Codable, Equatable, Sendable {
             try c.encode(width, forKey: .width)
             try c.encode(height, forKey: .height)
             try c.encode(maxLongEdge, forKey: .maxLongEdge)
+        case .uiTree(let maxElements):
+            try c.encode("uiTree", forKey: .op)
+            try c.encode(maxElements, forKey: .maxElements)
+        case .checkpoint(let name):
+            try c.encode("checkpoint", forKey: .op)
+            try c.encodeIfPresent(name, forKey: .name)
+        case .rollback(let name):
+            try c.encode("rollback", forKey: .op)
+            try c.encodeIfPresent(name, forKey: .name)
+        case .checkpoints:
+            try c.encode("checkpoints", forKey: .op)
+        case .putFile(let path, let size):
+            try c.encode("putFile", forKey: .op)
+            try c.encode(path, forKey: .path)
+            try c.encode(size, forKey: .size)
+        case .getFile(let path, let maxBytes):
+            try c.encode("getFile", forKey: .op)
+            try c.encode(path, forKey: .path)
+            try c.encode(maxBytes, forKey: .maxBytes)
+        case .listFiles(let path):
+            try c.encode("listFiles", forKey: .op)
+            try c.encodeIfPresent(path, forKey: .path)
         }
     }
 }
@@ -139,12 +211,21 @@ public struct AgentRequest: Codable, Equatable, Sendable {
     public var image: PixelSize?
     /// Size (points) of the screen that screenshot was taken of.
     public var screen: ScreenSize?
+    /// The bytes a `putFile` sends as the binary frame after this request (`AgentClient` on the
+    /// Mac). Never part of the request's JSON.
+    public var payload: Data?
 
-    public init(v: Int = AgentProtocol.version, action: AgentAction, image: PixelSize? = nil, screen: ScreenSize? = nil) {
+    public init(v: Int = AgentProtocol.version, action: AgentAction, image: PixelSize? = nil, screen: ScreenSize? = nil,
+                payload: Data? = nil) {
         self.v = v
         self.action = action
         self.image = image
         self.screen = screen
+        self.payload = payload
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case v, action, image, screen
     }
 }
 
@@ -169,7 +250,81 @@ public enum AgentErrorCode: String, Codable, Sendable {
     case notReady, agentAccessOff, notRunning, timeout, internalError
 }
 
+/// A rectangle in pixels of the latest screenshot, origin top left.
+public struct PixelRect: Codable, Equatable, Sendable {
+    public var x: Int
+    public var y: Int
+    public var w: Int
+    public var h: Int
+    public init(x: Int, y: Int, w: Int, h: Int) { self.x = x; self.y = y; self.w = w; self.h = h }
+}
+
+/// One control of a `uiTree` answer. The text comes from the guest's apps: the host cleans it
+/// before it reaches a terminal or an agent.
+public struct UIElement: Codable, Equatable, Sendable {
+    /// Index in this answer only.
+    public var id: Int
+    /// Short role: `button`, `textField`, `secureTextField`, `staticText`, ...
+    public var role: String
+    /// Title, else description, else label.
+    public var name: String?
+    /// Text value, at most 200 characters; never set for a secure text field.
+    public var value: String?
+    public var enabled: Bool
+    public var focused: Bool
+    public var frame: PixelRect
+
+    public init(id: Int, role: String, name: String?, value: String?, enabled: Bool, focused: Bool, frame: PixelRect) {
+        self.id = id
+        self.role = role
+        self.name = name
+        self.value = value
+        self.enabled = enabled
+        self.focused = focused
+        self.frame = frame
+    }
+}
+
+/// The frontmost app's controls in reading order; `truncated` when a limit (elements, depth,
+/// time, an app that stopped answering) cut the list.
+public struct UITree: Codable, Equatable, Sendable {
+    public var app: String
+    public var elements: [UIElement]
+    public var truncated: Bool
+
+    public init(app: String, elements: [UIElement], truncated: Bool) {
+        self.app = app
+        self.elements = elements
+        self.truncated = truncated
+    }
+}
+
+/// One item of a `listFiles` answer: a regular file or a folder of `~/NidoTransfer` (symbolic
+/// links and other special files are never listed). The name comes from the guest: the host
+/// cleans it before it reaches a terminal or an agent.
+public struct TransferEntry: Codable, Equatable, Sendable {
+    public var name: String
+    /// `file` or `folder`.
+    public var kind: String
+    /// In bytes; 0 for a folder.
+    public var size: Int
+    public var modified: Date
+
+    public static let file = "file"
+    public static let folder = "folder"
+
+    public init(name: String, kind: String, size: Int, modified: Date) {
+        self.name = name
+        self.kind = kind
+        self.size = size
+        self.modified = modified
+    }
+}
+
 /// A screenshot reply has `ok`, `image` and `screen`; its PNG follows as a second binary frame.
+/// A `uiTree` reply has `ok` and `tree`, and no PNG. A `putFile` reply has `bytes` (written); a
+/// `getFile` reply has `bytes` and the file follows as a second binary frame; a `listFiles` reply
+/// has `files` and `truncated`.
 public struct AgentReply: Codable, Equatable, Sendable {
     public var ok: Bool
     public var status: AgentStatus?
@@ -177,14 +332,23 @@ public struct AgentReply: Codable, Equatable, Sendable {
     public var screen: ScreenSize?
     public var error: AgentErrorCode?
     public var message: String?
+    public var tree: UITree?
+    public var files: [TransferEntry]?
+    public var truncated: Bool?
+    public var bytes: Int?
 
     public init(ok: Bool, status: AgentStatus? = nil, image: PixelSize? = nil, screen: ScreenSize? = nil,
-                error: AgentErrorCode? = nil, message: String? = nil) {
+                error: AgentErrorCode? = nil, message: String? = nil, tree: UITree? = nil,
+                files: [TransferEntry]? = nil, truncated: Bool? = nil, bytes: Int? = nil) {
         self.ok = ok
         self.status = status
         self.image = image
         self.screen = screen
         self.error = error
         self.message = message
+        self.tree = tree
+        self.files = files
+        self.truncated = truncated
+        self.bytes = bytes
     }
 }

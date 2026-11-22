@@ -23,6 +23,18 @@ import Testing
         #expect(error.localizedDescription(language: "fr") == "la VM debian n’est pas en marche")
     }
 
+    /// Apple's limit of two running macOS VMs, explained in every language.
+    @Test func macVMLimitInEveryLanguage() {
+        let error = NidoError.macVMLimitReached
+        let english = error.localizedDescription(language: "en")
+        #expect(english == "Apple allows at most two macOS VMs at once: stop one first")
+        for language in ["it", "de", "es", "fr"] {
+            let text = error.localizedDescription(language: language)
+            #expect(!text.isEmpty, "\(language)")
+            #expect(text != english, "\(language)")
+        }
+    }
+
     /// A language outside the five gets English, never a key or Italian.
     @Test func otherLanguagesGetEnglish() {
         #expect(NidoError.downloadDeclined.localizedDescription(language: "ja") == "download canceled")

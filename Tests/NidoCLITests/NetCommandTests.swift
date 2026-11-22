@@ -60,6 +60,22 @@ private final class FakeAuthenticator: OwnerAuthenticator {
         }
 
         func cleanup() { try? FileManager.default.removeItem(at: tmp) }
+
+        /// A fresh copy of "vm" (`disposable` and `freshBaseID` as `nido mcp --fresh` leaves them).
+        @discardableResult
+        func makeCopy(_ name: String, disposable: Bool? = true) throws -> VMBundle {
+            var config = VMConfig(
+                id: UUID(), name: try VMName(name), guest: .macos, cpuCount: 2,
+                memoryBytes: 4 << 30, diskBytes: 20 << 30, macAddress: "02:00:00:00:00:02")
+            config.controlledNetwork = true
+            config.disposable = disposable
+            config.freshBaseID = try bundle.readConfig().id
+            return try VMBundle.create(config: config, paths: paths)
+        }
+
+        func allowList(_ other: VMBundle) -> [String]? {
+            EgressPolicyStore.load(bundle: other)?.allow.map(\.description)
+        }
     }
 
     // MARK: - list
@@ -184,6 +200,83 @@ private final class FakeAuthenticator: OwnerAuthenticator {
         try env.setAllow(["*.debian.org"])
         _ = try CLISupport.netDeny(vm: "vm", domain: "debian.org", paths: env.paths)
         #expect(env.allowList() == ["*.debian.org"])
+    }
+
+    // MARK: - Fresh copies
+
+    @Test func allowNamesTheFreshCopies() async throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let first = try env.makeCopy("vm-fresh-0001")
+        let second = try env.makeCopy("vm-fresh-0002")
+        let damaged = try env.makeCopy("vm-fresh-0003")
+        let bad = Data("{".utf8)
+        try bad.write(to: damaged.egressPolicyURL)
+        let kept = try env.makeCopy("vm-fresh-0004", disposable: nil)
+
+        let text = try await env.allow("example.com", FakeAuthenticator(result: true))
+
+        let (base, names, failed) = ("vm", "vm-fresh-0001, vm-fresh-0002", "vm-fresh-0003")
+        #expect(text.contains(L10n.string("Also applied to the fresh Macs of \(base): \(names).")))
+        let reason = NidoError.invalidEgressPolicy(L10n.string("egress.json is unreadable or invalid")).localizedDescription
+        #expect(text.contains(L10n.string("Couldn’t apply it to the fresh Mac \(failed): \(reason).")))
+        #expect(text.contains("Applicato anche ai Mac nuovi di vm: vm-fresh-0001, vm-fresh-0002."))
+        #expect(text.contains("Impossibile applicarlo al Mac nuovo vm-fresh-0003: "))
+        #expect(env.allowList() == ["example.com"])
+        #expect(env.allowList(first) == ["example.com"])
+        #expect(env.allowList(second) == ["example.com"])
+        #expect(try Data(contentsOf: damaged.egressPolicyURL) == bad)
+        #expect(env.allowList(kept) == [])
+    }
+
+    @Test func allowWithoutCopiesAddsNoLine() async throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let text = try await env.allow("example.com", FakeAuthenticator(result: true))
+        #expect(text.split(separator: "\n").count == 1)
+    }
+
+    @Test func denyReachesTheCopies() throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        try env.setAllow(["deb.debian.org", "example.com"])
+        let copy = try env.makeCopy("vm-fresh-0001")
+        try EgressPolicyStore.save(
+            EgressPolicy(v: 1, allow: [try DomainPattern("example.com"), try DomainPattern("ollama.com")]), bundle: copy)
+
+        let text = try CLISupport.netDeny(vm: "vm", domain: "example.com", paths: env.paths)
+
+        #expect(text.contains("Tolto example.com"))
+        let (base, names) = ("vm", "vm-fresh-0001")
+        #expect(text.contains(L10n.string("Also applied to the fresh Macs of \(base): \(names).")))
+        #expect(env.allowList() == ["deb.debian.org"])
+        #expect(env.allowList(copy) == ["ollama.com"])
+        // Not on the base: nothing removed there, nothing propagated.
+        try EgressPolicyStore.save(EgressPolicy(v: 1, allow: [try DomainPattern("example.com")]), bundle: copy)
+        let absent = try CLISupport.netDeny(vm: "vm", domain: "example.com", paths: env.paths)
+        #expect(absent == "example.com non è tra i domini permessi di vm.")
+        #expect(env.allowList(copy) == ["example.com"])
+    }
+
+    /// One way: a copy's own list never reaches its base.
+    @Test func allowOnACopyStaysOnTheCopy() async throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let copy = try env.makeCopy("vm-fresh-0001")
+        let auth = FakeAuthenticator(result: true)
+
+        let text = try await CLISupport.netAllow(
+            vm: "vm-fresh-0001", domain: "example.com", paths: env.paths, interactive: true, confirm: { _ in true },
+            authenticator: auth)
+        _ = try CLISupport.netDeny(vm: "vm-fresh-0001", domain: "example.com", paths: env.paths)
+        _ = try await CLISupport.netAllow(
+            vm: "vm-fresh-0001", domain: "ollama.com", paths: env.paths, interactive: true, confirm: { _ in true },
+            authenticator: auth)
+
+        #expect(text.split(separator: "\n").count == 1)
+        #expect(env.allowList(copy) == ["ollama.com"])
+        #expect(env.allowList() == [])
+        #expect(env.policyFile == nil)
     }
 
     // MARK: - Malformed egress.json

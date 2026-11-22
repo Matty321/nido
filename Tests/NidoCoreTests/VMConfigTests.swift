@@ -232,6 +232,49 @@ import Virtualization
         #expect(config.stateHash() != off)
     }
 
+    @Test func disposableMissingIsNil() throws {
+        var config = try makeConfig()
+        let text = String(decoding: try config.encoded(), as: UTF8.self)
+        #expect(!text.contains("disposable"))
+        let decoded = try VMConfig.decode(try config.encoded())
+        #expect(decoded.disposable == nil)
+        let hash = config.stateHash()
+        config.disposable = true
+        #expect(config.stateHash() == hash)
+    }
+
+    @Test func disposableRoundTrips() throws {
+        var config = try makeConfig()
+        config.disposable = true
+        let text = String(decoding: try config.encoded(), as: UTF8.self)
+        #expect(text.contains("\"disposable\" : true"))
+        #expect(try VMConfig.decode(try config.encoded()).disposable == true)
+    }
+
+    @Test func freshBaseIDRoundTrips() throws {
+        var config = try makeConfig()
+        let hash = config.stateHash()
+        let base = UUID()
+        config.freshBaseID = base
+        let text = String(decoding: try config.encoded(), as: UTF8.self)
+        #expect(text.contains("\"freshBaseID\" : \"\(base.uuidString)\""))
+        let decoded = try VMConfig.decode(try config.encoded())
+        #expect(decoded.freshBaseID == base)
+        #expect(decoded.schemaVersion == VMConfig.currentSchemaVersion)
+        #expect(config.stateHash() == hash)
+    }
+
+    @Test func absentFreshBaseIDDecodesNil() throws {
+        let config = try makeConfig()
+        let text = String(decoding: try config.encoded(), as: UTF8.self)
+        #expect(!text.contains("freshBaseID"))
+        #expect(try VMConfig.decode(try config.encoded()).freshBaseID == nil)
+        // A value that is not a UUID never fails the decoding.
+        let bad = text.replacingOccurrences(of: "\"guest\"", with: "\"freshBaseID\" : 12,\n  \"guest\"")
+        #expect(bad.contains("freshBaseID"))
+        #expect(try VMConfig.decode(Data(bad.utf8)).freshBaseID == nil)
+    }
+
     @Test func macProvisioningFieldsMissingAreNil() throws {
         let config = try makeConfig()
         let text = String(decoding: try config.encoded(), as: UTF8.self)

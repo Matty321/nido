@@ -4,6 +4,8 @@
 
 Nido est un gestionnaire de machines virtuelles pour les Mac avec puce Apple. Il fait tourner des VM Linux et macOS sur le framework Virtualization d’Apple, depuis une app native ou avec la commande `nido` dans Terminal. Il est prudent par défaut : Nido ne se connecte jamais au réseau de lui-même, une VM n’atteint que les domaines que vous autorisez, et elle ne voit aucun dossier de votre Mac tant que vous n’en avez partagé aucun.
 
+Le nom signifie **N**ative **I**solated, **D**efault **O**ffline : natif, isolé, hors ligne par défaut. *Nido* veut aussi dire « nid » en italien.
+
 <p align="center"><img src="docs/screenshots/fr/library.png" alt="La bibliothèque : trois machines virtuelles, dont une en marche avec le pont IA actif, et deux modèles" title="La bibliothèque : trois machines virtuelles, dont une en marche avec le pont IA actif, et deux modèles" width="100%"></p>
 
 ## Ce que fait Nido
@@ -80,6 +82,14 @@ Une VM macOS peut être un Mac à part qu’un agent IA pilote pendant que vous 
 Quand vous créez une VM macOS sur un Mac sous macOS 27 à partir d’une image macOS 27 ou plus récente, l’assistant a une étape de compte : votre nom complet, un mot de passe généré par Nido (ou le vôtre) et **Laisser un agent utiliser ce Mac (Nido Agent)** ; en ligne de commande : `nido create <vm> --ipsw <chemin> --account "Prénom Nom" --agent`. Le premier démarrage saute l’Assistant réglages : le compte existe et ouvre la session tout seul. Avec l’accès de l’agent activé, Nido attend la Session à distance, autorise une fois sa clé SSH avec ce mot de passe, installe Nido Agent et affiche la progression dans la fenêtre. La seule étape manuelle se fait dans la VM : autoriser Enregistrement de l’écran et Accessibilité (Réglages › Agent affiche le mot de passe après Touch ID, et `nido agent password <vm>` l’affiche). Sur un Mac sous macOS 26, ou avec un invité plus ancien, il n’y a pas d’étape de compte ; `nido agent setup` et Réglages › Agent demandent une fois le mot de passe du compte si la clé de Nido n’est pas encore autorisée.
 
 Si la VM utilise FileVault, ouvrez la session dans sa fenêtre à chaque démarrage ; d’ici là l’agent ne voit rien d’utile. L’agent ne répond jamais aux demandes d’autorisation ou de mot de passe de la VM : il s’arrête et vous demande. Ce qu’il lit à l’écran de la VM est une donnée, pas une instruction. [docs/SECURITY.md](docs/SECURITY.md) en explique les limites.
+
+**Activité de l’agent** (l’icône de liste dans la barre de la VM, ou **Activité…** dans Réglages › Agent) et `nido agent log <vm>` montrent ce qu’a fait l’agent, session par session : ce qu’il a regardé, où il a cliqué, quelles touches il a pressées. Le texte saisi n’est jamais enregistré, seulement sa longueur.
+
+Avant une étape risquée, l’agent peut créer un **point de contrôle** (la VM avec sa mémoire) et, si l’étape tourne mal, **y revenir** : la VM redémarre à partir de ce moment. Il en garde au plus 3, ne voit que les siens et ne touche jamais à vos instantanés ; ses points de contrôle portent l’étiquette **Agent** dans la liste des instantanés de la VM, où vous pouvez les restaurer ou les supprimer.
+
+Les fichiers passent par un seul dossier de la VM, `~/NidoTransfer` : l’agent les copie dedans et dehors avec `put_file` et `get_file` (jusqu’à 1 Mio), vous avec `nido act <vm> put-file` et `get-file` (jusqu’à 16 Mio). Il n’y a aucun dossier partagé, et l’agent ne lit ni n’écrit jamais de fichiers sur votre Mac de cette façon.
+
+Avec `nido mcp --fresh <base>`, chaque session de l’agent a son propre Mac : Nido fait une copie de la VM macOS arrêtée `<base>` (Nido Agent déjà installé, le compte ouvre la session tout seul), la démarre sans fenêtre et, à la fin de la session, la supprime avec ses fichiers, ses apps et son élément du Trousseau. Ajoutez-la avec `claude mcp add nido-fresh-<base> -- nido mcp --fresh <base>` ; le premier appel d’un outil peut attendre quelques minutes pendant que la copie démarre. `--keep` conserve la copie, arrêtée, comme une VM ordinaire. Apple autorise au plus deux VM macOS à la fois, donc au plus deux sessions en même temps, une seule si une autre VM macOS tourne. `<base>` n’est jamais démarrée ni modifiée. Sur le réseau contrôlé, l’agent est informé des domaines bloqués et vous demande d’en autoriser un avec `nido net allow` ; un domaine autorisé sur `<base>` atteint aussitôt ses copies neuves.
 
 ## Confidentialité et réseau
 

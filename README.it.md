@@ -4,6 +4,8 @@
 
 Nido è un gestore di macchine virtuali per i Mac con chip Apple. Fa girare VM Linux e macOS con il framework Virtualization di Apple, da un'app nativa o dal comando `nido` nel Terminale. È prudente per impostazione predefinita: Nido non si collega mai alla rete da solo, una VM raggiunge solo i domini che permetti e non vede nessuna cartella del Mac finché non ne condividi una.
 
+Il nome è un acronimo inglese: **N**ative **I**solated, **D**efault **O**ffline, cioè nativo, isolato e offline per impostazione predefinita.
+
 <p align="center"><img src="docs/screenshots/it/library.png" alt="La libreria: tre macchine virtuali, una accesa con il ponte AI attivo, e due modelli" title="La libreria: tre macchine virtuali, una accesa con il ponte AI attivo, e due modelli" width="100%"></p>
 
 ## Cosa fa Nido
@@ -80,6 +82,14 @@ Una VM macOS può essere un Mac separato che un agente IA usa mentre tu continui
 Creando una VM macOS su un Mac con macOS 27 da un’immagine macOS 27 o successiva, la procedura guidata ha un passo Account: il tuo nome completo, una password generata da Nido (o una scelta da te) e **Lascia che un agente usi questo Mac (Nido Agent)**; da riga di comando: `nido create <vm> --ipsw <percorso> --account "Nome Cognome" --agent`. Il primo avvio salta l’assistente iniziale: l’account esiste e accede da solo. Con l’accesso dell’agente attivo, Nido aspetta Login remoto, autorizza una volta la sua chiave SSH con quella password, installa Nido Agent e mostra l’avanzamento nella finestra. L’unico passo manuale è nella VM: consenti Registrazione schermo e Accessibilità (Impostazioni › Agente mostra la password dopo Touch ID, e `nido agent password <vm>` la stampa). Su un Mac con macOS 26, o con un guest più vecchio, il passo Account non c’è; `nido agent setup` e Impostazioni › Agente chiedono una volta la password dell’account se la chiave di Nido non è ancora autorizzata.
 
 Se la VM usa FileVault, a ogni avvio accedi dalla sua finestra; finché non lo fai l’agente non vede nulla di utile. L’agente non risponde mai alle richieste di permesso o di password nella VM: si ferma e ti chiede. Ciò che legge sullo schermo della VM sono dati, non istruzioni. [docs/SECURITY.md](docs/SECURITY.md) spiega i limiti.
+
+**Attività agente** (l’icona a elenco nella barra della VM, oppure **Attività…** in Impostazioni › Agente) e `nido agent log <vm>` mostrano cosa ha fatto l’agente, sessione per sessione: cosa ha guardato, dove ha cliccato, quali tasti ha premuto. Il testo digitato non viene mai registrato, solo la sua lunghezza.
+
+Prima di un passo rischioso l’agente può fare un **checkpoint** (la VM con la sua memoria) e, se il passo va male, **tornarci**: la VM riparte da quel momento. Ne tiene al massimo 3, vede solo i propri e non tocca mai i tuoi snapshot; i suoi checkpoint hanno l’etichetta **Agente** nella lista degli snapshot della VM, dove puoi ripristinarli o eliminarli.
+
+I file passano da una sola cartella della VM, `~/NidoTransfer`: l’agente li copia dentro e fuori con `put_file` e `get_file` (fino a 1 MiB), tu con `nido act <vm> put-file` e `get-file` (fino a 16 MiB). Non c’è nessuna cartella condivisa, e in questo modo l’agente non legge né scrive mai file sul tuo Mac.
+
+Con `nido mcp --fresh <base>` ogni sessione dell’agente ha un Mac tutto suo: Nido fa una copia della VM macOS ferma `<base>` (Nido Agent già installato, l’account accede da solo), la avvia senza finestra e, quando la sessione finisce, la elimina con i suoi file, le sue app e la voce nel Keychain. Aggiungila con `claude mcp add nido-fresh-<base> -- nido mcp --fresh <base>`; la prima chiamata a uno strumento può attendere qualche minuto, finché la copia si avvia. `--keep` conserva la copia, ferma, come una VM normale. Apple consente al massimo due VM macOS alla volta, quindi al massimo due sessioni insieme, una se un’altra VM macOS è in esecuzione. `<base>` non viene mai avviata né modificata. Sulla rete controllata l’agente viene informato di quali domini sono stati bloccati e ti chiede di consentirne uno con `nido net allow`; un dominio consentito su `<base>` raggiunge subito le sue copie nuove.
 
 ## Privacy e rete
 

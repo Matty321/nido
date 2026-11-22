@@ -11,6 +11,12 @@ private final class PeerWatch: Sendable {
     let closed = Mutex(false)
 }
 
+/// The frames the fake helper read, in order (the request first).
+private final class FramesSeen: Sendable {
+    let frames = Mutex<[Data]>([])
+    var all: [Data] { frames.withLock { $0 } }
+}
+
 /// A channel whose far end is a fake helper on a socketpair: it reads the request frame, then
 /// sends the canned frames, like the guest's Nido Agent would.
 private struct FakeAgentChannel: GuestChannel {
@@ -20,6 +26,8 @@ private struct FakeAgentChannel: GuestChannel {
         case hang
         /// `connect` ignores cancellation and returns only after `delay`; the peer never answers.
         case lateConnect(delay: Duration, peerSawClose: PeerWatch)
+        /// Reads `read` frames (the request and what follows it), records them, then sends `frames`.
+        case exchange(read: Int, frames: [Data], seen: FramesSeen)
     }
     let behavior: Behavior
 
@@ -29,6 +37,7 @@ private struct FakeAgentChannel: GuestChannel {
         case .fail(let error): throw error
         case .hang: return try Self.pair(frames: nil)
         case .respond(let frames): return try Self.pair(frames: frames)
+        case .exchange(let read, let frames, let seen): return try Self.pair(frames: frames, read: read, seen: seen)
         case .lateConnect(let delay, let watch):
             // Not cancellable, like a pending VZVirtioSocketDevice.connect.
             await withCheckedContinuation { continuation in
@@ -40,13 +49,24 @@ private struct FakeAgentChannel: GuestChannel {
         }
     }
 
-    static func pair(frames: [Data]?, watch: PeerWatch? = nil) throws -> FileHandle {
+    static func pair(frames: [Data]?, watch: PeerWatch? = nil, read: Int = 1, seen: FramesSeen? = nil) throws -> FileHandle {
         var fds: [Int32] = [0, 0]
         guard socketpair(AF_UNIX, SOCK_STREAM, 0, &fds) == 0 else { throw POSIXError(.EIO) }
         let client = fds[0]
         let server = fds[1]
+        // A client that gives up mid-frame must give the fake EPIPE, not kill the test run.
+        var one: Int32 = 1
+        setsockopt(server, SOL_SOCKET, SO_NOSIGPIPE, &one, socklen_t(MemoryLayout<Int32>.size))
         Thread {
-            do { _ = try AgentFrame.read(from: server) } catch { watch?.closed.withLock { $0 = true } }  // the request, or EOF
+            for _ in 0..<read {
+                do {
+                    let frame = try AgentFrame.read(from: server)  // the request, or EOF
+                    seen?.frames.withLock { $0.append(frame) }
+                } catch {
+                    watch?.closed.withLock { $0 = true }
+                    break
+                }
+            }
             if let frames {
                 for frame in frames { try? AgentFrame.write(frame, to: server) }
             } else {
@@ -69,8 +89,12 @@ private func client(_ behavior: FakeAgentChannel.Behavior, timeout: Duration = .
 }
 
 private func failure(of client: AgentClient, _ action: AgentAction = .status) async -> AgentFailure? {
+    await failure(of: client, AgentRequest(action: action))
+}
+
+private func failure(of client: AgentClient, _ request: AgentRequest) async -> AgentFailure? {
     do {
-        _ = try await client.perform(AgentRequest(action: action))
+        _ = try await client.perform(request)
         return nil
     } catch {
         return error
@@ -82,7 +106,7 @@ private func failure(of client: AgentClient, _ action: AgentAction = .status) as
         let c = client(.respond([try json(AgentReply(ok: true, status: status))]))
         let result = try await c.perform(AgentRequest(action: .status))
         #expect(result.reply.status?.screen == ScreenSize(width: 1440, height: 900))
-        #expect(result.png == nil)
+        #expect(result.data == nil)
     }
 
     @Test func screenshotCarriesPNG() async throws {
@@ -90,8 +114,8 @@ private func failure(of client: AgentClient, _ action: AgentAction = .status) as
         let reply = AgentReply(ok: true, image: PixelSize(1280, 800), screen: ScreenSize(width: 1440, height: 900))
         let c = client(.respond([try json(reply), png]))
         let result = try await c.perform(AgentRequest(action: .screenshot(maxLongEdge: 1280)))
-        #expect(result.png?.count == 3 << 20)
-        #expect(result.png == png)
+        #expect(result.data?.count == 3 << 20)
+        #expect(result.data == png)
     }
 
     @Test func zoomCarriesPNG() async throws {
@@ -99,7 +123,7 @@ private func failure(of client: AgentClient, _ action: AgentAction = .status) as
         let reply = AgentReply(ok: true, image: PixelSize(400, 200), screen: ScreenSize(width: 1440, height: 900))
         let c = client(.respond([try json(reply), png]))
         let result = try await c.perform(AgentRequest(action: .zoom(x: 1, y: 2, width: 3, height: 4, maxLongEdge: 800)))
-        #expect(result.png == png)
+        #expect(result.data == png)
     }
 
     @Test func connectResetIsNotReady() async {
@@ -157,6 +181,97 @@ private func failure(of client: AgentClient, _ action: AgentAction = .status) as
     @Test func droppedConnectionIsAFailureNotACrash() async {
         let c = client(.respond([]))  // helper reads the request, then closes without answering
         let f = await failure(of: c)
+        #expect(f?.code == .internalError)
+    }
+
+    // MARK: - Files
+
+    @Test func putFileSendsTheBytesAsASecondFrame() async throws {
+        let seen = FramesSeen()
+        let bytes = Data((0..<300_000).map { UInt8($0 % 251) })
+        let c = client(.exchange(read: 2, frames: [try json(AgentReply(ok: true, bytes: bytes.count))], seen: seen))
+        var request = AgentRequest(action: .putFile(path: "in/data.bin", size: bytes.count))
+        request.payload = bytes
+        let result = try await c.perform(request)
+        #expect(result.reply.ok && result.reply.bytes == bytes.count)
+        #expect(result.data == nil)
+        let frames = seen.all
+        try #require(frames.count == 2)
+        let sent = try JSONDecoder().decode(AgentRequest.self, from: frames[0])
+        #expect(sent.action == .putFile(path: "in/data.bin", size: bytes.count))
+        #expect(frames[1] == bytes)
+        // The payload never travels inside the JSON request.
+        #expect(!String(decoding: frames[0], as: UTF8.self).contains("payload"))
+    }
+
+    @Test func putFileWithoutMatchingBytesIsNeverSent() async throws {
+        for payload: Data? in [nil, Data("abc".utf8), Data(count: AgentProtocol.maxTransferBytes + 1)] {
+            let seen = FramesSeen()
+            let c = client(.exchange(read: 2, frames: [try json(AgentReply(ok: true))], seen: seen))
+            var request = AgentRequest(action: .putFile(path: "a", size: payload.map { $0.count == 3 ? 4 : $0.count } ?? 1))
+            request.payload = payload
+            do {
+                _ = try await c.perform(request)
+                Issue.record("sent \(String(describing: payload?.count))")
+            } catch {
+                #expect(error.code == .badRequest)
+            }
+            #expect(seen.all.isEmpty)
+            #expect(L10n.string("the file’s data is missing, too large or of the wrong size", language: "en")
+                == "the file’s data is missing, too large or of the wrong size")
+        }
+    }
+
+    /// The guest refuses an oversized put by closing without reading: a failure, never a crash.
+    @Test func putFileToAGuestThatHangsUpIsAFailure() async {
+        let bytes = Data(count: 4 << 20)
+        let c = client(.respond([]))  // reads the request only, then closes
+        var request = AgentRequest(action: .putFile(path: "a", size: bytes.count))
+        request.payload = bytes
+        let f = await failure(of: c, request)
+        #expect(f?.code == .internalError)
+    }
+
+    @Test func getFileReadsTheBytesFrame() async throws {
+        let bytes = Data((0..<200_000).map { UInt8($0 % 13) })
+        let seen = FramesSeen()
+        let c = client(.exchange(read: 1, frames: [try json(AgentReply(ok: true, bytes: bytes.count)), bytes], seen: seen))
+        let result = try await c.perform(AgentRequest(action: .getFile(path: "out.log", maxBytes: 1 << 20)))
+        #expect(result.reply.ok)
+        #expect(result.data == bytes)
+        #expect(seen.all.count == 1)
+    }
+
+    @Test func getFileFailureHasNoFrame() async throws {
+        let c = client(.respond([try json(AgentReply(ok: false, error: .badRequest, message: "no such file"))]))
+        let result = try await c.perform(AgentRequest(action: .getFile(path: "missing", maxBytes: 1 << 20)))
+        #expect(!result.reply.ok)
+        #expect(result.data == nil)
+    }
+
+    @Test func getFileRefusesAFrameOverTheLimit() async throws {
+        let big = Data(count: 2048)
+        let c = client(.respond([try json(AgentReply(ok: true, bytes: big.count)), big]))
+        let f = await failure(of: c, AgentRequest(action: .getFile(path: "a", maxBytes: 1024)))
+        #expect(f?.code == .internalError)
+
+        // Never above the transfer limit, whatever `maxBytes` says.
+        let huge = Data(count: AgentProtocol.maxTransferBytes + 1)
+        let c2 = client(.respond([try json(AgentReply(ok: true, bytes: huge.count)), huge]))
+        let f2 = await failure(of: c2, AgentRequest(action: .getFile(path: "a", maxBytes: Int.max)))
+        #expect(f2?.code == .internalError)
+    }
+
+    @Test func getFileWhoseFrameDiffersFromItsSizeFails() async throws {
+        let c = client(.respond([try json(AgentReply(ok: true, bytes: 10)), Data(count: 9)]))
+        let f = await failure(of: c, AgentRequest(action: .getFile(path: "a", maxBytes: 1024)))
+        #expect(f?.code == .internalError)
+    }
+
+    /// An ok `getFile` reply must say how many bytes follow.
+    @Test func getFileReplyWithoutItsSizeFails() async throws {
+        let c = client(.respond([try json(AgentReply(ok: true)), Data(count: 9)]))
+        let f = await failure(of: c, AgentRequest(action: .getFile(path: "a", maxBytes: 1024)))
         #expect(f?.code == .internalError)
     }
 }

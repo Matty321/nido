@@ -58,10 +58,15 @@ public enum AgentSupport {
     }
 
     /// What `nido act <vm> …` does: send an action to the VM's owner (and maybe copy the
-    /// screenshot it saved), or sleep on this side.
+    /// screenshot it saved), sleep on this side, or copy a file between the Mac and the guest's
+    /// `~/NidoTransfer`.
     public enum Invocation: Equatable, Sendable {
         case send(AgentAction, output: String?)
         case wait(milliseconds: Int)
+        /// `put-file LOCAL GUEST-PATH`.
+        case putFile(local: String, guestPath: String)
+        /// `get-file GUEST-PATH LOCAL [--force]`.
+        case getFile(guestPath: String, local: String, force: Bool)
     }
 
     /// The longest a `wait` may take, in milliseconds (the same as the MCP tool's).
@@ -72,18 +77,27 @@ public enum AgentSupport {
     public static let maxLongEdgeRange = AgentProtocol.maxLongEdgeRange
 
     /// The action in `args` (`["click", "10", "20", "--right"]`), as `nido act <vm>` takes it.
-    /// `wait` is not an action of the helper and has no value here: it throws a usage error.
+    /// `wait`, `put-file` and `get-file` are not one action of the helper and have no value
+    /// here: they throw a usage error.
     public static func parseAction(_ args: [String]) throws -> AgentAction {
-        guard case .send(let action, _) = try parseInvocation(args) else {
-            throw CLIError.agentUsage("wait MS")
+        switch try parseInvocation(args) {
+        case .send(let action, _): return action
+        case .wait: throw CLIError.agentUsage("wait MS")
+        case .putFile: throw CLIError.agentUsage(putFileUsage)
+        case .getFile: throw CLIError.agentUsage(getFileUsage)
         }
-        return action
     }
+
+    private static let putFileUsage = "put-file LOCAL GUEST-PATH"
+    private static let getFileUsage = "get-file GUEST-PATH LOCAL [--force]"
 
     /// `args` as an `Invocation`: the action name, then its arguments; unknown options, missing or
     /// extra arguments and out-of-range values throw (`CLIError`, `KeyMapError` for a bad combo).
     public static func parseInvocation(_ args: [String]) throws -> Invocation {
-        guard let name = args.first else { throw CLIError.agentUsage("status | screenshot | zoom | click | drag | scroll | type | key | wait") }
+        guard let name = args.first else {
+            throw CLIError.agentUsage(
+                "status | screenshot | zoom | ui-tree | click | drag | scroll | type | key | wait | checkpoint | rollback | checkpoints | put-file | get-file | files")
+        }
         let rest = Array(args.dropFirst())
         switch name {
         case "status":
@@ -109,6 +123,13 @@ public enum AgentSupport {
             guard x >= 0, y >= 0, width >= 1, height >= 1 else { throw CLIError.agentUsage(usage) }
             return .send(.zoom(x: x, y: y, width: width, height: height, maxLongEdge: maxLongEdge),
                          output: p.options["--output"])
+        case "ui-tree":
+            let p = try Parsed(rest, usage: "ui-tree [--max N]", flags: [], options: ["--max"], positionals: 0)
+            var maxElements = AgentProtocol.defaultUITreeElements
+            if let value = p.options["--max"] {
+                maxElements = try integer(value, name: "--max", in: AgentProtocol.uiTreeElementsRange)
+            }
+            return .send(.uiTree(maxElements: maxElements), output: nil)
         case "click":
             let usage = "click X Y [--right] [--count N]"
             let p = try Parsed(rest, usage: usage, flags: ["--right"], options: ["--count"], positionals: 2)
@@ -141,6 +162,26 @@ public enum AgentSupport {
             guard rest.count == 1 else { throw CLIError.agentUsage("key COMBO") }
             try KeyMap.validateCombo(rest[0])
             return .send(.key(combo: rest[0]), output: nil)
+        case "checkpoint":
+            let p = try Parsed(rest, usage: "checkpoint [--name N]", flags: [], options: ["--name"], positionals: 0)
+            return .send(.checkpoint(name: p.options["--name"]), output: nil)
+        case "rollback":
+            // NAME is optional: at most one positional.
+            let p = try Parsed(rest, usage: "rollback [NAME]", flags: [], options: [], positionals: min(rest.count, 1))
+            return .send(.rollback(name: p.positionals.first), output: nil)
+        case "checkpoints":
+            _ = try Parsed(rest, usage: "checkpoints", flags: [], options: [], positionals: 0)
+            return .send(.checkpoints, output: nil)
+        case "put-file":
+            let p = try Parsed(rest, usage: putFileUsage, flags: [], options: [], positionals: 2)
+            return .putFile(local: p.positionals[0], guestPath: p.positionals[1])
+        case "get-file":
+            let p = try Parsed(rest, usage: getFileUsage, flags: ["--force"], options: [], positionals: 2)
+            return .getFile(guestPath: p.positionals[0], local: p.positionals[1], force: p.flags.contains("--force"))
+        case "files":
+            // GUEST-PATH is optional: at most one positional.
+            let p = try Parsed(rest, usage: "files [GUEST-PATH]", flags: [], options: [], positionals: min(rest.count, 1))
+            return .send(.listFiles(path: p.positionals.first), output: nil)
         case "wait":
             guard rest.count == 1 else { throw CLIError.agentUsage("wait MS") }
             let ms = try integer(rest[0], name: "MS", in: 0...maxWaitMilliseconds)
@@ -159,8 +200,9 @@ public enum AgentSupport {
         return .milliseconds(ms)
     }
 
-    /// `answer` as one line of JSON with sorted keys and unescaped slashes (a path stays readable).
-    /// What the guest wrote in it is cleaned first (`AgentAnswer.cleaned`).
+    /// `answer` as one line of JSON with sorted keys and unescaped slashes (a path stays readable),
+    /// a checkpoint's time in ISO 8601 (UTC). What the guest wrote in it is cleaned first
+    /// (`AgentAnswer.cleaned`).
     public static func json(_ answer: AgentAnswer) -> String { encode(answer.cleaned) }
 
     /// The JSON `nido agent status` prints: `agentAccess`, `running` and, only when the helper was
@@ -238,11 +280,40 @@ public enum AgentSupport {
         }
     }
 
-    /// The client of `bundle`'s control socket for `nido act`, `nido mcp` and `nido agent`. A VM
-    /// that runs (bundle lock held) with agent access on in its configuration but has no socket
-    /// file is told to restart, not to start.
-    public static func client(bundle: VMBundle, config: VMConfig) -> AgentControlClient {
-        AgentControlClient.forVM(bundle: bundle, config: config)
+    /// Who talks to the owner, as the activity log records it.
+    public enum Caller: Sendable {
+        /// `nido act`: each call joins the last `act` session when it is recent.
+        case act
+        /// `nido mcp`: one session for the whole run.
+        case mcp
+        /// `nido agent status`: Nido's own check, not recorded.
+        case nido
+    }
+
+    /// The client of `bundle`'s control socket for `nido act`, `nido mcp` and `nido agent`,
+    /// naming `caller` to the owner (an MCP client gets a new session of its own). A VM that runs
+    /// (bundle lock held) with agent access on in its configuration but has no socket file is
+    /// told to restart, not to start.
+    public static func client(bundle: VMBundle, config: VMConfig, for caller: Caller) -> AgentControlClient {
+        switch caller {
+        case .act:
+            AgentControlClient.forVM(bundle: bundle, config: config, client: AgentCommand.Client.act)
+        case .mcp:
+            AgentControlClient.forVM(
+                bundle: bundle, config: config, client: AgentCommand.Client.mcp, session: UUID().uuidString.lowercased())
+        case .nido:
+            AgentControlClient.forVM(bundle: bundle, config: config, client: AgentCommand.Client.nido)
+        }
+    }
+
+    /// The `mcpServers` entry of `nido mcp` for `vm`, as one line of JSON: `nido-<vm>` running
+    /// `mcp <vm>`, or with `fresh` `nido-fresh-<vm>` running `mcp --fresh [--keep] <vm>`.
+    public static func mcpConfigSnippet(vm: String, executable: String, fresh: Bool, keep: Bool) -> String {
+        let key = fresh ? "nido-fresh-\(vm)" : "nido-\(vm)"
+        let args = ["mcp"] + (fresh ? ["--fresh"] : []) + (fresh && keep ? ["--keep"] : []) + [vm]
+        let object: [String: Any] = ["mcpServers": [key: ["command": executable, "args": args]]]
+        let data = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes])
+        return String(decoding: data ?? Data("{}".utf8), as: UTF8.self)
     }
 
     /// Throws `CLIError.agentAccessOff` unless the VM's agent access is on.
@@ -298,6 +369,129 @@ public enum AgentSupport {
         }
     }
 
+    // MARK: Files (`put-file`, `get-file`)
+
+    /// The largest file `put-file` and `get-file` copy, in bytes (16 MiB, Nido Agent's own bound).
+    public static let maxFileBytes = AgentProtocol.maxTransferBytes
+
+    /// The bytes of the local file `path` for `put-file`: a regular file only, opened with
+    /// `O_NOFOLLOW` (a link is refused, never followed) and without waiting on a FIFO; more than
+    /// `AgentProtocol.maxTransferBytes` is refused (`agentFileTooLarge`), also when the file grows
+    /// while it is read.
+    public static func readLocalFile(_ path: String) throws -> Data {
+        let fd = Darwin.open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+        guard fd >= 0 else {
+            if errno == ELOOP { throw CLIError.notARegularFile(path) }
+            throw CLIError.localFileUnreadable(path, String(cString: strerror(errno)))
+        }
+        defer { _ = Darwin.close(fd) }
+        var info = stat()
+        guard fstat(fd, &info) == 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        guard info.st_mode & S_IFMT == S_IFREG else { throw CLIError.notARegularFile(path) }
+        let limit = maxFileBytes
+        guard info.st_size <= limit else { throw CLIError.agentFileTooLarge }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1 << 16)
+        while true {
+            let n = buffer.withUnsafeMutableBytes { Darwin.read(fd, $0.baseAddress!, $0.count) }
+            if n < 0 && errno == EINTR { continue }
+            guard n >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+            if n == 0 { return data }
+            data.append(contentsOf: buffer[..<n])
+            guard data.count <= limit else { throw CLIError.agentFileTooLarge }
+        }
+    }
+
+    /// Before `get-file` asks for anything: without `force`, a local path that exists (a file, a
+    /// folder, a link, even one to nothing) is refused (`localFileExists`), so nothing is copied
+    /// for a file that would not be written.
+    public static func checkLocalTarget(_ path: String, force: Bool) throws {
+        guard !force else { return }
+        var info = stat()
+        if lstat(path, &info) == 0 { throw CLIError.localFileExists(path) }
+    }
+
+    /// Writes `data` to the local `path` with mode 0600. Without `force` the file is created
+    /// with `O_CREAT | O_EXCL | O_NOFOLLOW`: whatever is at `path` (a file, a link) stays as it is
+    /// and is refused (`localFileExists`). With `force` it is written to a temporary file in the
+    /// same folder, then renamed over `path`: a link at `path` is replaced as an entry, its
+    /// target never written, and a reader never sees half a file.
+    public static func writeLocalFile(_ data: Data, to path: String, force: Bool) throws {
+        guard force else {
+            try createLocalFile(data, at: path) { CLIError.localFileExists(path) }
+            return
+        }
+        // A short name, not derived from the target's: a target named with the longest name the
+        // folder allows still gets a temporary file beside it.
+        let folder = URL(fileURLWithPath: path).deletingLastPathComponent()
+        var temporary = ""
+        var created = false
+        for _ in 0..<4 where !created {
+            temporary = folder.appendingPathComponent(".nido-\(String(UUID().uuidString.lowercased().prefix(8))).tmp").path
+            do {
+                try createLocalFile(data, at: temporary) { POSIXError(.EEXIST) }
+                created = true
+            } catch let error as POSIXError where error.code == .EEXIST {
+                continue
+            }
+        }
+        guard created else { throw POSIXError(.EEXIST) }
+        guard Darwin.rename(temporary, path) == 0 else {
+            let error = POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+            _ = Darwin.unlink(temporary)
+            throw error
+        }
+    }
+
+    /// A new file at `path` holding `data`, 0600 whatever the umask; `exists` is thrown when
+    /// something is already there. A failed write leaves nothing behind.
+    private static func createLocalFile(_ data: Data, at path: String, exists: () -> any Error) throws {
+        let fd = Darwin.open(path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
+        guard fd >= 0 else {
+            if errno == EEXIST { throw exists() }
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+        var failure: POSIXError?
+        if fchmod(fd, 0o600) != 0 { failure = POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        data.withUnsafeBytes { raw in
+            var offset = 0
+            while failure == nil, offset < raw.count {
+                let n = Darwin.write(fd, raw.baseAddress! + offset, raw.count - offset)
+                if n < 0 && errno == EINTR { continue }
+                guard n > 0 else {
+                    failure = POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+                    break
+                }
+                offset += n
+            }
+        }
+        if Darwin.close(fd) != 0, failure == nil { failure = POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        if let failure {
+            _ = Darwin.unlink(path)
+            throw failure
+        }
+    }
+
+    /// The answer `nido act get-file` prints: when the answer is ok, the bytes are written to
+    /// `local` first (`writeLocalFile`), and a write that fails (or no bytes) turns the answer into
+    /// a failure with the reason and no `bytes`, so the JSON never says ok, nor a size, while no
+    /// file was written. A failed answer passes through and nothing is written.
+    public static func completeGetFile(_ answer: AgentAnswer, data: Data?, to local: String, force: Bool) -> AgentAnswer {
+        guard answer.ok else { return answer }
+        guard let data else { return .failure(.internalError, L10n.string("could not read the copied file")) }
+        do {
+            try writeLocalFile(data, to: local, force: force)
+            return answer
+        } catch {
+            var failed = answer
+            failed.ok = false
+            failed.error = .internalError
+            failed.message = CLISupport.message(for: error)
+            failed.bytes = nil
+            return failed
+        }
+    }
+
     // MARK: - Helpers
 
     private struct StatusReport: Encodable {
@@ -306,9 +500,92 @@ public enum AgentSupport {
         var helper: AgentAnswer?
     }
 
+    // MARK: Activity log (`nido agent log`)
+
+    /// Entries `nido agent log` shows when `--limit` is not given.
+    public static let defaultLogLimit = 50
+
+    /// `--limit`: a whole number of at least 1, or `defaultLogLimit` when not given.
+    public static func logLimit(_ text: String?) throws -> Int? {
+        guard let text else { return defaultLogLimit }
+        guard let value = Int(text), value >= 1 else { throw CLIError.agentLogLimitInvalid }
+        return value
+    }
+
+    /// `--clear` stands alone: with `--limit` or `--json` it would do something else than asked.
+    /// `--yes` only answers `--clear`'s question, so without it it is a mistake.
+    public static func validateLogOptions(clear: Bool, limit: String?, json: Bool, yes: Bool = false) throws {
+        if clear && (limit != nil || json) { throw CLIError.agentLogClearConflict }
+        if yes && !clear { throw CLIError.agentLogYesWithoutClear }
+    }
+
+    /// What `nido agent log` says on standard error when there is nothing to show.
+    public static func emptyLogMessage(vm: String) -> String {
+        L10n.string("No agent activity for \(printable(vm)).")
+    }
+
+    /// The log as text, oldest first: one line per entry,
+    /// `HH:mm:ss.SSS <client> <op> <detail> ok|<error>[: <message>] (<ms> ms)`, the time in
+    /// `timeZone` (the Mac's by default), `detail` as sorted `key=value`. A line
+    /// `— session <first 8 characters of the id> (<client>) —` opens each run. Control characters
+    /// never reach the terminal.
+    public static func logLines(_ entries: [AgentActivityEntry], timeZone: TimeZone = .current) -> [String] {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "HH:mm:ss.SSS"
+        var lines: [String] = []
+        var session: String?
+        for entry in entries {
+            if entry.session != session {
+                session = entry.session
+                let id = printable(String(entry.session.prefix(8)))
+                lines.append(L10n.string("— session \(id) (\(printable(entry.client))) —"))
+            }
+            var parts = [formatter.string(from: entry.time), printable(entry.client), printable(entry.op)]
+            for key in entry.detail.keys.sorted() {
+                parts.append("\(printable(key))=\(printable(entry.detail[key] ?? ""))")
+            }
+            if entry.ok {
+                parts.append("ok")
+            } else {
+                let code = printable(entry.error ?? "error")
+                parts.append(entry.message.map { "\(code): \(printable($0))" } ?? code)
+            }
+            parts.append("(\(entry.ms) ms)")
+            lines.append(parts.joined(separator: " "))
+        }
+        return lines
+    }
+
+    /// The entries as one JSON array (sorted keys, unescaped slashes); `[]` when there are none.
+    public static func logJSON(_ entries: [AgentActivityEntry]) -> String { encode(entries) }
+
+    /// Empties the VM's log. Without `yes` it asks (`confirm`) on a terminal and refuses without
+    /// one. Returns false when the user said no.
+    public static func clearLog(
+        bundle: VMBundle, yes: Bool, stdinIsTerminal: Bool, confirm: (String) -> Bool
+    ) throws -> Bool {
+        if !yes {
+            guard stdinIsTerminal else { throw CLIError.agentLogClearNeedsConfirmation }
+            guard confirm(L10n.string("Clear the agent activity log of this VM? [y/N] ")) else { return false }
+        }
+        try AgentActivityLog.clear(in: bundle)
+        return true
+    }
+
+    /// `text` with every control character (line breaks, escapes, DEL) turned into a space.
+    private static func printable(_ text: String) -> String {
+        String(String.UnicodeScalarView(text.unicodeScalars.map {
+            $0.value < 0x20 || (0x7F...0x9F).contains($0.value) ? " " : $0
+        }))
+    }
+
     private static func encode(_ value: some Encodable) -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        // Only checkpoints carry a `Date` (an activity entry writes its own time).
+        encoder.dateEncodingStrategy = .iso8601
         return String(decoding: (try? encoder.encode(value)) ?? Data("{}".utf8), as: UTF8.self)
     }
 

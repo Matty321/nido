@@ -162,19 +162,20 @@ public struct SnapshotStore: Sendable {
     /// that is running or paused (the VM runs in this process, which holds its lock), the state is
     /// saved too: refused with `.snapshotUnsupported` if the configuration cannot be saved; a
     /// running VM is paused, saved, cloned and resumed (also after a failure). If only the resume
-    /// fails, the snapshot exists and `.snapshotResumeFailed` says so.
+    /// fails, the snapshot exists and `.snapshotResumeFailed` says so. `createdBy` is recorded in
+    /// `meta.json` (`Snapshot.agentCreator` for an agent checkpoint; nil for the user's).
     @discardableResult
     public func create(
-        name: String, owner: LockOwner, session: (any MachineStateSaving)?
+        name: String, owner: LockOwner, session: (any MachineStateSaving)?, createdBy: String? = nil
     ) async throws -> Snapshot {
-        try await createReportingWarnings(name: name, owner: owner, session: session).snapshot
+        try await createReportingWarnings(name: name, owner: owner, session: session, createdBy: createdBy).snapshot
     }
 
     /// `create`, also returning what went wrong after the snapshot was committed (localized):
     /// e.g. the `snapshots/` directory could not be synced after the final rename, so the snapshot
     /// exists but a power loss right now might lose it.
     public func createReportingWarnings(
-        name: String, owner: LockOwner, session: (any MachineStateSaving)?
+        name: String, owner: LockOwner, session: (any MachineStateSaving)?, createdBy: String? = nil
     ) async throws -> (snapshot: Snapshot, warnings: [String]) {
         try Self.validateName(name)
         var liveSession: (any MachineStateSaving)?
@@ -223,7 +224,8 @@ public struct SnapshotStore: Sendable {
         do {
             if let liveSession {
                 return try await createLive(
-                    id: id, name: name, partial: partial, guest: config.guest, session: liveSession)
+                    id: id, name: name, partial: partial, guest: config.guest, session: liveSession,
+                    createdBy: createdBy)
             }
             try cloneMachineFiles(of: config.guest, into: partial)
             if suspendedHash != nil {
@@ -232,7 +234,7 @@ public struct SnapshotStore: Sendable {
             }
             let snapshot = Snapshot(
                 id: id, name: name, createdAt: Date(), hasSavedState: suspendedHash != nil,
-                configHash: suspendedHash ?? config.stateHash())
+                configHash: suspendedHash ?? config.stateHash(), createdBy: createdBy)
             let warnings = try commit(snapshot, partial: partial)
             return (snapshot, warnings)
         } catch is SimulatedCrash {
@@ -250,7 +252,7 @@ public struct SnapshotStore: Sendable {
     /// Pause (unless already paused), save, clone, commit, resume. The VM is resumed whatever
     /// happens if this call paused it; a failed resume after the commit is `.snapshotResumeFailed`.
     private func createLive(
-        id: UUID, name: String, partial: URL, guest: GuestOS, session: any MachineStateSaving
+        id: UUID, name: String, partial: URL, guest: GuestOS, session: any MachineStateSaving, createdBy: String?
     ) async throws -> (snapshot: Snapshot, warnings: [String]) {
         let pausedHere = await session.state == .running
         if pausedHere { try await session.pause() }
@@ -267,7 +269,7 @@ public struct SnapshotStore: Sendable {
             try cloneMachineFiles(of: guest, into: partial)
             snapshot = Snapshot(
                 id: id, name: name, createdAt: Date(), hasSavedState: true,
-                configHash: await session.attachedStateHash)
+                configHash: await session.attachedStateHash, createdBy: createdBy)
             warnings = try commit(snapshot, partial: partial)
         } catch {
             if pausedHere {
@@ -360,6 +362,16 @@ public struct SnapshotStore: Sendable {
     public func restoreAsync(_ id: UUID, owner: LockOwner) async throws {
         let lock = try await acquireLockAsync(owner)
         defer { lock.release() }
+        try restoreLocked(id)
+    }
+
+    /// `restore` under a lock the caller already holds on this bundle (`nido start` keeps its
+    /// lock across an agent's rollback: the session it ran is stopped, the next one not started
+    /// yet). The caller must have stopped the machine first: this only checks that `lock` is held
+    /// on this bundle, not that no machine runs. A lock of another bundle, or one already
+    /// released, is refused (`.notRunning`).
+    public func restore(_ id: UUID, holding lock: BundleLock) throws {
+        try checkHeld(lock)
         try restoreLocked(id)
     }
 
@@ -525,6 +537,22 @@ public struct SnapshotStore: Sendable {
         try deleteLocked(id)
     }
 
+    /// `delete` under a lock the caller already holds on this bundle: see `restore(_:holding:)`.
+    public func delete(_ id: UUID, holding lock: BundleLock) throws {
+        try checkHeld(lock)
+        try deleteLocked(id)
+    }
+
+    /// `delete` of a snapshot of a VM running in this process (an agent checkpoint pruned while
+    /// the VM runs): its files are apart from the machine's, so nothing the running VM uses is
+    /// touched. Same holder check as the live create: no holder is `.notRunning`, a holder in
+    /// another process `.runningInAnotherProcess`.
+    public func deleteLive(_ id: UUID) throws {
+        guard let holder = BundleLock.holder(bundle) else { throw NidoError.notRunning(bundle.displayName) }
+        guard holder.pid == getpid() else { throw NidoError.runningInAnotherProcess }
+        try deleteLocked(id)
+    }
+
     private func deleteLocked(_ id: UUID) throws {
         let directory = directory(for: id)
         guard isRealDirectory(directory) else { throw NidoError.snapshotNotFound(id.uuidString) }
@@ -624,6 +652,11 @@ public struct SnapshotStore: Sendable {
     /// handled there; one running in this process must be stopped (or snapshotted through its session).
     static func refusal(holder: LockHolder, name: String, ownPID: Int32) -> NidoError {
         holder.pid == ownPID ? .vmMustBeStopped(name) : .runningInAnotherProcess
+    }
+
+    /// `lock` must be held, and on this bundle's `.lock`.
+    private func checkHeld(_ lock: BundleLock) throws {
+        guard lock.holds(bundle) else { throw NidoError.notRunning(bundle.displayName) }
     }
 
     private func acquireLock(_ owner: LockOwner) throws -> BundleLock {

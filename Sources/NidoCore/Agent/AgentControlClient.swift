@@ -17,25 +17,36 @@ public struct AgentControlClient: Sendable {
     /// asked only when there is no socket file at all: such a VM was started before agent access
     /// was turned on.
     public let isRunningWithAgentAccess: @Sendable () -> Bool
+    /// Sent with each command for the activity log (`AgentCommand.client`).
+    public let client: String?
+    /// Sent with each command: the activity log's session of this client, the same across its
+    /// connections (`AgentCommand.session`).
+    public let session: String?
 
     public init(vmID: UUID, vmName: String, bundle: URL, root: URL = AgentControlServer.defaultRoot,
-                isRunningWithAgentAccess: @escaping @Sendable () -> Bool = { false }) {
+                isRunningWithAgentAccess: @escaping @Sendable () -> Bool = { false },
+                client: String? = nil, session: String? = nil) {
         self.vmID = vmID
         self.vmName = vmName
         self.bundle = bundle
         self.root = root
         self.isRunningWithAgentAccess = isRunningWithAgentAccess
+        self.client = client
+        self.session = session
     }
 
     /// The client of `bundle`'s control socket (`nido act`, `nido mcp`, `nido agent`, the app's
-    /// Agent pane). A VM that runs (bundle lock held) with agent access on in its configuration
-    /// but has no socket file is told to restart, not to start.
-    public static func forVM(bundle: VMBundle, config: VMConfig) -> AgentControlClient {
+    /// Agent pane), naming itself `client` with `session` in the activity log. A VM that runs
+    /// (bundle lock held) with agent access on in its configuration but has no socket file is
+    /// told to restart, not to start.
+    public static func forVM(bundle: VMBundle, config: VMConfig, client: String? = nil,
+                             session: String? = nil) -> AgentControlClient {
         AgentControlClient(
             vmID: config.id, vmName: config.name.rawValue, bundle: bundle.url,
             isRunningWithAgentAccess: {
                 BundleLock.holder(bundle) != nil && (try? bundle.readConfig())?.agentAccess == true
-            })
+            },
+            client: client, session: session)
     }
 
     /// `send(_:timeout:)` with `timeout(for:)`.
@@ -46,15 +57,72 @@ public struct AgentControlClient: Sendable {
     /// Added to the owner's own limits towards the helper.
     static let ownerMargin: Duration = .seconds(5)
 
+    /// How long the client waits for a checkpoint.
+    static let checkpointTimeout: Duration = .seconds(120)
+
     /// How long the client waits for `action`: longer than the owner's own limits towards the
     /// helper (`AgentClient`: `defaultTimeout`, `defaultImageTimeout` for an image), so their
     /// errors arrive rather than a timeout. A zoom asks `status` first, then the image: both
-    /// limits.
+    /// limits; a `uiTree` asks `status` first, then the tree. A file's transfer asks `status`
+    /// first, then the bytes (the image limit); a `listFiles`, `status` then the list. A
+    /// checkpoint saves the VM's memory (several GiB): `checkpointTimeout`.
     static func timeout(for action: AgentAction) -> Duration {
         switch action {
-        case .zoom: AgentClient.defaultTimeout + AgentClient.defaultImageTimeout + ownerMargin
+        case .checkpoint: checkpointTimeout
+        case .zoom, .putFile, .getFile: AgentClient.defaultTimeout + AgentClient.defaultImageTimeout + ownerMargin
+        case .uiTree, .listFiles: AgentClient.defaultTimeout + AgentClient.defaultTimeout + ownerMargin
         default: AgentClient.defaultImageTimeout + ownerMargin
         }
+    }
+
+    /// Copies `data` to `path` in the guest's `~/NidoTransfer` (`putFile`): the bytes are staged
+    /// in the bundle (`AgentFiles`) and only their name travels to the owner, which reads and
+    /// deletes them; whatever the answer, nothing of this call stays staged. More than
+    /// `AgentProtocol.maxTransferBytes` is refused here, before anything is written.
+    public func putFile(_ data: Data, to path: String) throws -> AgentAnswer {
+        guard data.count <= AgentProtocol.maxTransferBytes else {
+            return .failure(.badRequest, L10n.string("the file is larger than 16 MiB"))
+        }
+        let vmBundle = VMBundle(url: bundle)
+        let staged: String
+        do {
+            staged = try AgentFiles.stage(data, in: vmBundle)
+        } catch {
+            return .failure(.internalError, L10n.string("could not save the file"))
+        }
+        // The owner deletes what it takes; a refusal before that (agent access off, a VM that
+        // does not run) leaves it to this client.
+        defer { AgentFiles.remove(staged, in: vmBundle) }
+        let action = AgentAction.putFile(path: path, size: data.count)
+        return try send(action, staged: staged, timeout: Self.timeout(for: action))
+    }
+
+    /// The file at `path` in the guest's `~/NidoTransfer` (`getFile`), at most `maxBytes`
+    /// (bounded by `AgentProtocol.maxTransferBytes`): the answer, and the bytes when it is ok.
+    /// The owner stages them in the bundle; they are read and deleted here.
+    public func getFile(_ path: String, maxBytes: Int) throws -> (AgentAnswer, Data?) {
+        let action = AgentAction.getFile(path: path, maxBytes: max(0, min(maxBytes, AgentProtocol.maxTransferBytes)))
+        let answer = try send(action, timeout: Self.timeout(for: action))
+        guard answer.ok else {
+            if let staged = answer.staged { AgentFiles.remove(staged, in: VMBundle(url: bundle)) }
+            return (answer, nil)
+        }
+        return Self.takeStaged(answer, in: VMBundle(url: bundle))
+    }
+
+    /// The bytes of the file `answer` names (`staged`), read and deleted, and the answer without
+    /// the name. A name that is not a staged file's, a file that is not a regular one of this
+    /// user, or a size other than `bytes`: an `internalError` answer, no bytes.
+    static func takeStaged(_ answer: AgentAnswer, in bundle: VMBundle) -> (AgentAnswer, Data?) {
+        let refused = AgentAnswer.failure(.internalError, L10n.string("could not read the copied file"))
+        guard let staged = answer.staged, let data = try? AgentFiles.take(staged, in: bundle) else {
+            return (refused, nil)
+        }
+        guard answer.bytes == nil || answer.bytes == data.count else { return (refused, nil) }
+        var copy = answer
+        copy.staged = nil
+        copy.bytes = data.count
+        return (copy, data)
     }
 
     /// Sends `action` to the owner of the running VM and returns its answer. No owner listening
@@ -63,6 +131,11 @@ public struct AgentControlClient: Sendable {
     /// so is no answer within `timeout` (`timeout`). Throws `AgentFailure` when the connection breaks or the
     /// answer is not one, and `.unsafePath` for a socket path that cannot exist.
     public func send(_ action: AgentAction, timeout: Duration) throws -> AgentAnswer {
+        try send(action, staged: nil, timeout: timeout)
+    }
+
+    /// `send(_:timeout:)` with the name of the staged file that holds a `putFile`'s bytes.
+    func send(_ action: AgentAction, staged: String?, timeout: Duration) throws -> AgentAnswer {
         let deadline = ContinuousClock.now + timeout
         let url = AgentControlServer.socketURL(vmID: vmID, root: root)
         var address = try AgentControlServer.socketAddress(url)
@@ -99,7 +172,9 @@ public struct AgentControlClient: Sendable {
         let flags = fcntl(fd, F_GETFL)
         guard flags >= 0, fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 else { throw AgentControlServer.posixError() }
 
-        var line = try JSONEncoder().encode(AgentCommand(vmID: vmID, bundlePath: AgentCommand.bundlePath(bundle), action: action))
+        var line = try JSONEncoder().encode(AgentCommand(
+            vmID: vmID, bundlePath: AgentCommand.bundlePath(bundle), action: action, client: client, session: session,
+            staged: staged))
         line.append(0x0A)
         switch write(line, to: fd, before: deadline) {
         case .done, .closed: break  // closed: the owner refused the line; its answer may be waiting
@@ -168,7 +243,7 @@ public struct AgentControlClient: Sendable {
                 let start = buffer.count
                 buffer.append(contentsOf: chunk[..<n])
                 if let newline = buffer[start...].firstIndex(of: 0x0A) { return .line(Data(buffer[..<newline])) }
-                guard buffer.count <= AgentControlServer.maxLineBytes else { return .closed }
+                guard buffer.count <= AgentControlServer.maxAnswerBytes + 1 else { return .closed }
                 continue
             }
             if n < 0 && errno == EINTR { continue }
