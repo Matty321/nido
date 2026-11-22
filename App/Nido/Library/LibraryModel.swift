@@ -114,6 +114,8 @@ final class LibraryModel {
     }
     private var pendingCancelJob: MacInstallation?
 
+    /// The Mac the app acts as (`AppEnvironment.host`): which VMs can start here, how labels read.
+    let host: HostPlatform
     private let registry: any VMRegistryProviding
     /// Nil: "Salva come modello" and "Modifica modello" are not offered.
     private let templates: (any VMTemplating)?
@@ -142,8 +144,10 @@ final class LibraryModel {
         isBridgeActive: @escaping @MainActor (String) -> Bool = { _ in false },
         liveAgentActive: @escaping @MainActor (String) -> Bool = { _ in false },
         measureTemplate: (@Sendable (String) -> UInt64?)? = nil,
-        installs: MacInstallStore? = nil
+        installs: MacInstallStore? = nil,
+        host: HostPlatform = .current
     ) {
+        self.host = host
         self.installs = installs ?? MacInstallStore()
         self.registry = registry
         self.templates = templates
@@ -303,12 +307,12 @@ final class LibraryModel {
                       comment: "A VM card's resources: CPUs, memory (8 GiB), disk (64 GiB).")
     }
 
-    /// "macOS 26.6" for a macOS VM (ruling R4), "Debian 13 · arm64" or "Ubuntu 26.04 LTS · arm64"
-    /// for Linux, "Unknown system" when the config cannot be read.
+    /// "macOS 26.6" for a macOS VM (ruling R4), "Debian 13 · arm64" or "Ubuntu 26.04 LTS · amd64"
+    /// for Linux (the VM's own architecture), "Unknown system" when the config cannot be read.
     nonisolated static func system(of vm: VMSummary) -> String {
         if case .unreadable = vm.status { return String(localized: "Unknown system") }
         if vm.guest == .macos { return vm.osVersion.map { "macOS \($0)" } ?? "macOS" }
-        return "\((vm.distribution ?? .debian13).displayName) · arm64"
+        return "\((vm.distribution ?? .debian13).displayName) · \(vm.architecture.imageLabel)"
     }
 
     /// The letter of the system tile: "M", "D", "U" (Ubuntu), or "?".
@@ -388,10 +392,25 @@ final class LibraryModel {
         return nil
     }
 
+    /// Whether the VM can start on this Mac (`ArchitectureGate`'s rule on the summary).
+    func runsHere(_ vm: VMSummary) -> Bool {
+        if case .unreadable = vm.status { return true }
+        return !(vm.guest == .macos && !host.supportsMacGuests) && vm.architecture == host.architecture
+    }
+
+    /// `NidoError.wrongArchitecture`'s text for a VM that cannot start on this Mac; nil when it can.
+    private func wrongArchitectureMessage(for vm: VMSummary) -> String? {
+        guard !runsHere(vm) else { return nil }
+        return NidoError.wrongArchitecture(name: vm.name, made: vm.architecture).errorDescription
+    }
+
     /// The card state: busy comes from this app's own work on a stopped VM; starting, paused and
     /// error from a live session of this app; the rest is what the registry knows (the lock of a
     /// busy VM would read "Running").
     func cardState(for vm: VMSummary) -> NidoVMCardState {
+        // Made for another architecture than this Mac's: shown like an unreadable VM (message,
+        // Show in Finder, Delete), nothing starts and no lock is taken.
+        if vm.status == .stopped, let message = wrongArchitectureMessage(for: vm) { return .unreadable(message) }
         if let reason = busyReason(for: vm) { return .busy(reason) }
         switch liveState(vm.name) {
         case .starting: return .starting
@@ -418,7 +437,13 @@ final class LibraryModel {
         // A template never starts: a new VM from it, or back to a VM (spec E).
         // Disabled while something holds it (a `nido create --from-template`, this app).
         if vm.isTemplate {
+            // Made for another architecture: the same buttons as such a VM (Show in Finder, Delete).
+            if vm.status == .stopped, !runsHere(vm) {
+                return [.init(action: .showInFinder, kind: .secondary, isEnabled: true),
+                        .init(action: .delete, kind: .destructive, isEnabled: true)]
+            }
             let free = vm.status == .stopped && !appRunsMachine(vm.name) && busyReason(for: vm) == nil
+                && runsHere(vm)
             return [.init(action: .newFromTemplate, kind: .primary, isEnabled: free && cloner != nil),
                     .init(action: .editTemplate, kind: .secondary, isEnabled: free && templates != nil)]
         }
@@ -479,6 +504,8 @@ final class LibraryModel {
     func menuActions(for vm: VMSummary) -> [CardAction] {
         // Not while a window of this app is starting it (the registry may not have seen the lock yet).
         guard vm.status == .stopped, !appRunsMachine(vm.name), busyReason(for: vm) == nil else { return [] }
+        // Made for another architecture: the refusal card's own buttons (Show in Finder, Delete).
+        if !runsHere(vm) { return [] }
         if vm.isTemplate { return [.delete] }
         var actions: [CardAction] = []
         if cloner != nil { actions.append(.clone) }

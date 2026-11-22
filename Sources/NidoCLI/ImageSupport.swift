@@ -6,8 +6,10 @@ import NidoCore
 
 extension CLISupport {
     /// The catalog image with id `id`, or `CLIError.unknownImage`.
-    public static func catalogImage(id: String) throws -> CloudImage {
-        guard let image = CloudImageCatalog.image(id: id) else { throw CLIError.unknownImage(id) }
+    public static func catalogImage(
+        id: String, architecture: CPUArchitecture = HostPlatform.current.architecture
+    ) throws -> CloudImage {
+        guard let image = CloudImageCatalog.image(id: id, architecture: architecture) else { throw CLIError.unknownImage(id) }
         return image
     }
 
@@ -99,6 +101,17 @@ extension CLISupport {
     /// What Ctrl-C or a lost connection leaves: the partial file, resumed by the same command.
     public static func macImagePausedMessage() -> String {
         L10n.string("Download paused: run the same command to resume.")
+    }
+
+    /// `nido image macos`: refused on this host first, then `--output` is checked (nothing goes
+    /// online here). Returns the downloader and the chosen destination, if any.
+    public static func beginMacImage(
+        output: String?, host: HostPlatform = .current
+    ) throws -> (MacImageDownloader, URL?) {
+        try HostChecks.requireMacGuests(host)
+        let downloader = MacImageDownloader()
+        let chosen = try output.map { try downloader.outputDestination(URL(fileURLWithPath: $0)) }
+        return (downloader, chosen)
     }
 
     /// `--output` and `--yes` belong to `--download`.

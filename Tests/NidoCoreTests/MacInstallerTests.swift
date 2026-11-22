@@ -163,6 +163,7 @@ private final class SpyPasswordStore: GuestPasswordStore, @unchecked Sendable {
     var count: Int { lock.withLock { items.count } }
 }
 
+#if arch(arm64)
 @Suite struct MacInstallerTests {
     @Test func installWritesAccountAndAgentAccess() async throws {
         let env = try InstallEnv()
@@ -658,3 +659,4 @@ private final class SpyPasswordStore: GuestPasswordStore, @unchecked Sendable {
         #expect(!store.items.withLock { $0.contains(liveID) })
     }
 }
+#endif

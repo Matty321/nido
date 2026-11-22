@@ -51,16 +51,18 @@ struct LiveVMCloner: VMCloning {
     let paths: NidoPaths
     /// Where a macOS clone's account password is copied (`AppEnvironment.guestPasswords`).
     let passwords: any GuestPasswordStore
+    /// The Mac the app acts as (`AppEnvironment.host`): a source of another architecture is refused.
+    var host: HostPlatform = .current
 
     @concurrent
     func clone(_ source: VMName, as target: VMName) async throws -> [String] {
-        try await VMCloner(paths: paths, runner: SystemProcessRunner(), passwords: passwords)
+        try await VMCloner(paths: paths, runner: SystemProcessRunner(), passwords: passwords, host: host)
             .cloneReportingNotes(source, as: target, owner: .app).cloneNotes
     }
 
     @concurrent
     func createFromTemplate(_ template: VMName, as target: VMName) async throws {
-        _ = try await VMCloner(paths: paths, runner: SystemProcessRunner(), passwords: passwords)
+        _ = try await VMCloner(paths: paths, runner: SystemProcessRunner(), passwords: passwords, host: host)
             .createFromTemplate(template, as: target, sshKeyPath: nil, owner: .app)
     }
 }

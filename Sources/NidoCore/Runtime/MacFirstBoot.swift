@@ -43,7 +43,7 @@ public enum MacFirstBoot {
     /// everything (no account is offered there: `nido create --account` and the wizard need a
     /// macOS 27 host).
     public static var canValidate: Bool {
-        #if compiler(>=6.4)
+        #if compiler(>=6.4) && arch(arm64)
         if #available(macOS 27, *) { return true }
         #endif
         return false
@@ -53,7 +53,7 @@ public enum MacFirstBoot {
     /// asked before the VM is created: an account it refuses would leave the VM unable to start.
     /// Throws `MacProvisioningError`.
     public static func validate(fullName: String, username: String, password: GuestPassword) throws {
-        #if compiler(>=6.4)
+        #if compiler(>=6.4) && arch(arm64)
         if #available(macOS 27, *) {
             let options = VZMacGuestProvisioningOptions()
             options.fullName = fullName

@@ -68,7 +68,9 @@ let canCreateVirtualMachines: Bool = {
         try VZVirtualMachineConfiguration().validate()
         return true
     } catch let error as NSError {
-        return !(error.localizedFailureReason ?? "").contains("entitlement")
+        let reason = error.localizedFailureReason ?? ""
+        // The reason is localized; the entitlement's name is not.
+        return !(reason.contains("entitlement") || reason.contains("com.apple.security.virtualization"))
     }
 }()
 

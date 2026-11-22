@@ -37,6 +37,7 @@ public enum MacConfigurationBuilder {
         imageCache: URL = ImageStore.defaultCacheRoot(), egress: EgressRelay.Options = .init(),
         relay started: EgressRelay? = nil
     ) throws -> GuestConfiguration {
+        #if arch(arm64)
         guard config.guest == .macos else {
             throw NidoError.invalidResources(L10n.string("the VM \(config.name.rawValue) isn’t a macOS VM"))
         }
@@ -108,5 +109,8 @@ public enum MacConfigurationBuilder {
             configuration: configuration, warnings: network.warnings + shared.warnings,
             attachedShareNames: shared.directories.keys.sorted(), rosettaAttached: false,
             egressRelay: network.relay)
+        #else
+        throw NidoError.needsAppleSilicon
+        #endif
     }
 }

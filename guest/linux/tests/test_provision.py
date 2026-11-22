@@ -172,14 +172,21 @@ class ProvisionTests(unittest.TestCase):
         self._tmp.cleanup()
 
     def write_release(self, payload, sha=None):
-        with open(self.paths.release, "w") as f:
-            json.dump({
-                "version": VERSION,
-                "url": "https://github.com/ollama/ollama/releases/download/v%s/ollama-linux-arm64.tar.zst" % VERSION,
-                "file": "ollama-linux-arm64.tar.zst",
+        def entry(name):
+            return {
+                "url": "https://github.com/ollama/ollama/releases/download/v%s/%s" % (VERSION, name),
+                "file": name,
                 "size": len(payload),
                 "sha256": sha or hashlib.sha256(payload).hexdigest(),
                 "extracted_size_estimate": 3 * len(payload),
+            }
+        with open(self.paths.release, "w") as f:
+            json.dump({
+                "version": VERSION,
+                "architectures": {
+                    "aarch64": entry("ollama-linux-arm64.tar.zst"),
+                    "x86_64": entry("ollama-linux-amd64.tar.zst"),
+                },
             }, f)
 
     def run_step(self, *argv):
@@ -320,12 +327,27 @@ class ProvisionTests(unittest.TestCase):
         self.assertEqual(self.sys.extracts, [])
         self.assertFalse(self.sys.active)
 
-    def test_refusesNonArm64(self):
+    def test_release_picks_aarch64(self):
+        rel = provision.Provisioner(self.paths, self.sys).release()
+        self.assertEqual(rel["file"], "ollama-linux-arm64.tar.zst")
+        self.assertEqual(rel["version"], VERSION)
+
+    def test_release_picks_x86_64(self):
         self.sys.machine_name = "x86_64"
+        rel = provision.Provisioner(self.paths, self.sys).release()
+        self.assertEqual(rel["file"], "ollama-linux-amd64.tar.zst")
+        self.assertEqual(rel["version"], VERSION)
+
+    def test_preflight_accepts_x86_64(self):
+        self.sys.machine_name = "x86_64"
+        provision.Provisioner(self.paths, self.sys).preflight()
+
+    def test_preflight_refuses_riscv64(self):
+        self.sys.machine_name = "riscv64"
         code, _, err = self.run_step("ollama-install", ARCHIVE)
         self.assertEqual(code, 1)
         self.assertEqual(err, "nido-provision: architecture_unsupported: unsupported architecture "
-                              "(x86_64): aarch64 required\n")
+                              "(riscv64): aarch64 or x86_64 required\n")
         self.assertEqual(self.sys.downloads, [])
         self.assertEqual(self.step("ollama-install")["state"], "failed")
 

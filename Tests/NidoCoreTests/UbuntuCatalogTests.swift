@@ -53,6 +53,30 @@ import Testing
             == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
     }
 
+    @Test func ubuntuAmd64BaseHasNoPorts() {
+        for distribution in [LinuxDistribution.ubuntu2604, .ubuntu2404] {
+            let base = EgressPolicy.base(for: distribution, architecture: .x86_64)
+            #expect(!base.allows("ports.ubuntu.com"))
+            #expect(base.allows("archive.ubuntu.com"))
+            #expect(base.allows("security.ubuntu.com"))
+            #expect(base.allows(GuestTimeSync.server))
+            #expect(base.allow.count == EgressPolicy.ubuntuBase.allow.count - 1)
+        }
+    }
+
+    @Test func ubuntuArm64BaseUnchanged() {
+        #expect(EgressPolicy.base(for: .ubuntu2604, architecture: .arm64) == EgressPolicy.ubuntuBase)
+        #expect(EgressPolicy.base(for: .ubuntu2404, architecture: .arm64) == EgressPolicy.ubuntuBase)
+        #expect(EgressPolicy.ubuntuBase.allows("ports.ubuntu.com"))
+    }
+
+    @Test func debianBaseSameBothArchitectures() {
+        for architecture in [CPUArchitecture.arm64, .x86_64] {
+            #expect(EgressPolicy.base(for: .debian13, architecture: architecture) == EgressPolicy.base)
+            #expect(EgressPolicy.base(for: nil, architecture: architecture) == EgressPolicy.base)
+        }
+    }
+
     @Test func ubuntuBaseListSwapsOnlyTheArchive() {
         #expect(EgressPolicy.base(for: nil) == EgressPolicy.base)
         #expect(EgressPolicy.base(for: .debian13) == EgressPolicy.base)

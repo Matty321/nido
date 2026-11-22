@@ -97,7 +97,7 @@ private final class Sink: Sendable {
             try CLISupport.parseMacCreateOptions(
                 name: "mac", ipsw: "/x/UniversalMac.ipsw", image: image, imageFile: imageFile, sshKey: sshKey,
                 user: user, cpus: cpus, memory: memory, disk: disk,
-                noPackages: noPackages, noGuestTools: noGuestTools)
+                noPackages: noPackages, noGuestTools: noGuestTools, host: .appleSilicon)
         }
 
         let defaults = try parse()
@@ -146,7 +146,7 @@ private final class Sink: Sendable {
             account: account, passwordSource: source, agent: agent, hostMajor: hostMajor,
             readStdinLine: { remainingLines.withLock { $0.isEmpty ? nil : $0.removeFirst() } },
             askPassword: { _ in remainingTyped.withLock { $0.isEmpty ? nil : $0.removeFirst() } },
-            stdinIsTerminal: stdinIsTerminal)
+            stdinIsTerminal: stdinIsTerminal, host: .appleSilicon)
     }
 
     /// The wizard refuses an empty full name: so does the CLI; spaces around it are dropped.
@@ -206,7 +206,7 @@ private final class Sink: Sendable {
         let options = try CLISupport.parseMacCreateOptions(
             name: "mac", ipsw: env.ipsw.path, image: nil, imageFile: nil, sshKey: env.key.path, user: "mattia",
             cpus: nil, memory: nil, disk: "1G", noPackages: false, noGuestTools: false,
-            account: "Mattia", hostMajor: 27)
+            account: "Mattia", hostMajor: 27, host: .appleSilicon)
         let installer = MacInstaller(
             paths: env.paths,
             environment: .init(
@@ -220,13 +220,14 @@ private final class Sink: Sendable {
         #expect(!FileManager.default.fileExists(atPath: env.paths.root.path))
     }
 
+    #if arch(arm64)
     @Test func createMacWithAccountSaysWhereThePasswordIs() async throws {
         let env = try Env()
         defer { env.cleanup() }
         let options = try CLISupport.parseMacCreateOptions(
             name: "mac", ipsw: env.ipsw.path, image: nil, imageFile: nil, sshKey: env.key.path, user: "mattia",
             cpus: nil, memory: nil, disk: "1G", noPackages: false, noGuestTools: false,
-            account: "Mattia", agent: true, hostMajor: 27)
+            account: "Mattia", agent: true, hostMajor: 27, host: .appleSilicon)
         var environment = MacInstaller.Environment()
         environment.loader = FakeLoader(major: 27)
         environment.availableCapacity = { _ in UInt64.max / 2 }
@@ -239,6 +240,7 @@ private final class Sink: Sendable {
         let config = try VMBundle.open(try VMName("mac"), paths: env.paths).readConfig()
         #expect(config.macAccountFullName == "Mattia" && config.agentAccess == true)
     }
+    #endif
 
     // MARK: - agent password
 
@@ -331,12 +333,13 @@ private final class Sink: Sendable {
         #expect(sink.text.withLock { $0 } == "\rInstallazione di macOS 26.1: 42 %\rInstallazione di macOS 26.1: 100 %\n")
     }
 
+    #if arch(arm64)
     @Test func createMacInstallsWithProgressAndFinalMessage() async throws {
         let env = try Env()
         defer { env.cleanup() }
         let options = try CLISupport.parseMacCreateOptions(
             name: "mac", ipsw: env.ipsw.path, image: nil, imageFile: nil, sshKey: env.key.path, user: "mattia",
-            cpus: nil, memory: nil, disk: "1G", noPackages: false, noGuestTools: false)
+            cpus: nil, memory: nil, disk: "1G", noPackages: false, noGuestTools: false, host: .appleSilicon)
         let installer = MacInstaller(
             paths: env.paths,
             environment: .init(
@@ -352,13 +355,15 @@ private final class Sink: Sendable {
         #expect(config.cpuCount == min(4, ResourceLimits.maxCPUCount()) && config.memoryBytes == 8 * gib)
         #expect(config.sshPublicKeyPath == env.key.path)
     }
+    #endif
 
+    #if arch(arm64)
     @Test func createMacCancelledLeavesNothing() async throws {
         let env = try Env()
         defer { env.cleanup() }
         let options = try CLISupport.parseMacCreateOptions(
             name: "mac", ipsw: env.ipsw.path, image: nil, imageFile: nil, sshKey: env.key.path, user: "mattia",
-            cpus: nil, memory: nil, disk: "1G", noPackages: false, noGuestTools: false)
+            cpus: nil, memory: nil, disk: "1G", noPackages: false, noGuestTools: false, host: .appleSilicon)
         let installer = MacInstaller(
             paths: env.paths,
             environment: .init(
@@ -374,6 +379,7 @@ private final class Sink: Sendable {
         #expect(try FileManager.default.contentsOfDirectory(atPath: env.paths.root.path).isEmpty)
         #expect(CLIError.installCancelled.errorDescription == "installazione annullata: nessuna VM è stata creata")
     }
+    #endif
 
     // MARK: - start --console
 
@@ -634,7 +640,7 @@ private final class Sink: Sendable {
         for enabled in [true, false] {
             for state in [RosettaState.installed, .notInstalled] {
                 #expect(throws: CLIError.rosettaNotForMac) {
-                    _ = try CLISupport.setRosetta(vm: "mac", enabled: enabled, paths: env.paths, state: state)
+                    _ = try CLISupport.setRosetta(vm: "mac", enabled: enabled, paths: env.paths, state: state, host: .appleSilicon)
                 }
             }
         }
@@ -667,5 +673,28 @@ private final class Sink: Sendable {
         #expect(lines[0].split(separator: " ", omittingEmptySubsequences: true)
             == ["NOME", "STATO", "SISTEMA", "CPU", "MEMORIA"])
         #expect(lines[2].contains("macOS 26.1"))
+    }
+}
+
+extension CreateCommandTests {
+    /// `nido create --ipsw` on Intel is refused before any option is parsed (and so before a
+    /// password is read from stdin) and before anything is created.
+    @Test func createIPSWRefusedOnIntel() throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("nido-tests-intel-ipsw-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        var stdinRead = false
+        func parse(host: HostPlatform) throws -> MacCreateOptions {
+            try CLISupport.parseMacCreateOptions(
+                name: "mac", ipsw: tmp.appendingPathComponent("m.ipsw").path, image: nil, imageFile: nil,
+                sshKey: "/k.pub", user: "mattia", cpus: nil, memory: nil, disk: nil,
+                noPackages: false, noGuestTools: false, account: "Mattia", passwordSource: .stdin, hostMajor: 27,
+                readStdinLine: { stdinRead = true; return "pw" }, host: host)
+        }
+        #expect(throws: NidoError.needsAppleSilicon) { _ = try parse(host: .intel) }
+        #expect(!stdinRead)
+        #expect(!FileManager.default.fileExists(atPath: tmp.path))
+        #expect(try parse(host: .appleSilicon).name.rawValue == "mac")
+        #expect(stdinRead)
     }
 }

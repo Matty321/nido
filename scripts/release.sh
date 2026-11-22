@@ -174,6 +174,15 @@ verify_app() {
         [[ "$info" == *"Identifier=$id"* && "$info" == *"TeamIdentifier=$team_id"* ]] ||
             die "$app: Contents/Helpers/${helper%%:*} not signed as $id by team $team_id"
     done
+    # The release is universal: every executable carries both slices.
+    local binary archs
+    for binary in MacOS/Nido Helpers/nido Helpers/gvproxy Frameworks/Sparkle.framework/Sparkle \
+        Frameworks/Sparkle.framework/Versions/B/Autoupdate \
+        Frameworks/Sparkle.framework/Versions/B/Updater.app/Contents/MacOS/Updater; do
+        archs="$(lipo -archs "$app/Contents/$binary" 2>&1)" || die "$app: lipo cannot read Contents/$binary"
+        [[ " $archs " == *" arm64 "* && " $archs " == *" x86_64 "* ]] ||
+            die "$app: Contents/$binary is not universal (arm64 and x86_64 needed; found: $archs)"
+    done
     info="$(codesign -dv "$app/Contents/Frameworks/Sparkle.framework" 2>&1)"
     [[ "$info" == *"TeamIdentifier=$team_id"* ]] || die "$app: Sparkle not signed by team $team_id"
     [[ "$(info_value "$app" CFBundleShortVersionString)" == "$version" ]] || die "$app: CFBundleShortVersionString differs from $version"

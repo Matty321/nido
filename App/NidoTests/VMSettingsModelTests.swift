@@ -31,6 +31,16 @@ struct VMSettingsModelTests {
         return (try VMBundle.create(config: config, paths: NidoPaths(root: root)), root)
     }
 
+    @Test func rosettaHiddenOnIntel() throws {
+        let (bundle, root) = try makeBundle()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let intel = try VMSettingsModel(bundle: bundle, rosettaState: { .installed }, host: .intel)
+        #expect(!intel.showsRosetta)
+        #expect(intel.showsGuestTools)
+        let apple = try VMSettingsModel(bundle: bundle, rosettaState: { .installed }, host: .appleSilicon)
+        #expect(apple.showsRosetta)
+    }
+
     /// S08 for macOS (R4): no Rosetta, no Guest Tools, no one-time Linux mount command; the
     /// shared folders live in /Volumes/My Shared Files.
     @Test func macSettingsHideRosetta() async throws {

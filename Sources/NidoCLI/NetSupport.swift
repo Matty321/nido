@@ -106,7 +106,7 @@ extension CLISupport {
         // Which list to write depends on the guest: a config that does not read is refused
         // rather than taken for a Linux VM.
         let config = try bundle.readConfig()
-        let base = config.guest == .macos ? EgressPolicy.macOSBase : EgressPolicy.base(for: config.distribution)
+        let base = config.guest == .macos ? EgressPolicy.macOSBase : EgressPolicy.base(for: config.distribution, architecture: config.architecture)
         let count = base.allow.count
         let shown = name.rawValue
         let question = BundleLock.holder(bundle) != nil

@@ -64,9 +64,14 @@ final class ProvisioningModel {
     /// verified success or "Non installare".
     @ObservationIgnored private let clearPending: @MainActor () async -> Void
 
+    /// The Mac the app acts as: on Intel a first boot that never answers may be a wrong image.
+    @ObservationIgnored private let host: HostPlatform
+
     init(name: String = "", aiRuntime: AIRuntimeModel, monitor: MonitorModel? = nil,
+         host: HostPlatform = .current,
          now: @escaping @MainActor () -> Date = { Date() },
          clearPending: @escaping @MainActor () async -> Void = {}) {
+        self.host = host
         self.name = name
         self.aiRuntime = aiRuntime
         self.monitor = monitor
@@ -282,8 +287,11 @@ final class ProvisioningModel {
     /// Phase 1 did not finish: why, and the way out (the view offers Installa Guest Tools).
     var phase1FailureText: (title: String, detail: String)? {
         guard phase1Failed else { return nil }
-        return (String(localized: "The Guest Tools of \(name) don’t respond"),
-                String(localized: "The first boot didn’t start the guest monitor within 5 minutes. Look at the console in the Screen view; if cloud-init has finished, install the Guest Tools over SSH."))
+        let detail = String(localized: "The first boot didn’t start the guest monitor within 5 minutes. Look at the console in the Screen view; if cloud-init has finished, install the Guest Tools over SSH.")
+        // On Intel the usual cause is an image of the wrong architecture (a local image).
+        let hint = host.architecture == .x86_64
+            ? String(localized: "The VM didn’t start: check that the image is for amd64") + "\n" : ""
+        return (String(localized: "The Guest Tools of \(name) don’t respond"), hint + detail)
     }
 
     var caption: String? {

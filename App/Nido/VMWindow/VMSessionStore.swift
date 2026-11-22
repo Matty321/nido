@@ -24,10 +24,13 @@ final class VMSessionStore {
     /// The account passwords the windows' first-run setup reads (`AppEnvironment.guestPasswords`).
     /// Required, like `VMRegistry`'s: a store left out by mistake would lose the password.
     let passwords: any GuestPasswordStore
+    /// The Mac the app acts as (`AppEnvironment.host`), handed to every window model.
+    let host: HostPlatform
 
     init(paths: NidoPaths, factory: any SessionFactory, aiBridge: AIBridgeServices? = nil,
          passwords: any GuestPasswordStore,
-         checkHeadroom: (@Sendable (VMBundle) -> MemoryHeadroom?)? = nil) {
+         checkHeadroom: (@Sendable (VMBundle) -> MemoryHeadroom?)? = nil, host: HostPlatform = .current) {
+        self.host = host
         self.passwords = passwords
         self.paths = paths
         self.factory = factory
@@ -47,7 +50,7 @@ final class VMSessionStore {
         }
         let model = VMWindowModel(
             name: name, paths: paths, factory: factory, passwords: passwords, aiBridgeServices: aiBridge,
-            aiRuntime: aiRuntime, checkHeadroom: checkHeadroom)
+            aiRuntime: aiRuntime, checkHeadroom: checkHeadroom, host: host)
         model.refusesStart = isQuitting
         models[name] = model
         return model
@@ -328,9 +331,14 @@ final class VMSessionStore {
 
         /// The alert's button index (0 = first): nil for Annulla.
         init?(buttonIndex: Int) {
-            switch buttonIndex {
-            case 0: self = .suspend
-            case 1: self = .stop
+            self.init(buttonIndex: buttonIndex, canSuspend: true)
+        }
+
+        /// Without Suspend (Intel) the buttons are Stop and Quit, Cancel.
+        init?(buttonIndex: Int, canSuspend: Bool) {
+            switch (buttonIndex, canSuspend) {
+            case (0, true): self = .suspend
+            case (1, true), (0, false): self = .stop
             default: return nil
             }
         }
@@ -345,7 +353,16 @@ final class VMSessionStore {
     }
 
     /// `unsuspendable`: the live VMs whose configuration cannot be saved (they are stopped).
-    nonisolated static func quitPrompt(names: [String], unsuspendable: [String]) -> QuitPrompt {
+    nonisolated static func quitPrompt(names: [String], unsuspendable: [String], canSuspend: Bool = true) -> QuitPrompt {
+        if !canSuspend {
+            // Intel: suspend does not exist; only Stop and Quit (never a silent fallback).
+            let message = names.count == 1
+                ? String(localized: "Stop and Quit asks \(names[0]) to shut down cleanly and, if it’s still running after 30 seconds, forces it to stop.")
+                : String(localized: "Stop and Quit asks each virtual machine to shut down cleanly and forces those still running after 30 seconds to stop.")
+            return QuitPrompt(
+                question: quitQuestion(names: names), message: message,
+                buttons: [String(localized: "Stop and Quit"), String(localized: "Cancel")])
+        }
         let message = names.count == 1
             ? String(localized: "Suspend and Quit saves the state of \(names[0]) on the Mac: the next start continues where you left off. Stop and Quit asks it to shut down cleanly and, if it’s still running after 30 seconds, forces it to stop.")
             : String(localized: "Suspend and Quit saves the state of each virtual machine on the Mac: the next start continues each one where you left off. Stop and Quit asks each one to shut down cleanly and forces those still running after 30 seconds to stop.")

@@ -28,6 +28,10 @@ public enum GuestOS: String, Codable, Sendable {
 /// (`decode`), so it can never start a controlled VM on NAT, nor rewrite its config without the field.
 public struct VMConfig: Codable, Sendable, Equatable {
     public static let currentSchemaVersion = 5
+    /// Schema 6 is written only for an x86_64 VM (Intel Mac support): a build that knows schema
+    /// 5 at most refuses it, so it can never start an Intel VM, nor rewrite its config without
+    /// the `architecture`. An arm64 VM keeps schema 5 and its file is unchanged.
+    public static let intelSchemaVersion = 6
 
     public var schemaVersion: Int
     public var id: UUID
@@ -132,6 +136,20 @@ public struct VMConfig: Codable, Sendable, Equatable {
     /// copy is disposable, the base's allow/deny reaches it. Optional, no schema bump, not in
     /// `stateHash()`. Cleared with `disposable` (`DisposableVMs.claim`); clones never inherit it.
     public var freshBaseID: UUID?
+    /// The `architecture` key as the file has it. Nil for arm64: the key is written only for an
+    /// x86_64 VM, so every arm64 bundle stays byte-for-byte what it was.
+    private var architectureID: CPUArchitecture?
+
+    /// The architecture the VM was made for (arm64 when the file has no such key).
+    public var architecture: CPUArchitecture {
+        get { architectureID ?? .arm64 }
+        set { architectureID = newValue == .arm64 ? nil : newValue }
+    }
+
+    /// The schema a write of this config uses: 6 for x86_64, else 5.
+    public var writtenSchemaVersion: Int {
+        architecture == .x86_64 ? Self.intelSchemaVersion : Self.currentSchemaVersion
+    }
 
     public init(
         schemaVersion: Int = VMConfig.currentSchemaVersion,
@@ -167,7 +185,8 @@ public struct VMConfig: Codable, Sendable, Equatable {
         macAccountFullName: String? = nil,
         macProvisioningSent: Bool? = nil,
         disposable: Bool? = nil,
-        freshBaseID: UUID? = nil
+        freshBaseID: UUID? = nil,
+        architecture: CPUArchitecture = .arm64
     ) {
         self.schemaVersion = schemaVersion
         self.id = id
@@ -203,6 +222,7 @@ public struct VMConfig: Codable, Sendable, Equatable {
         self.macProvisioningSent = macProvisioningSent
         self.disposable = disposable
         self.freshBaseID = freshBaseID
+        self.architectureID = architecture == .arm64 ? nil : architecture
     }
 
     /// The distribution of a Linux VM (Debian 13 when none is recorded); nil for macOS and for
@@ -222,6 +242,7 @@ public struct VMConfig: Codable, Sendable, Equatable {
         case distributionID = "distribution"
         case backgroundRequestsOff, agentAccess, guestKeyboardLayoutID
         case macAccountFullName, macProvisioningSent, disposable, freshBaseID
+        case architectureID = "architecture"
     }
 
     /// Fields missing from the file (older schemas) take their defaults; a missing
@@ -263,6 +284,9 @@ public struct VMConfig: Codable, Sendable, Equatable {
         macProvisioningSent = (try? c.decodeIfPresent(Bool.self, forKey: .macProvisioningSent)) ?? nil
         disposable = (try? c.decodeIfPresent(Bool.self, forKey: .disposable)) ?? nil
         freshBaseID = (try? c.decodeIfPresent(UUID.self, forKey: .freshBaseID)) ?? nil
+        // A value this build does not know fails the decode: never guess an unknown architecture.
+        let decodedArchitecture = try c.decodeIfPresent(CPUArchitecture.self, forKey: .architectureID)
+        architectureID = decodedArchitecture == .arm64 ? nil : decodedArchitecture
     }
 
     /// Accepts a guest account name for `sshUser`: `^[a-z_][a-z0-9_-]{0,31}$` (ASCII only), so it
@@ -335,7 +359,7 @@ public struct VMConfig: Codable, Sendable, Equatable {
     /// Decodes a config, rejecting schema versions this build does not understand.
     public static func decode(_ data: Data) throws -> VMConfig {
         let config = try JSONDecoder().decode(VMConfig.self, from: data)
-        guard (1...currentSchemaVersion).contains(config.schemaVersion) else {
+        guard (1...intelSchemaVersion).contains(config.schemaVersion) else {
             throw NidoError.unsupportedSchema(config.schemaVersion)
         }
         return config

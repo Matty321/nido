@@ -997,6 +997,64 @@
         }
       }
     },
+    "%@ was made for an Intel Mac: it can’t start on this Mac" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ wurde für einen Intel-Mac erstellt: sie kann auf diesem Mac nicht starten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ se creó para un Mac Intel: no puede iniciarse en este Mac"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ a été créée pour un Mac Intel : elle ne peut pas démarrer sur ce Mac"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ è stata creata per un Mac Intel: su questo Mac non può avviarsi"
+          }
+        }
+      }
+    },
+    "%@ was made for Apple silicon: it can’t start on this Mac" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ wurde für Apple Silicon erstellt: sie kann auf diesem Mac nicht starten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ se creó para Apple silicon: no puede iniciarse en este Mac"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ a été créée pour Apple silicon : elle ne peut pas démarrer sur ce Mac"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ è stata creata per Apple silicon: su questo Mac non può avviarsi"
+          }
+        }
+      }
+    },
     "%@ works only with --download" : {
       "comment" : "%@ is an option name.",
       "extractionState" : "manual",
@@ -7679,6 +7737,64 @@
         }
       }
     },
+    "needs Apple silicon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Silicon erforderlich"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "se necesita Apple silicon"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple silicon requis"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "serve Apple silicon"
+          }
+        }
+      }
+    },
+    "Needs Apple silicon: this Mac runs Linux VMs only" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Silicon erforderlich: Dieser Mac führt nur Linux-VMs aus"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se necesita Apple silicon: este Mac solo ejecuta VM de Linux"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple silicon requis : ce Mac n’exécute que des VM Linux"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serve Apple silicon: questo Mac esegue solo VM Linux"
+          }
+        }
+      }
+    },
     "Nido records each action an agent takes: which one, with what numbers, when and how it ended. It never records typed text (only how many characters), the clipboard or the text of the UI tree; screenshots and zooms keep a small thumbnail." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7710,6 +7826,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nido registra ogni azione di un agente: quale, con quali numeri, quando e come è finita. Non registra mai il testo digitato (solo quanti caratteri), gli appunti o il testo dell’albero dell’interfaccia; screenshot e zoom conservano una piccola miniatura."
+          }
+        }
+      }
+    },
+    "nido runs natively: open Terminal without Rosetta" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nido läuft nativ: Öffne das Terminal ohne Rosetta"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nido se ejecuta de forma nativa: abre Terminal sin Rosetta"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nido s’exécute en natif : ouvre Terminal sans Rosetta"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nido si esegue in modo nativo: apri Terminale senza Rosetta"
           }
         }
       }
@@ -10667,6 +10812,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "STATO"
+          }
+        }
+      }
+    },
+    "suspend isn’t available on this Mac: stop the VM instead" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Ruhezustand ist auf diesem Mac nicht verfügbar: Stoppe stattdessen die VM"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "la suspensión no está disponible en este Mac: detén la VM"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "la suspension n’est pas disponible sur ce Mac : arrête la VM"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "la sospensione non è disponibile su questo Mac: ferma la VM"
           }
         }
       }
@@ -23847,32 +24021,32 @@
         }
       }
     },
-    "unsupported architecture (%@): aarch64 required" : {
-      "comment" : "A Guest Tools error from the VM; %@ is the VM’s CPU architecture (x86_64).",
+    "unsupported architecture (%@): aarch64 or x86_64 required" : {
+      "comment" : "A Guest Tools error from the VM; %@ is the VM’s CPU architecture (riscv64).",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nicht unterstützte Architektur (%@): aarch64 erforderlich"
+            "value" : "nicht unterstützte Architektur (%@): aarch64 oder x86_64 erforderlich"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "arquitectura no compatible (%@): se necesita aarch64"
+            "value" : "arquitectura no compatible (%@): se necesita aarch64 o x86_64"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "architecture non prise en charge (%@) : aarch64 requis"
+            "value" : "architecture non prise en charge (%@) : aarch64 ou x86_64 requis"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "architettura non supportata (%@): serve aarch64"
+            "value" : "architettura non supportata (%@): serve aarch64 o x86_64"
           }
         }
       }
@@ -25692,6 +25866,64 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "put-file, get-file e files lavorano nella cartella ~/NidoTransfer della VM: GUEST-PATH è relativo a quella. Al massimo 16 MiB per file. get-file scrive il file solo per te (0600) e non sostituisce mai un file o un link esistente, a meno che tu non aggiunga --force."
+          }
+        }
+      }
+    },
+    "Use an amd64 image on this Mac" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende auf diesem Mac ein amd64-Image"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa una imagen amd64 en este Mac"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilisez une image amd64 sur ce Mac"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa un’immagine amd64 su questo Mac"
+          }
+        }
+      }
+    },
+    "Use an arm64 image on this Mac" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende auf diesem Mac ein arm64-Image"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa una imagen arm64 en este Mac"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilisez une image arm64 sur ce Mac"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa un’immagine arm64 su questo Mac"
           }
         }
       }

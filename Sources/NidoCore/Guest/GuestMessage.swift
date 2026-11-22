@@ -14,7 +14,7 @@ public enum GuestMessage {
     /// (`%s` there), word for word (`GuestMessageTests.everyGuestCodeIsKnown`).
     static let templates: [String: String] = [
         "release_invalid": "the Guest Tools’ release.json isn’t valid (%@)",
-        "architecture_unsupported": "unsupported architecture (%@): aarch64 required",
+        "architecture_unsupported": "unsupported architecture (%@): aarch64 or x86_64 required",
         "ollama_foreign": "Ollama wasn’t installed by Nido: manage it yourself",
         "ollama_link_foreign": "/usr/local/bin/ollama already holds an Ollama that Nido didn’t install: remove it or use that one",
         "ollama_not_installed": "Ollama isn’t installed",
@@ -94,7 +94,7 @@ public enum GuestMessage {
         case ("release_invalid", 1):
             L10n.string("the Guest Tools’ release.json isn’t valid (\(v[0]))", language: language)
         case ("architecture_unsupported", 1):
-            L10n.string("unsupported architecture (\(v[0])): aarch64 required", language: language)
+            L10n.string("unsupported architecture (\(v[0])): aarch64 or x86_64 required", language: language)
         case ("ollama_foreign", 0):
             L10n.string("Ollama wasn’t installed by Nido: manage it yourself", language: language)
         case ("ollama_link_foreign", 0):

@@ -95,8 +95,8 @@ import Testing
     }
 
     @Test func catalogLookup() {
-        #expect(CloudImageCatalog.image(id: "debian-13") == CloudImageCatalog.debian13)
-        #expect(CloudImageCatalog.image(id: "nope") == nil)
+        #expect(CloudImageCatalog.image(id: "debian-13", architecture: .arm64) == CloudImageCatalog.debian13)
+        #expect(CloudImageCatalog.image(id: "nope", architecture: .arm64) == nil)
         #expect(CloudImageCatalog.debian13.fileName == "debian-13-genericcloud-arm64.raw")
     }
 }

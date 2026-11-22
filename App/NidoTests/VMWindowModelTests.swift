@@ -1592,6 +1592,65 @@ struct SuspendModelTests {
         #expect(VMSessionStore.QuitChoice(buttonIndex: 2) == nil)
     }
 
+    @Test func noSuspendButtonOnIntel() async throws {
+        let root = try TempRoot()
+        let model = VMWindowModel(
+            name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory(),
+            passwords: MemoryGuestPasswordStore(), host: .intel)
+        await model.start()
+        #expect(model.toolbarButtons.map(\.action) == [.pause, .stop, .snapshots, .settings, .fullScreen])
+        #expect(model.suspendBlocker() == NidoError.suspendUnavailable.localizedDescription)
+    }
+
+    @Test func quitOffersStopOnlyOnIntel() async throws {
+        let root = try TempRoot(vms: ["a"])
+        let store = VMSessionStore(
+            paths: root.paths, factory: FakeSessionFactory(), passwords: MemoryGuestPasswordStore(), host: .intel)
+        await store.model(for: try VMName("a")).start()
+        #expect(store.unsuspendableNames() == ["a"])
+        let prompt = VMSessionStore.quitPrompt(names: ["a"], unsuspendable: ["a"], canSuspend: false)
+        #expect(prompt.buttons == ["Arresta ed esci", "Annulla"])
+        #expect(!prompt.message.contains("Sospendi"))
+        #expect(VMSessionStore.QuitChoice(buttonIndex: 0, canSuspend: false) == .stop)
+        #expect(VMSessionStore.QuitChoice(buttonIndex: 1, canSuspend: false) == nil)
+        let many = VMSessionStore.quitPrompt(names: ["a", "b"], unsuspendable: ["a", "b"], canSuspend: false)
+        #expect(many.buttons == ["Arresta ed esci", "Annulla"])
+        #expect(!many.message.contains("Sospendi"))
+        // Never a silent fallback: the quit stop says why.
+        let warning = await store.model(for: try VMName("a")).suspendOrStop()
+        #expect(warning?.contains(NidoError.suspendUnavailable.localizedDescription) == true)
+    }
+
+    /// A VM made for another architecture is refused before the lock, the recovery and the claim.
+    @Test func startRefusesAWrongArchitectureBeforeTouchingTheBundle() async throws {
+        let root = try TempRoot(vms: ["arm"])
+        try root.bundle("arm").writeConfig(VMConfig(
+            id: UUID(), name: try VMName("arm"), guest: .linux, cpuCount: 2, memoryBytes: 4 << 30,
+            diskBytes: 8 << 30, macAddress: "7a:80:2e:82:30:a5", disposable: true))
+        let factory = FakeSessionFactory()
+        let model = VMWindowModel(
+            name: try VMName("arm"), paths: root.paths, factory: factory,
+            passwords: MemoryGuestPasswordStore(), host: .intel)
+        await model.start()
+        guard case .error = model.state else { Issue.record("expected an error, got \(model.state)"); return }
+        #expect(model.errorDetail?.isEmpty == false)
+        #expect(factory.made.isEmpty)
+        #expect(try root.holder("arm") == nil, "no lock taken")
+        #expect(try root.bundle("arm").readConfig().disposable == true, "not claimed")
+    }
+
+    @Test func suspendUnchangedOnAppleSilicon() async throws {
+        let root = try TempRoot()
+        let model = VMWindowModel(
+            name: try VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory(),
+            passwords: MemoryGuestPasswordStore(), host: .appleSilicon)
+        await model.start()
+        #expect(model.toolbarButtons.map(\.action) == [.pause, .suspend, .stop, .snapshots, .settings, .fullScreen])
+        let prompt = VMSessionStore.quitPrompt(names: ["a"], unsuspendable: [])
+        #expect(prompt.buttons == ["Sospendi ed esci", "Arresta ed esci", "Annulla"])
+        #expect(VMSessionStore.QuitChoice(buttonIndex: 0, canSuspend: true) == .suspend)
+    }
+
     @Test func quitSuspendsAllAndStopsWhatCannotBeSaved() async throws {
         let root = try TempRoot(vms: ["a", "b"])
         let factory = FakeSessionFactory()

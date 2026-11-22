@@ -41,7 +41,10 @@ struct StartCommand: AsyncParsableCommand {
         GvproxyProcess.sweepOrphans()
         let (vmName, bundle) = try Terminal.openBundle(name)
         // A macOS guest has no serial console: refused before anything is touched.
-        try CLISupport.checkConsoleFlag(console, guest: try bundle.readConfig().guest)
+        let startConfig = try bundle.readConfig()
+        // A VM made for another architecture: refused before the lock, with the bundle untouched.
+        try ArchitectureGate.check(startConfig, host: .current)
+        try CLISupport.checkConsoleFlag(console, guest: startConfig.guest)
         // Lock first: a second start fails here without touching the bundle.
         let lock = try BundleLock.acquire(bundle, owner: .cli)
         // The last thing the run does, after every other `defer`: the lock goes, and a fresh

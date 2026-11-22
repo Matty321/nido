@@ -12,13 +12,13 @@ final class SnapshotRoot {
     let paths: NidoPaths
     let bundle: VMBundle
 
-    init(name: String = "debian-13") throws {
+    init(name: String = "debian-13", architecture: CPUArchitecture = .arm64) throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("nido-snapshots-\(UUID().uuidString)", isDirectory: true)
         paths = NidoPaths(root: url)
         let config = VMConfig(
             id: UUID(), name: try VMName(name), guest: .linux, cpuCount: 2,
-            memoryBytes: 1 << 30, diskBytes: 1 << 20, macAddress: "52:54:00:12:34:56")
+            memoryBytes: 1 << 30, diskBytes: 1 << 20, macAddress: "52:54:00:12:34:56", architecture: architecture)
         bundle = try VMBundle.create(config: config, paths: paths)
         try write("disk-v1", to: bundle.diskURL)
         try write("nvram-v1", to: bundle.nvramURL)
@@ -47,6 +47,28 @@ struct SnapshotsModelTests {
     {
         let window = VMWindowModel(name: try! VMName("debian-13"), paths: root.paths, factory: factory, passwords: MemoryGuestPasswordStore())
         return (window, SnapshotsModel(window: window, bundle: root.bundle))
+    }
+
+    private func intelModels(_ root: SnapshotRoot) -> (VMWindowModel, SnapshotsModel) {
+        let window = VMWindowModel(
+            name: try! VMName("debian-13"), paths: root.paths, factory: FakeSessionFactory(),
+            passwords: MemoryGuestPasswordStore(), host: .intel)
+        return (window, SnapshotsModel(window: window, bundle: root.bundle))
+    }
+
+    @Test func liveSnapshotDisabledOnIntel() async throws {
+        let root = try SnapshotRoot(architecture: .x86_64)
+        let (window, model) = intelModels(root)
+        await window.start()
+        #expect(!model.canCreate)
+        #expect(model.createLockedNote == "Arresta debian-13 per fare uno snapshot su questo Mac")
+    }
+
+    @Test func stoppedSnapshotAllowedOnIntel() throws {
+        let root = try SnapshotRoot()
+        let (_, model) = intelModels(root)
+        #expect(model.canCreate)
+        #expect(model.createLockedNote == nil)
     }
 
     /// Ripristina only asks: the bundle is untouched until the user confirms the sheet, whose

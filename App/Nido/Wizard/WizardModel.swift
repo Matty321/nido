@@ -208,6 +208,8 @@ final class WizardModel: Identifiable {
     var onClose: @MainActor () -> Void = {}
 
     private let registry: any VMRegistryProviding
+    /// The Mac the app acts as (`AppEnvironment.host`): images, labels and tiles follow it.
+    let host: HostPlatform
     private let images: WizardImageSource
     private let creator: any VMCreating
     private let freeDiskBytes: UInt64?
@@ -252,10 +254,11 @@ final class WizardModel: Identifiable {
          macImageDownloader: (any MacImageDownloading)? = nil,
          defaultSSHUser: String = WizardModel.defaultSSHUser(), presetIPSW: URL? = nil,
          hostMajor: Int = ProcessInfo.processInfo.operatingSystemVersion.majorVersion,
-         accountValidationDelay: Duration = .milliseconds(300),
+         accountValidationDelay: Duration = .milliseconds(300), host: HostPlatform = .current,
          accountValidator: @escaping @Sendable (String, String, GuestPassword) throws -> Void = {
              try MacFirstBoot.validate(fullName: $0, username: $1, password: $2)
          }) {
+        self.host = host
         self.accountValidationDelay = accountValidationDelay
         self.accountValidator = accountValidator
         self.hostMajor = hostMajor
@@ -306,7 +309,7 @@ final class WizardModel: Identifiable {
         // The VMs being installed have no bundle yet: their names are taken too.
         let names = summaries.map(\.name) + (installs?.installations.map(\.name.rawValue) ?? [])
         existingNames = Set(names.map { $0.lowercased() })
-        templates = summaries.filter(\.isTemplate).sorted { $0.name < $1.name }
+        templates = summaries.filter { $0.isTemplate && $0.architecture == host.architecture }.sorted { $0.name < $1.name }
         #if DEBUG
             if fixtureSelectsFirstTemplate, selectedTemplate == nil, let first = templates.first {
                 selectedTemplate = first.name
@@ -363,7 +366,7 @@ final class WizardModel: Identifiable {
     private var catalogImage: CloudImage? {
         guard case .catalog(let image, _, _) = images else { return nil }
         // The source's image is the default (tests give their own); another distribution, its own.
-        return image.distribution == distribution ? image : distribution.image
+        return image.distribution == distribution ? image : distribution.image(for: host.architecture)
     }
 
     /// "SHA-512" or "SHA-256", as the catalog image lists it.
@@ -1192,10 +1195,20 @@ final class WizardModel: Identifiable {
         switch images {
         case .catalog:
             distribution == self.distribution && cachedImageBytes != nil
-                ? String(localized: "arm64 · cached") : String(localized: "arm64 · cloud image")
-        case .localFile: String(localized: "arm64 · local image")
+                ? String(localized: "\(host.architecture.imageLabel) · cached")
+                : String(localized: "\(host.architecture.imageLabel) · cloud image")
+        case .localFile: String(localized: "\(host.architecture.imageLabel) · local image")
         }
     }
+
+    /// What a local image must be for this Mac.
+    var localImageHint: String {
+        host.architecture == .x86_64
+            ? String(localized: "Use an amd64 image on this Mac") : String(localized: "Use an arm64 image on this Mac")
+    }
+
+    /// Whether this Mac can run macOS VMs (the macOS tile is off otherwise).
+    var supportsMacGuests: Bool { host.supportsMacGuests }
 
     // MARK: - Download (S03)
 
@@ -1203,7 +1216,7 @@ final class WizardModel: Identifiable {
     var downloadRows: [Row] {
         switch images {
         case .catalog:
-            let image = catalogImage ?? distribution.image
+            let image = catalogImage ?? distribution.image(for: host.architecture)
             let size: String
             let most = ByteSize.text(image.maxBytes)
             if imageURL != nil, let bytes = imageBytes {
@@ -1232,7 +1245,7 @@ final class WizardModel: Identifiable {
             let size = localImageBytes.map { ByteSize.text($0) }
                 ?? String(localized: "unknown", comment: "The image's size is unknown.")
             return [Row(label: String(localized: "Source", comment: "Where the image comes from."),
-                        value: String(localized: "local file (debug only)")),
+                        value: String(localized: "local file (debug only)"), note: localImageHint),
                     Row(label: String(localized: "File"), value: url.lastPathComponent),
                     Row(label: String(localized: "Size"), value: size),
                     Row(label: String(localized: "Verification"),
@@ -1286,7 +1299,7 @@ final class WizardModel: Identifiable {
     private var downloadHost: String {
         switch images {
         case .catalog:
-            let image = catalogImage ?? distribution.image
+            let image = catalogImage ?? distribution.image(for: host.architecture)
             return image.url.host() ?? image.url.absoluteString
         case .localFile: return String(localized: "local file")
         }
@@ -1345,7 +1358,7 @@ final class WizardModel: Identifiable {
 
     func checkForNewBuild() async {
         guard case .catalog(_, let store, _) = images, buildNotice?.actionLabel != nil else { return }
-        let image = catalogImage ?? distribution.image
+        let image = catalogImage ?? distribution.image(for: host.architecture)
         buildCheck = .checking
         let result: BuildCheck
         do {
@@ -1358,14 +1371,14 @@ final class WizardModel: Identifiable {
             result = .failed(Self.sentence(error))
         }
         // The distribution may have changed meanwhile: that reset the check, keep it reset.
-        guard buildCheck == .checking, image == (catalogImage ?? distribution.image) else { return }
+        guard buildCheck == .checking, image == (catalogImage ?? distribution.image(for: host.architecture)) else { return }
         buildCheck = result
     }
 
     private func refreshImageOnDisk() {
         switch images {
         case .catalog(_, _, let cacheRoot):
-            let image = catalogImage ?? distribution.image
+            let image = catalogImage ?? distribution.image(for: host.architecture)
             let file = cacheRoot.appendingPathComponent(image.fileName, isDirectory: false)
             let digest = cacheRoot.appendingPathComponent(image.sidecarName, isDirectory: false)
             cachedImageBytes = FileManager.default.fileExists(atPath: digest.path) ? Self.fileSize(file) : nil
@@ -1583,7 +1596,7 @@ final class WizardModel: Identifiable {
                     note: String(localized: "They don’t carry over from the template to the new VM: you choose them later.")),
             ]
         }
-        var rows = [Row(label: system, value: "\(distribution.displayName) · arm64 · \(profile.title(for: distribution))"),
+        var rows = [Row(label: system, value: "\(distribution.displayName) · \(host.architecture.imageLabel) · \(profile.title(for: distribution))"),
                     Row(label: resources, value: resourcesValue)]
         var firstBoot: [String] = []
         if installEssentialPackages { firstBoot.append(String(localized: "Essential packages")) }
@@ -1600,7 +1613,7 @@ final class WizardModel: Identifiable {
         rows.append(Row(label: access, value: "SSH · " + (publicKeyURL?.lastPathComponent ?? noKey)))
         // A zero-width space after each dot lets a long host name (the R2 bucket) wrap there
         // instead of in the middle of a label.
-        let domains = EgressPolicy.base(for: distribution).allow
+        let domains = EgressPolicy.base(for: distribution, architecture: host.architecture).allow
             .map { $0.description.replacingOccurrences(of: ".", with: ".\u{200B}") }
             .joined(separator: ", ")
         rows.append(Row(label: String(localized: "Network"),
@@ -1755,7 +1768,7 @@ final class WizardModel: Identifiable {
             let url: URL
             switch images {
             case .catalog(_, let store, _):
-                let image = catalogImage ?? distribution.image
+                let image = catalogImage ?? distribution.image(for: host.architecture)
                 // The confirmation is the Download step itself: "Scarica" was just pressed.
                 // After "Cerca una nuova build" found one: the cached copy is replaced.
                 url = try await store.ensureImage(

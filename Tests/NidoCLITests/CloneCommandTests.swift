@@ -87,6 +87,7 @@ struct CloneCommandTests {
     }
 }
 
+#if arch(arm64)
 /// `nido clone` of a macOS VM: the steps to run in the guest follow the summary.
 @Suite(.italian) struct MacCloneCommandTests {
     @Test func macCloneShowsTheGuestSteps() async throws {
@@ -113,3 +114,4 @@ struct CloneCommandTests {
         #expect(text.contains("sudo scutil --set ComputerName mac-copia"))
     }
 }
+#endif

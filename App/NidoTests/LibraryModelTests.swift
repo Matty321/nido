@@ -54,6 +54,11 @@ final class FakeControl: VMControlling {
     }
 }
 
+private func summary(_ name: String, _ status: VMStatus, architecture: CPUArchitecture) -> VMSummary {
+    VMSummary(configID: UUID(), name: name, status: status, cpuCount: 4, memoryBytes: 8 << 30,
+              diskBytes: 64 << 30, distribution: .debian13, architecture: architecture)
+}
+
 private func summary(_ name: String, _ status: VMStatus) -> VMSummary {
     if case .unreadable = status {
         return VMSummary(configID: nil, name: name, status: status, cpuCount: nil, memoryBytes: nil,
@@ -114,6 +119,37 @@ struct LibraryModelTests {
 
         await model.perform(.stop, on: vm)
         #expect(control.stops == ["ci-runner"])
+    }
+
+    /// A VM made for another architecture is refused before anything starts: the card of an
+    /// unreadable VM, with the message of `NidoError.wrongArchitecture`.
+    @Test func wrongArchitectureVMShowsRefusalCard() {
+        let model = LibraryModel(registry: FakeRegistry(), control: FakeControl(), host: .intel)
+        let arm = summary("arm", .stopped, architecture: .arm64)
+        #expect(model.buttons(for: arm).map(\.action) == [.showInFinder, .delete])
+        #expect(model.buttons(for: arm).allSatisfy { $0.isEnabled })
+        #expect(model.actions(for: arm) == [.showInFinder, .delete])
+        guard case .unreadable(let message) = model.cardState(for: arm) else {
+            Issue.record("expected the refusal card")
+            return
+        }
+        #expect(message == NidoError.wrongArchitecture(name: "arm", made: .arm64).errorDescription)
+        // The same VM on Apple silicon starts as ever.
+        let apple = LibraryModel(registry: FakeRegistry(), control: FakeControl(), host: .appleSilicon)
+        #expect(apple.buttons(for: arm).map(\.action) == [.start, .settings])
+        // An x86_64 VM on Apple silicon is refused too.
+        #expect(apple.buttons(for: summary("x", .stopped, architecture: .x86_64)).map(\.action) == [.showInFinder, .delete])
+        // A template made for the other architecture: the buttons of a wrong-architecture VM.
+        let template = VMSummary(configID: UUID(), name: "t", status: .stopped, cpuCount: 2, memoryBytes: 1 << 30,
+                                 diskBytes: 1 << 30, isTemplate: true, distribution: .debian13, architecture: .arm64)
+        #expect(model.buttons(for: template).map(\.action) == [.showInFinder, .delete])
+        #expect(model.buttons(for: template).allSatisfy { $0.isEnabled })
+        #expect(model.actions(for: template) == [.showInFinder, .delete])
+    }
+
+    @Test func labelsShowTheVMsArchitecture() {
+        #expect(LibraryModel.system(of: summary("a", .stopped, architecture: .x86_64)) == "Debian 13 · amd64")
+        #expect(LibraryModel.system(of: summary("a", .stopped, architecture: .arm64)) == "Debian 13 · arm64")
     }
 
     @Test func actionsFollowTheStatus() {

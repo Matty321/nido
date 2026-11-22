@@ -17,13 +17,13 @@ private struct CloneEnv {
     let paths: NidoPaths
     let source: VMBundle
 
-    init(name: String = "sorgente", profile: ProvisioningProfile = .empty) throws {
+    init(name: String = "sorgente", profile: ProvisioningProfile = .empty, host: HostPlatform = .current) throws {
         tmp = FileManager.default.temporaryDirectory.appendingPathComponent("nido-clone-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
         paths = NidoPaths(root: tmp.appendingPathComponent("VMs"))
         let image = tmp.appendingPathComponent("base.img")
         try Data(repeating: 0xAB, count: Int(mib)).write(to: image)
-        source = try VMFactory(paths: paths, runner: SystemProcessRunner()).createLinux(
+        source = try VMFactory(paths: paths, runner: SystemProcessRunner(), host: host).createLinux(
             LinuxVMRequest(
                 name: try VMName(name), baseImage: image, cpuCount: 2, memoryBytes: 2048 * mib,
                 diskBytes: 4 * mib, publicKey: validKey, profile: profile))
@@ -73,6 +73,35 @@ private func mode(_ url: URL) throws -> Int {
 private struct InjectedFailure: Error {}
 
 @Suite(.enabled(if: hasHdiutil)) struct VMClonerTests {
+    @Test func cloneKeepsArchitecture() async throws {
+        let env = try CloneEnv()
+        defer { env.cleanup() }
+        _ = try env.source.updateConfig { $0.architecture = .x86_64 }
+        var environment = VMCloner.Environment()
+        environment.host = .intel
+
+        let clone = try await env.cloner(environment).clone(
+            try VMName("sorgente"), as: try VMName("copia"), owner: .cli)
+
+        let config = try clone.readConfig()
+        #expect(config.architecture == .x86_64)
+        #expect(config.schemaVersion == 6)
+    }
+
+    @Test func cloneRefusesWrongArchitecture() async throws {
+        let env = try CloneEnv()
+        defer { env.cleanup() }
+        _ = try env.source.updateConfig { $0.architecture = .x86_64 }
+        let before = try env.rootEntries()
+        var environment = VMCloner.Environment()
+        environment.host = .appleSilicon
+
+        await #expect(throws: NidoError.wrongArchitecture(name: "sorgente", made: .x86_64)) {
+            _ = try await env.cloner(environment).clone(try VMName("sorgente"), as: try VMName("copia"), owner: .cli)
+        }
+        #expect(try env.rootEntries() == before)
+    }
+
     @Test func cloneDropsSharedFolders() async throws {
         let env = try CloneEnv()
         defer { env.cleanup() }
@@ -628,7 +657,7 @@ private struct InjectedFailure: Error {}
     }
 
     @Test func seedReaderRejectsWhatIsNotAnISO() throws {
-        let env = try CloneEnv()
+        let env = try CloneEnv(host: .appleSilicon)
         defer { env.cleanup() }
         let junk = env.tmp.appendingPathComponent("junk.iso")
         try Data("iso".utf8).write(to: junk)
@@ -646,7 +675,15 @@ private struct InjectedFailure: Error {}
         #expect(try CloudInitSeed.readFile("user-data", fromISO: env.source.seedURL)
             == CloudInitSeed.userData(
                 username: "nido", publicKey: try CloudInitSeed.validatePublicKey(validKey), pinnedTimeServer: true,
-                aptQuiet: true))
+                aptQuiet: true, rosetta: true))
+
+        // An Intel host leaves the Rosetta files out of the seed.
+        let intel = try CloneEnv(host: .intel)
+        defer { intel.cleanup() }
+        #expect(try CloudInitSeed.readFile("user-data", fromISO: intel.source.seedURL)
+            == CloudInitSeed.userData(
+                username: "nido", publicKey: try CloudInitSeed.validatePublicKey(validKey), pinnedTimeServer: true,
+                aptQuiet: true, rosetta: false))
     }
 
     @Test func cloneOfACloneGetsTheMachineIDStepOnce() async throws {
@@ -710,6 +747,7 @@ private struct InjectedFailure: Error {}
             == "[cloud-init-per, instance, nido-machine-id, sh, -c, 'rm -f /etc/machine-id /var/lib/dbus/machine-id && systemd-machine-id-setup || exit 1; [ ! -d /var/lib/dbus ] || ln -sf /etc/machine-id /var/lib/dbus/machine-id; systemctl restart systemd-journald; exit 0']")
     }
 }
+#if arch(arm64)
 
 /// Clones of macOS guests (M3b): no seed; a new `VZMacMachineIdentifier` and MAC instead.
 @Suite struct MacClonerTests {
@@ -844,7 +882,9 @@ private struct InjectedFailure: Error {}
         // A new Mac machine identifier; disk, auxiliary storage and hardware model cloned.
         let identifier = try Data(contentsOf: clone.machineIdentifierURL)
         #expect(identifier != (try Data(contentsOf: source.machineIdentifierURL)))
+#if arch(arm64)
         #expect(VZMacMachineIdentifier(dataRepresentation: identifier) != nil)
+#endif
         #expect(try Data(contentsOf: clone.auxiliaryStorageURL) == (try Data(contentsOf: source.auxiliaryStorageURL)))
         #expect(try Data(contentsOf: clone.hardwareModelURL) == (try Data(contentsOf: source.hardwareModelURL)))
         #expect(try MachineFileCopy.allocatedSize(clone.diskURL) < 1 << 30)  // sparse / cloned
@@ -925,3 +965,4 @@ private struct InjectedFailure: Error {}
         #expect(try rootEntries(fixture) == ["mac.nidovm"])
     }
 }
+#endif

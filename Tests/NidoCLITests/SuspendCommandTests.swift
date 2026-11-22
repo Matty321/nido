@@ -116,3 +116,25 @@ extension SuspendCommandTests {
         #expect(FileManager.default.fileExists(atPath: target.path))
     }
 }
+
+extension SuspendCommandTests {
+    /// `nido stop --suspend` on Intel is refused before the VM is opened (even a name that does not
+    /// exist gets the suspend message); a plain stop and Apple silicon are unchanged.
+    @Test func stopSuspendRefusedOnIntel() throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let before = try Data(contentsOf: env.bundle.configURL)
+        #expect(throws: NidoError.suspendUnavailable) {
+            _ = try CLISupport.openForStop("vm", suspend: true, paths: env.paths, host: .intel)
+        }
+        #expect(throws: NidoError.suspendUnavailable) {
+            _ = try CLISupport.openForStop("nobody", suspend: true, paths: env.paths, host: .intel)
+        }
+        #expect(try Data(contentsOf: env.bundle.configURL) == before)
+        #expect(!FileManager.default.fileExists(atPath: env.bundle.stateURL.path))
+        #expect(VMControl.readSuspendResult(bundle: env.bundle) == nil)
+
+        _ = try CLISupport.openForStop("vm", suspend: false, paths: env.paths, host: .intel)
+        _ = try CLISupport.openForStop("vm", suspend: true, paths: env.paths, host: .appleSilicon)
+    }
+}

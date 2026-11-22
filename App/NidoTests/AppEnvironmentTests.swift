@@ -143,11 +143,30 @@ struct AppSetupTests {
     /// user's own VM root. Refused before the root is even prepared.
     @Test(arguments: [
         ["-NidoFakeSessions"], ["-NidoWizardFixture", "summary"], ["-NidoFakeStates", "a=running"], ["-NidoFakeAIRouter"],
-        ["-NidoFakeGuest", "a=values"], ["-NidoOpenVM", "macos-t8"],
+        ["-NidoFakeGuest", "a=values"], ["-NidoOpenVM", "macos-t8"], ["-NidoFakeHost", "intel"],
     ])
     func debugFlagsRequireNidoRoot(_ flag: [String]) {
         #expect(throws: AppEnvironment.LaunchError.requiresRoot(flag[0])) {
             try AppEnvironment(arguments: ["Nido"] + flag, isDebug: true)
+        }
+    }
+
+    @Test func fakeHostNeedsRoot() {
+        #expect(throws: AppEnvironment.LaunchError.requiresRoot("-NidoFakeHost")) {
+            try AppEnvironment(arguments: ["Nido", "-NidoFakeHost", "intel"], isDebug: true)
+        }
+    }
+
+    @Test func hostFollowsTheFakeFlagInDebugOnly() throws {
+        let args = ["Nido", "-NidoFakeHost", "intel"]
+        #expect(try AppEnvironment.resolveHost(arguments: args, isDebug: true) == .intel)
+        #expect(try AppEnvironment.resolveHost(arguments: args, isDebug: false) == .current)
+        #expect(try AppEnvironment.resolveHost(arguments: ["Nido"], isDebug: true) == .current)
+        // Without the flag the host never reads NIDO_FAKE_HOST from the process environment.
+        #expect(try AppEnvironment.resolveHost(arguments: ["Nido"], isDebug: true)
+            == HostPlatform.current(environment: [:]))
+        #expect(throws: AppEnvironment.LaunchError.invalidValue("-NidoFakeHost", "ppc")) {
+            try AppEnvironment.resolveHost(arguments: ["Nido", "-NidoFakeHost", "ppc"], isDebug: true)
         }
     }
 

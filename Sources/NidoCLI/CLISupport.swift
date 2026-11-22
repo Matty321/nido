@@ -20,6 +20,16 @@ public enum CLISupport {
         return NidoPaths(root: URL(fileURLWithPath: raw, isDirectory: true))
     }
 
+    /// `nido stop`: with `--suspend`, refused on this host before the VM is opened; then the
+    /// named bundle is opened.
+    public static func openForStop(
+        _ name: String, suspend: Bool, paths: NidoPaths? = nil, host: HostPlatform = .current
+    ) throws -> (VMName, VMBundle) {
+        if suspend { try HostChecks.requireSaveRestore(host) }
+        let vmName = try VMName(name)
+        return (vmName, try VMBundle.open(vmName, paths: try paths ?? preparedPaths()))
+    }
+
     /// `paths(environment:)` followed by `ensureRoot()`.
     public static func preparedPaths(
         environment: [String: String] = ProcessInfo.processInfo.environment
@@ -36,7 +46,8 @@ public enum CLISupport {
         name: String, image: String?, imageFile: String?, sshKey: String?,
         cpus: Int, memory: String?, disk: String, noPackages: Bool = false, noGuestTools: Bool = false,
         user: String? = nil,
-        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory,
+        architecture: CPUArchitecture = HostPlatform.current.architecture
     ) throws -> CreateOptions {
         let vmName = try VMName(name)
         // The Linux guest's account is always `nido` (cloud-init).
@@ -49,7 +60,9 @@ public enum CLISupport {
         let source: CreateOptions.ImageSource
         switch (image, imageFile) {
         case (let id?, nil):
-            guard let catalogImage = CloudImageCatalog.image(id: id) else { throw CLIError.unknownImage(id) }
+            guard let catalogImage = CloudImageCatalog.image(id: id, architecture: architecture) else {
+                throw CLIError.unknownImage(id)
+            }
             source = .catalog(catalogImage)
         case (nil, let path?):
             source = .file(URL(fileURLWithPath: path))

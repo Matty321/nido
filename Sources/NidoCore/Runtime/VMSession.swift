@@ -140,11 +140,12 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
     /// A controlled VM's relay reports to `egressEvents` (on its own queue).
     public convenience init(
         bundle: VMBundle, mirrorsConsole: Bool = false, display: DisplaySpec? = nil,
-        imageCache: URL = ImageStore.defaultCacheRoot(), egressEvents: EgressRelay.Events? = nil
+        imageCache: URL = ImageStore.defaultCacheRoot(), egressEvents: EgressRelay.Events? = nil,
+        host: HostPlatform = .current
     ) throws {
         try self.init(
             bundle: bundle, mirrorsConsole: mirrorsConsole, display: display, imageCache: imageCache,
-            egress: EgressRelay.Options(events: egressEvents), validate: { try $0.validate() })
+            egress: EgressRelay.Options(events: egressEvents), validate: { try $0.validate() }, host: host)
     }
 
     /// The CLI's session (see above), with the relay's options and the configuration's
@@ -152,9 +153,11 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
     /// shut down when validation fails.
     convenience init(
         bundle: VMBundle, mirrorsConsole: Bool, display: DisplaySpec?, imageCache: URL,
-        egress: EgressRelay.Options, validate: (VZVirtualMachineConfiguration) throws -> Void
+        egress: EgressRelay.Options, validate: (VZVirtualMachineConfiguration) throws -> Void,
+        host: HostPlatform = .current
     ) throws {
         let config = try bundle.readConfig()
+        try ArchitectureGate.check(config, host: host)
         try bundle.verifyInnerFiles(for: config.guest)
         guard !config.isTemplate else { throw NidoError.isTemplate(bundle.displayName) }
         let built: GuestConfiguration
@@ -205,7 +208,7 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
     public convenience init(
         bundle: VMBundle, serialConsole: SerialConsole?, display: DisplaySpec? = nil,
         imageCache: URL = ImageStore.defaultCacheRoot(), egressEvents: EgressRelay.Events? = nil,
-        egressRelay: EgressRelay? = nil
+        egressRelay: EgressRelay? = nil, host: HostPlatform = .current
     ) throws {
         let config: VMConfig
         let built: GuestConfiguration
@@ -213,7 +216,7 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
         do {
             (config, built, serial) = try Self.buildForApp(
                 bundle: bundle, serialConsole: serialConsole, display: display, imageCache: imageCache,
-                egressEvents: egressEvents, egressRelay: egressRelay)
+                egressEvents: egressEvents, egressRelay: egressRelay, host: host)
         } catch {
             // Every failure, also before the configuration is built (config unreadable, inner
             // files refused, a template): the relay leads nowhere. Shutdown is idempotent.
@@ -226,9 +229,10 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
     /// The app's configuration (see the init above); throws without shutting `egressRelay` down.
     private static func buildForApp(
         bundle: VMBundle, serialConsole: SerialConsole?, display: DisplaySpec?, imageCache: URL,
-        egressEvents: EgressRelay.Events?, egressRelay: EgressRelay?
+        egressEvents: EgressRelay.Events?, egressRelay: EgressRelay?, host: HostPlatform
     ) throws -> (VMConfig, GuestConfiguration, SerialConsole?) {
         let config = try bundle.readConfig()
+        try ArchitectureGate.check(config, host: host)
         try bundle.verifyInnerFiles(for: config.guest)
         guard !config.isTemplate else { throw NidoError.isTemplate(bundle.displayName) }
         switch config.guest {
@@ -323,7 +327,7 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
     }
 
     private func startProvisioned(_ plan: MacProvisioningPlan) async throws {
-        #if compiler(>=6.4)
+        #if compiler(>=6.4) && arch(arm64)
         if #available(macOS 27, *) {
             let options = VZMacGuestProvisioningOptions()
             options.fullName = plan.fullName
@@ -413,11 +417,15 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
     /// Throws `.snapshotUnsupported(<reason>)` when Virtualization.framework cannot save (or
     /// restore) a machine with this configuration.
     public func validateSaveRestoreSupport() throws {
+        #if arch(arm64)
         do {
             try configuration.validateSaveRestoreSupport()
         } catch {
             throw NidoError.snapshotUnsupported(error.localizedDescription)
         }
+        #else
+        throw NidoError.snapshotUnsupported(L10n.string("needs Apple silicon"))
+        #endif
     }
 
     /// Writes the machine state to `url` (a file that must not exist yet). The VM must be paused
@@ -425,7 +433,11 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
     /// to this Mac: it can only be restored here.
     public func saveMachineState(to url: URL) async throws {
         guard state == .paused else { throw NidoError.notRunning(bundleName) }
+        #if arch(arm64)
         try await vm.saveMachineStateTo(url: url)
+        #else
+        throw NidoError.suspendUnavailable
+        #endif
     }
 
     /// Restores a state written by `saveMachineState(to:)` instead of booting: only into a session
@@ -444,6 +456,9 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
         guard !hasRun, state == .stopped, vm.state == .stopped, !restoreWindow.isActive else {
             throw NidoError.vmMustBeStopped(bundleName)
         }
+        #if !arch(arm64)
+        throw NidoError.suspendUnavailable
+        #else
         // No transitional state: going back to `.stopped` after a failure would close the serial
         // console, and the same session must still be able to `start()` from cold.
         restoreWindow.begin()
@@ -465,6 +480,7 @@ public final class VMSession: NSObject, VZVirtualMachineDelegate, MachineStateSa
             await performStop(gracePeriod: .zero)
         }
         restoreWindow.end()
+        #endif
     }
 
     /// Asks the guest to power off; forces a stop if it is still running after `gracePeriod`.

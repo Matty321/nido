@@ -48,7 +48,7 @@ struct VMSettingsRoot: View {
                 imageCache: environment.imageCacheRoot,
                 onConfigurationChanged: { sessions.configurationChanged(vmName) },
                 applyLiveShares: { try sessions.applyLiveShares(vmName, $0) },
-                guestTools: sessions.guestTools(for: vmName))
+                guestTools: sessions.guestTools(for: vmName), host: environment.host)
             let settings = model
             network = NetworkSettingsModel(
                 bundle: bundle, config: try bundle.readConfig(), authenticator: environment.egress.authenticator,

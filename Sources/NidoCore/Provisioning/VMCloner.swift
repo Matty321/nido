@@ -59,13 +59,18 @@ public struct VMCloner: Sendable {
         var supportsCloning: @Sendable (URL) -> Bool = SnapshotStore.volumeSupportsCloning
         /// Skip `clonefile` and use the copy fallback (tests of the fallback).
         var forceCopy = false
+        /// The Mac the clone runs on: a source made for another architecture is refused.
+        var host: HostPlatform = .current
         var faultInjection: (@Sendable (CloneStep) throws -> Void)?
     }
 
+    /// `host`: the Mac the clone runs on (a source made for another architecture is refused).
     public init(
-        paths: NidoPaths, runner: ProcessRunner, passwords: any GuestPasswordStore
+        paths: NidoPaths, runner: ProcessRunner, passwords: any GuestPasswordStore, host: HostPlatform = .current
     ) {
-        self.init(paths: paths, runner: runner, passwords: passwords, environment: Environment())
+        var environment = Environment()
+        environment.host = host
+        self.init(paths: paths, runner: runner, passwords: passwords, environment: environment)
     }
 
     init(
@@ -164,6 +169,9 @@ public struct VMCloner: Sendable {
         try paths.ensureRoot()
         try checkNameIsFree(target)
         let bundle = try VMBundle.open(source, paths: paths)
+        // Before the lock, the leftovers check or any copy: a VM of another architecture is
+        // refused with the bundle untouched.
+        try ArchitectureGate.check(try bundle.readConfig(), host: environment.host)
         let lock: BundleLock
         do {
             lock = try await BundleLock.acquireAsync(bundle, owner: owner)
@@ -234,7 +242,7 @@ public struct VMCloner: Sendable {
             }
 
             var config = sourceConfig
-            config.schemaVersion = VMConfig.currentSchemaVersion
+            config.schemaVersion = config.writtenSchemaVersion
             config.id = UUID()
             config.name = target
             config.macAddress = VZMACAddress.randomLocallyAdministered().string
@@ -256,7 +264,12 @@ public struct VMCloner: Sendable {
             try Self.copyEgressPolicy(from: bundle, to: clone)
             let identifier = switch guest {
             case .linux: VZGenericMachineIdentifier().dataRepresentation
-            case .macos: VZMacMachineIdentifier().dataRepresentation
+            case .macos:
+                #if arch(arm64)
+                VZMacMachineIdentifier().dataRepresentation
+                #else
+                throw NidoError.needsAppleSilicon
+                #endif
             }
             try MachineFileCopy.writeNewFile(clone.machineIdentifierURL, data: identifier)
             try fault(.identityWritten)

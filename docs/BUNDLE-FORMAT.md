@@ -65,7 +65,7 @@ JSON with sorted keys, written atomically.
 
 | Field | Schema | Meaning |
 |---|---|---|
-| `schemaVersion` | 1 | `2` since M3a, `3` since M3c, `4` since M3b, `5` since M3d |
+| `schemaVersion` | 1 | `2` since M3a, `3` since M3c, `4` since M3b, `5` since M3d, `6` for x86_64 (Intel) bundles |
 | `id`, `name`, `guest` | 1 | UUID, VM name, `linux` or (schema 4) `macos` |
 | `cpuCount`, `memoryBytes`, `diskBytes` | 1 | resources |
 | `macAddress` | 1 | MAC of the NAT interface |
@@ -91,6 +91,7 @@ JSON with sorted keys, written atomically.
 | `guestKeyboardLayoutID` | 5 | optional, macOS only: the keyboard layout of the guest as the input source ID of the same layout on the Mac (`com.apple.keylayout.Italian-Pro`), used by the app's "Type in VM"; missing = the Mac's current layout. **Not part of `stateHash()`**; inherited by clones |
 | `macAccountFullName` | 5 | optional, macOS 27 guests: the full name asked at creation for the account Nido provisions (the account name is `sshUser`; the password lives only in the Keychain, one item per VM, never in the bundle). **Not part of `stateHash()`**; inherited by clones |
 | `macProvisioningSent` | 5 | optional, macOS: true once the provisioning went to the guest (sent at most once per VM). **Not part of `stateHash()`**; inherited by clones, which also get a copy of the source's Keychain item |
+| `architecture` | 6 | optional: the CPU architecture the VM was made for. Written only for x86_64, with the value `"x86_64"`; missing = arm64 (so arm64 bundles keep schema 5). A VM made for one architecture never starts on the other: an Intel Mac starts only x86_64 bundles, an Apple silicon Mac only arm64 ones. x86_64 bundles are Linux only, have no Rosetta, and are never suspended |
 
 The M3c features (`provisioning`, `guestToolsVersion`, `isTemplate`, `aiBridge`, `pendingProvisioning`) are Linux only: in a macOS VM they stay missing or false.
 
@@ -102,7 +103,7 @@ The M3c features (`provisioning`, `guestToolsVersion`, `isTemplate`, `aiBridge`,
 - A schema 1 or 2 `config.json` is also read with the defaults of the schema 3 fields (`provisioning`, `guestToolsVersion`, `sshPublicKeyPath`, `aiBridge` and `pendingProvisioning` missing, `isTemplate` false).
 - A schema 1, 2 or 3 `config.json` is read as a Linux VM without the schema 4 fields (`sshUser` and `osVersion` missing) and isn't rewritten just to read it.
 - A schema 1–4 `config.json` has no `controlledNetwork` and is read as false: migration never puts an existing VM on the controlled network. At the first write, the field is written explicitly as false.
-- Every write (`VMBundle.writeConfig`) writes the current schema (5) after `VMConfig.validate`.
+- Every write (`VMBundle.writeConfig`) writes the current schema after `VMConfig.validate`: 5 for arm64, 6 for x86_64 (the only difference is the `architecture` field).
 - A schema higher than the known one (or lower than 1) is refused (`unsupportedSchema`). So a version of Nido earlier than M3d doesn't read a schema 5 VM: it can't start it on the NAT or rewrite its config without `controlledNetwork`.
 - Missing `guestMountsSharedFolders` and `guestRegistersRosetta` count as false: a VM created before M3a doesn't have the units in the guest and gets the command to run once.
 

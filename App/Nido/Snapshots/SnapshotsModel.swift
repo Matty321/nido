@@ -88,7 +88,15 @@ final class SnapshotsModel {
     /// The VM runs in this app (or is starting, stopping…): a snapshot keeps its memory.
     var runsInApp: Bool { !window.isGone }
 
-    var canCreate: Bool { !isWorking && !runsElsewhere && (window.isGone || isLive) }
+    var canCreate: Bool {
+        !isWorking && !runsElsewhere && (window.isGone || (isLive && window.host.supportsSaveRestore))
+    }
+
+    /// Intel: a running VM cannot be snapshotted (no memory save), only a stopped one.
+    var createLockedNote: String? {
+        guard isLive, !runsElsewhere, !window.host.supportsSaveRestore else { return nil }
+        return String(localized: "Stop \(vmName) to take a snapshot on this Mac", comment: "%@ is the VM's name.")
+    }
     var canRestore: Bool { !isWorking && !runsElsewhere && window.isGone }
     var canDelete: Bool { canRestore }
 

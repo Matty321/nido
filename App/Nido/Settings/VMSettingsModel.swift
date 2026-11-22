@@ -104,8 +104,10 @@ final class VMSettingsModel {
         onConfigurationChanged: @escaping @MainActor () -> Void = {},
         applyLiveShares: (@MainActor ([SharedFolder]) throws -> [String])? = nil,
         guestTools: GuestToolsModel? = nil,
-        guestToolsServices: any GuestToolsServicing = LiveGuestToolsServices()
+        guestToolsServices: any GuestToolsServicing = LiveGuestToolsServices(),
+        host: HostPlatform = .current
     ) throws {
+        self.host = host
         let config = try bundle.readConfig()
         self.bundle = bundle
         self.applyLiveShares = applyLiveShares
@@ -150,7 +152,9 @@ final class VMSettingsModel {
     // MARK: - What this guest has (R4)
 
     /// Rosetta runs Linux binaries: Linux only.
-    var showsRosetta: Bool { guest == .linux }
+    var showsRosetta: Bool { guest == .linux && host.supportsRosetta }
+    /// The Mac the app acts as (`AppEnvironment.host`): without Apple silicon there is no Rosetta.
+    let host: HostPlatform
     /// Guest Tools (monitor, provisioning, AI bridge) are Linux-only in M3b.
     var showsGuestTools: Bool { guest == .linux }
     /// "Nome utente per nido ssh": the account a macOS guest is reached as.

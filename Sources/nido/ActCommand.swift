@@ -47,10 +47,7 @@ struct ActCommand: ParsableCommand {
     var action: [String] = []
 
     func run() throws {
-        let invocation = try AgentSupport.parseInvocation(action)
-        let (vmName, bundle) = try Terminal.openBundle(vm)
-        let config = try bundle.readConfig()
-        try AgentSupport.requireAgentAccess(config)
+        let (invocation, _, bundle, config) = try AgentSupport.openForAct(vm: vm, action: action)
 
         switch invocation {
         case .wait(let milliseconds):

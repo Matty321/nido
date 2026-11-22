@@ -25,13 +25,15 @@ struct LiveVMCreator: VMCreating {
     let paths: NidoPaths
     /// Where a VM from a macOS template gets its account password (`AppEnvironment.guestPasswords`).
     let passwords: any GuestPasswordStore
+    /// The Mac the app acts as (`AppEnvironment.host`): the new VM is made for its architecture.
+    var host: HostPlatform = .current
 
     func create(_ request: LinuxVMRequest) async throws {
-        _ = try await VMFactory(paths: paths, runner: SystemProcessRunner()).createLinuxAsync(request)
+        _ = try await VMFactory(paths: paths, runner: SystemProcessRunner(), host: host).createLinuxAsync(request)
     }
 
     func createFromTemplate(_ template: VMName, as name: VMName, sshKeyPath: URL?) async throws {
-        _ = try await VMCloner(paths: paths, runner: SystemProcessRunner(), passwords: passwords)
+        _ = try await VMCloner(paths: paths, runner: SystemProcessRunner(), passwords: passwords, host: host)
             .createFromTemplate(template, as: name, sshKeyPath: sshKeyPath, owner: .app)
     }
 

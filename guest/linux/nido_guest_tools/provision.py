@@ -70,7 +70,7 @@ USAGE = (
 MESSAGES = {
     # code: English message
     "release_invalid": "the Guest Tools’ release.json isn’t valid (%s)",
-    "architecture_unsupported": "unsupported architecture (%s): aarch64 required",
+    "architecture_unsupported": "unsupported architecture (%s): aarch64 or x86_64 required",
     "ollama_foreign": "Ollama wasn’t installed by Nido: manage it yourself",
     "ollama_link_foreign": "/usr/local/bin/ollama already holds an Ollama that Nido didn’t install: remove it or use that one",
     "ollama_not_installed": "Ollama isn’t installed",
@@ -420,11 +420,17 @@ class Provisioner:
     def release(self):
         try:
             with open(self.paths.release, encoding="utf-8") as f:
-                rel = json.load(f)
+                doc = json.load(f)
+            # One entry per architecture; the one for this machine, with the shared version.
+            machine = self.sys.machine()
+            if machine not in ("aarch64", "x86_64"):
+                raise StepFailed("architecture_unsupported", machine)
+            entry = doc["architectures"][machine]
+            rel = dict(entry, version=doc["version"])
             for key in ("version", "url", "file", "size", "sha256"):
                 if key not in rel:
                     raise ValueError(key)
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, KeyError, TypeError) as exc:
             raise StepFailed("release_invalid", exc)
         if not rel["url"].startswith(DOWNLOAD_PREFIX) or "/" in rel["file"]:
             raise StepFailed("release_invalid", "url")
@@ -767,7 +773,7 @@ class Provisioner:
             raise StepFailed("ollama_foreign")
 
     def preflight(self):
-        if self.sys.machine() != "aarch64":
+        if self.sys.machine() not in ("aarch64", "x86_64"):
             raise StepFailed("architecture_unsupported", self.sys.machine())
         self.refuse_foreign()
 

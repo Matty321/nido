@@ -19,7 +19,7 @@ struct CreateCommand: AsyncParsableCommand {
     @Option(help: ArgumentHelp(L10n.string("Catalog image to download and verify: debian-13, ubuntu-26.04 or ubuntu-24.04.")))
     var image: String?
 
-    @Option(name: .customLong("image-file"), help: ArgumentHelp(L10n.string("Local disk image, raw or qcow2 (not verified).")))
+    @Option(name: .customLong("image-file"), help: ArgumentHelp(HostChecks.imageFileHelp()))
     var imageFile: String?
 
     @Option(help: ArgumentHelp(L10n.string("A macOS restore image (.ipsw): creates a macOS VM. Get one from Apple with nido image macos --download.")))

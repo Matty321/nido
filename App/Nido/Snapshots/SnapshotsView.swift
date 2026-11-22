@@ -174,6 +174,12 @@ struct SnapshotsView: View {
                             onDelete: { model.requestDelete(snapshot) })
                             .accessibilityIdentifier("snapshot-row-\(snapshot.name)")
                     }
+                    if let note = model.createLockedNote {
+                        Text(verbatim: note)
+                            .font(.nido(Theme.TypeSize.caption))
+                            .foregroundStyle(Theme.Color.textSecondary)
+                            .accessibilityIdentifier("snapshots-create-locked-note")
+                    }
                     if let note = model.lockedNote {
                         Text(verbatim: note)
                             .font(.nido(Theme.TypeSize.caption))

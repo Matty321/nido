@@ -38,7 +38,7 @@ import Testing
         try env.bundle.updateConfig { $0.isTemplate = true }
         for enabled in [true, false] {
             #expect(throws: NidoError.isTemplate("vm")) {
-                _ = try CLISupport.setRosetta(vm: "vm", enabled: enabled, paths: env.paths, state: .installed)
+                _ = try CLISupport.setRosetta(vm: "vm", enabled: enabled, paths: env.paths, state: .installed, host: .appleSilicon)
             }
         }
         #expect(try env.bundle.readConfig().rosetta == false)
@@ -50,22 +50,22 @@ import Testing
         for owner in [LockOwner.cli, .app] {
             let lock = try BundleLock.acquire(env.bundle, owner: owner)
             #expect(throws: NidoError.vmMustBeStopped("vm")) {
-                _ = try CLISupport.setRosetta(vm: "vm", enabled: true, paths: env.paths, state: .installed)
+                _ = try CLISupport.setRosetta(vm: "vm", enabled: true, paths: env.paths, state: .installed, host: .appleSilicon)
             }
             #expect(throws: NidoError.vmMustBeStopped("vm")) {
-                _ = try CLISupport.setRosetta(vm: "vm", enabled: false, paths: env.paths, state: .installed)
+                _ = try CLISupport.setRosetta(vm: "vm", enabled: false, paths: env.paths, state: .installed, host: .appleSilicon)
             }
             lock.release()
         }
         #expect(try env.bundle.readConfig().rosetta == false)
 
-        let message = try CLISupport.setRosetta(vm: "vm", enabled: true, paths: env.paths, state: .installed)
+        let message = try CLISupport.setRosetta(vm: "vm", enabled: true, paths: env.paths, state: .installed, host: .appleSilicon)
         #expect(try env.bundle.readConfig().rosetta)
         #expect(message.contains("Vale dal prossimo avvio di vm"))
         #expect(!message.contains("sudo"))  // created with the cloud-init registration
         #expect(BundleLock.holder(env.bundle) == nil)
 
-        let off = try CLISupport.setRosetta(vm: "vm", enabled: false, paths: env.paths, state: .installed)
+        let off = try CLISupport.setRosetta(vm: "vm", enabled: false, paths: env.paths, state: .installed, host: .appleSilicon)
         #expect(try env.bundle.readConfig().rosetta == false)
         #expect(off.contains("disattivata"))
     }
@@ -75,10 +75,10 @@ import Testing
         defer { env.cleanup() }
         // Not installed or unsupported: refused with the app's reason, nothing written.
         #expect(throws: NidoError.rosettaNotInstalled) {
-            _ = try CLISupport.setRosetta(vm: "vm", enabled: true, paths: env.paths, state: .notInstalled)
+            _ = try CLISupport.setRosetta(vm: "vm", enabled: true, paths: env.paths, state: .notInstalled, host: .appleSilicon)
         }
         #expect(throws: NidoError.rosettaUnavailable) {
-            _ = try CLISupport.setRosetta(vm: "vm", enabled: true, paths: env.paths, state: .unsupported)
+            _ = try CLISupport.setRosetta(vm: "vm", enabled: true, paths: env.paths, state: .unsupported, host: .appleSilicon)
         }
         #expect(try env.bundle.readConfig().rosetta == false)
         #expect(CLISupport.message(for: NidoError.rosettaNotInstalled) + "." == RosettaState.notInstalled.reason)
@@ -88,7 +88,7 @@ import Testing
         config.rosetta = true
         try env.bundle.writeConfig(config)
         for state in [RosettaState.notInstalled, .unsupported] {
-            try CLISupport.setRosetta(vm: "vm", enabled: false, paths: env.paths, state: state)
+            try CLISupport.setRosetta(vm: "vm", enabled: false, paths: env.paths, state: state, host: .appleSilicon)
             #expect(try env.bundle.readConfig().rosetta == false)
         }
     }
@@ -96,7 +96,7 @@ import Testing
     @Test func olderVMGetsTheGuestCommand() throws {
         let env = try Env(guestRegisters: false)
         defer { env.cleanup() }
-        let message = try CLISupport.setRosetta(vm: "vm", enabled: true, paths: env.paths, state: .installed)
+        let message = try CLISupport.setRosetta(vm: "vm", enabled: true, paths: env.paths, state: .installed, host: .appleSilicon)
         #expect(message.contains(RosettaSupport.legacyGuestCommand))
     }
 
@@ -111,29 +111,29 @@ import Testing
         let spy = InstallSpy()
         var asked = 0
         let done = try await CLISupport.installRosetta(
-            state: .installed, assumeYes: false, confirm: { _ in asked += 1; return true }, install: spy.install)
+            state: .installed, assumeYes: false, confirm: { _ in asked += 1; return true }, install: spy.install, host: .appleSilicon)
         #expect(done.contains("già installata"))
         await #expect(throws: NidoError.self) {
             _ = try await CLISupport.installRosetta(
-                state: .unsupported, assumeYes: true, confirm: { _ in true }, install: spy.install)
+                state: .unsupported, assumeYes: true, confirm: { _ in true }, install: spy.install, host: .appleSilicon)
         }
         #expect(asked == 0)
         #expect(spy.calls == 0)
 
         // Declined: nothing installed.
         let declined = try await CLISupport.installRosetta(
-            state: .notInstalled, assumeYes: false, confirm: { _ in asked += 1; return false }, install: spy.install)
+            state: .notInstalled, assumeYes: false, confirm: { _ in asked += 1; return false }, install: spy.install, host: .appleSilicon)
         #expect(asked == 1)
         #expect(spy.calls == 0)
         #expect(declined.contains("annullata"))
 
         // Confirmed (or --yes): the system install runs once.
         _ = try await CLISupport.installRosetta(
-            state: .notInstalled, assumeYes: false, confirm: { _ in true }, install: spy.install)
+            state: .notInstalled, assumeYes: false, confirm: { _ in true }, install: spy.install, host: .appleSilicon)
         #expect(spy.calls == 1)
         _ = try await CLISupport.installRosetta(
             state: .notInstalled, assumeYes: true, confirm: { _ in Issue.record("asked"); return false },
-            install: spy.install)
+            install: spy.install, host: .appleSilicon)
         #expect(spy.calls == 2)
     }
 }
@@ -149,7 +149,7 @@ extension RosettaCommandTests {
         config.suspendedConfigHash = config.stateHash()
         try env.bundle.writeConfig(config)
         let warning = "Attenzione: la VM è sospesa: al prossimo avvio lo stato salvato verrà scartato."
-        #expect(try CLISupport.setRosetta(vm: "vm", enabled: false, paths: env.paths).contains(warning) == false)
-        #expect(try CLISupport.setRosetta(vm: "vm", enabled: true, paths: env.paths, state: .installed).contains(warning))
+        #expect(try CLISupport.setRosetta(vm: "vm", enabled: false, paths: env.paths, host: .appleSilicon).contains(warning) == false)
+        #expect(try CLISupport.setRosetta(vm: "vm", enabled: true, paths: env.paths, state: .installed, host: .appleSilicon).contains(warning))
     }
 }

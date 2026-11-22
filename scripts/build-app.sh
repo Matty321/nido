@@ -12,9 +12,9 @@ cd "$repo"
 # The project sets ENABLE_HARDENED_RUNTIME = YES, but Xcode drops it for ad-hoc signatures
 # ("Disabling hardened runtime with ad-hoc codesigning"), so the M2 build asks codesign for it
 # explicitly (and again for the final seal below).
-# ARCHS=arm64 covers the local package targets too: Release would otherwise build NidoCore for
-# x86_64, where the Virtualization save/restore and Rosetta APIs do not exist. Hosted unit tests are built
-# without it: library validation rejects an injected bundle without a Team ID.
+# Release is universal (arm64 and x86_64: NidoCore compiles for both, the APIs only Apple silicon has are
+# behind #if arch(arm64)); Debug stays arm64. Hosted unit tests are built without these settings: library
+# validation rejects an injected bundle without a Team ID.
 entitlements="$(mktemp -t nido-entitlements)"
 trap 'rm -f "$entitlements"' EXIT
 
@@ -71,8 +71,20 @@ fi
 sh scripts/fetch-gvproxy.sh
 
 # The command-line tool ships inside the app (Contents/Helpers/nido); ~/.local/bin/nido links to it.
-swift build -c release --product nido --arch arm64
-cli_binary="$(swift build -c release --product nido --arch arm64 --show-bin-path)/nido"
+# It is universal: one build per architecture, each slice copied away at once (SwiftPM's Xcode build
+# system writes both to the same Products folder), then joined with lipo.
+cli_binary=".build/universal/nido"
+mkdir -p .build/universal
+rm -f "$cli_binary"
+cli_slices=()
+for cli_arch in arm64 x86_64; do
+    swift build -c release --product nido --arch "$cli_arch"
+    slice=".build/universal/nido-$cli_arch"
+    cp "$(swift build -c release --product nido --arch "$cli_arch" --show-bin-path)/nido" "$slice"
+    cli_slices+=("$slice")
+done
+lipo -create "${cli_slices[@]}" -output "$cli_binary"
+rm -f "${cli_slices[@]}"
 
 # Spotlight skips folders named *.noindex: App/build is a link to App/build.noindex, so the
 # development builds of Nido do not show up next to the installed app when searching for it.
@@ -86,8 +98,11 @@ check() {
     local configuration="$1"
     local app="App/build/Build/Products/$configuration/Nido.app"
 
+    local archs="arm64"
+    [[ "$configuration" == "Release" ]] && archs="arm64 x86_64"
+
     xcodebuild -project App/Nido.xcodeproj -scheme Nido -configuration "$configuration" \
-        -derivedDataPath App/build build ARCHS=arm64 OTHER_CODE_SIGN_FLAGS=--options=runtime ${signing[@]+"${signing[@]}"}
+        -derivedDataPath App/build build ARCHS="$archs" OTHER_CODE_SIGN_FLAGS=--options=runtime ${signing[@]+"${signing[@]}"}
 
     if [[ ! -d "$app" ]]; then
         echo "build-app: $app not found" >&2

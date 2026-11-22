@@ -138,14 +138,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         var choice = VMSessionStore.QuitChoice.stop
         if !live.isEmpty {
             let prompt = VMSessionStore.quitPrompt(
-                names: live.map(\.name.rawValue), unsuspendable: sessions.unsuspendableNames())
+                names: live.map(\.name.rawValue), unsuspendable: sessions.unsuspendableNames(),
+                canSuspend: sessions.host.supportsSaveRestore)
             let alert = NSAlert()
             alert.messageText = prompt.question
             alert.informativeText = prompt.message
-            // The first button is the default (Return): "Sospendi ed esci".
+            // The first button is the default (Return): "Sospendi ed esci", or "Arresta ed esci" on Intel.
             for title in prompt.buttons { alert.addButton(withTitle: title) }
             let index = alert.runModal().rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
-            guard let chosen = VMSessionStore.QuitChoice(buttonIndex: index) else { return .terminateCancel }
+            guard let chosen = VMSessionStore.QuitChoice(buttonIndex: index, canSuspend: sessions.host.supportsSaveRestore) else { return .terminateCancel }
             choice = chosen
             // Only a stop cuts a first boot short ("Sospendi ed esci" saves the guest's state):
             // "Arresta ed esci", or a VM that cannot be suspended. The guest may then be left

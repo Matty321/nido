@@ -7,7 +7,8 @@ import Testing
 /// The language of the `nido` command. What depends on the process's language is checked on the
 /// built executable, with `NIDO_LANGUAGE` in its environment: this test process stays pinned to
 /// Italian (`ItalianCopy`) and never pins another language.
-@Suite(.italian) struct CLILanguageTests {
+@Suite(.italian, .enabled(if: !HostChecks.isTranslatedProcess(), "nido refuses to run translated"))
+struct CLILanguageTests {
     /// `nido` next to this test bundle (`swift build` puts both in the same products directory),
     /// with NidoCore's catalog beside it.
     static let nido: URL = Bundle(for: BundleToken.self).bundleURL

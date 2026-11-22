@@ -139,4 +139,31 @@ struct NidoCoreCopyTests {
         #expect(L10n.string("\(5) more blocks not shown", language: "it") == "altri 5 blocchi non mostrati")
         #expect(L10n.string("\(5) more blocks not shown", language: "en") == "5 more blocks not shown")
     }
+
+    private static let intelHostCases: [(NidoError, String)] = [
+        (.needsAppleSilicon, "Needs Apple silicon: this Mac runs Linux VMs only"),
+        (.suspendUnavailable, "suspend isn’t available on this Mac: stop the VM instead"),
+        (.wrongArchitecture(name: "vm1", made: .arm64), "vm1 was made for Apple silicon: it can’t start on this Mac"),
+        (.wrongArchitecture(name: "vm1", made: .x86_64), "vm1 was made for an Intel Mac: it can’t start on this Mac"),
+        (.translatedProcess, "nido runs natively: open Terminal without Rosetta"),
+    ]
+
+    /// The Intel-host errors: exact English text.
+    @Test func intelHostErrorsEnglish() {
+        for (error, text) in Self.intelHostCases {
+            #expect(error.localizedDescription(language: "en") == text)
+        }
+    }
+
+    /// The Intel-host errors are translated (and keep the name) in the other four languages.
+    @Test func intelHostErrorsTranslated() {
+        for (error, english) in Self.intelHostCases {
+            for language in ["it", "de", "es", "fr"] {
+                let text = error.localizedDescription(language: language)
+                #expect(text != english, "\(language): \(english)")
+                #expect(!text.contains("%@"), "\(language): \(english)")
+                if english.hasPrefix("vm1") { #expect(text.contains("vm1"), "\(language): \(english)") }
+            }
+        }
+    }
 }

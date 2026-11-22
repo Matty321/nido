@@ -13,7 +13,7 @@ Nido installs the Guest Tools by itself: through cloud-init on a new VM, or over
 "Installa Guest Tools" on an existing one. Do it by hand only when Nido cannot reach the guest.
 
 ### What you need first
-- A **Debian 13 (trixie)** or **Ubuntu Server 26.04 / 24.04 LTS** arm64 guest (the installer
+- A **Debian 13 (trixie)** or **Ubuntu Server 26.04 / 24.04 LTS** arm64 or amd64 guest (the installer
   stops with `unsupported` on anything else), `python3`, `systemd`, `tar`, `gzip`, `base64` (all
   in the Debian and Ubuntu cloud images) and `sudo`.
 - **An access to the VM**: a working SSH session (also from another Mac, or `nido ssh <vm>` in the
@@ -106,7 +106,8 @@ when the user chooses it; never by cloud-init. Steps: `ollama-install`, `ollama-
 `model-pull <id> [--force]`, `model-remove <id>`, `status` (JSON), `log`. Every step is
 idempotent and can be re-run after an interruption.
 
-- Ollama: the pinned release of `ollama/release.json` (official GitHub release). Since Guest
+- Ollama: the pinned release of `ollama/release.json` (official GitHub release; since Guest Tools
+  1.6.0 one entry per architecture, `aarch64` and `x86_64`, the guest picks its own). Since Guest
   Tools 1.4.0 the guest never downloads it: Nido downloads it on the Mac, checks its SHA-256
   there, and sends it on stdin of `ollama-install --archive-stdin` (or `ollama-update`). The guest
   writes exactly `size` bytes into `/var/lib/nido-provision/tmp/<file>.part`, checks the SHA-256

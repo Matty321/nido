@@ -59,7 +59,7 @@ private final class NetworkConfigRecorder: ProcessRunner, @unchecked Sendable {
         let env = try Env()
         defer { env.cleanup() }
         let recorder = NetworkConfigRecorder()
-        let bundle = try VMFactory(paths: env.paths, runner: recorder).createLinux(try env.request(disk: 4 * mib))
+        let bundle = try VMFactory(paths: env.paths, runner: recorder, host: .appleSilicon).createLinux(try env.request(disk: 4 * mib))
         let config = try bundle.readConfig()
         #expect(recorder.networkConfig == (try CloudInitSeed.networkConfig(macAddress: config.macAddress)))
     }
@@ -67,7 +67,7 @@ private final class NetworkConfigRecorder: ProcessRunner, @unchecked Sendable {
     @Test func createsCompleteBundle() throws {
         let env = try Env()
         defer { env.cleanup() }
-        let factory = VMFactory(paths: env.paths, runner: SeedRunner(status: 0))
+        let factory = VMFactory(paths: env.paths, runner: SeedRunner(status: 0), host: .appleSilicon)
         let bundle = try factory.createLinux(try env.request(disk: 4 * mib))
 
         let size = (try FileManager.default.attributesOfItem(atPath: bundle.diskURL.path)[.size] as! NSNumber).uint64Value
@@ -94,7 +94,7 @@ private final class NetworkConfigRecorder: ProcessRunner, @unchecked Sendable {
         defer { env.cleanup() }
         var request = try env.request(disk: 4 * mib)
         request.pendingProvisioning = PendingProvisioning(ollama: true, model: "qwen3:0.6b")
-        let bundle = try VMFactory(paths: env.paths, runner: SeedRunner(status: 0)).createLinux(request)
+        let bundle = try VMFactory(paths: env.paths, runner: SeedRunner(status: 0), host: .appleSilicon).createLinux(request)
         #expect(try bundle.readConfig().pendingProvisioning == PendingProvisioning(ollama: true, model: "qwen3:0.6b"))
     }
 
@@ -106,7 +106,7 @@ private final class NetworkConfigRecorder: ProcessRunner, @unchecked Sendable {
         for (name, distribution) in [("deb", LinuxDistribution.debian13), ("ubu", .ubuntu2604)] {
             var request = try env.request(name: name, disk: 4 * mib)
             request.distribution = distribution
-            let bundle = try VMFactory(paths: env.paths, runner: SeedRunner(status: 0)).createLinux(request)
+            let bundle = try VMFactory(paths: env.paths, runner: SeedRunner(status: 0), host: .appleSilicon).createLinux(request)
             #expect(try bundle.readConfig().controlledNetwork == true)
             // Its seed turns the background requests off: no "Spegni" suggestion.
             #expect(try bundle.readConfig().backgroundRequestsOff == true)
@@ -117,12 +117,41 @@ private final class NetworkConfigRecorder: ProcessRunner, @unchecked Sendable {
         }
     }
 
+    /// On an Intel Mac a new VM is x86_64, has no Rosetta in its seed or config, and Ubuntu's
+    /// base list has no `ports.ubuntu.com`.
+    @Test func intelFactoryWritesX86AndNoRosetta() throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let recorder = NetworkConfigRecorder()
+        var request = try env.request(disk: 4 * mib)
+        request.distribution = .ubuntu2604
+        let bundle = try VMFactory(paths: env.paths, runner: recorder, host: .intel).createLinux(request)
+        let config = try bundle.readConfig()
+        #expect(config.architecture == .x86_64)
+        #expect(config.guestRegistersRosetta == false)
+        let userData = try #require(recorder.userData)
+        #expect(!userData.contains(RosettaSupport.unitName))
+        #expect(!userData.contains("rosetta"))
+        #expect(EgressPolicyStore.load(bundle: bundle) == EgressPolicy.base(for: .ubuntu2604, architecture: .x86_64))
+        #expect(EgressPolicyStore.load(bundle: bundle)?.allows("ports.ubuntu.com") == false)
+    }
+
+    @Test func appleSiliconFactoryKeepsRosettaInTheSeed() throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let recorder = NetworkConfigRecorder()
+        let bundle = try VMFactory(paths: env.paths, runner: recorder, host: .appleSilicon)
+            .createLinux(try env.request(disk: 4 * mib))
+        #expect(try bundle.readConfig().guestRegistersRosetta == true)
+        #expect(try #require(recorder.userData).contains(RosettaSupport.unitName))
+    }
+
     /// The new VM's seed points the guest clock at the base list's time server.
     @Test func newVMSyncsTimeWithTheBaseListServer() throws {
         let env = try Env()
         defer { env.cleanup() }
         let recorder = NetworkConfigRecorder()
-        _ = try VMFactory(paths: env.paths, runner: recorder).createLinux(try env.request(disk: 4 * mib))
+        _ = try VMFactory(paths: env.paths, runner: recorder, host: .appleSilicon).createLinux(try env.request(disk: 4 * mib))
         let userData = try #require(recorder.userData)
         #expect(userData.contains("/etc/systemd/timesyncd.conf.d/nido.conf"))
         #expect(userData.contains("[systemctl, restart, systemd-timesyncd.service]"))
@@ -136,7 +165,7 @@ private final class NetworkConfigRecorder: ProcessRunner, @unchecked Sendable {
     @Test func diskSmallerThanImageIsRejectedWithoutBundle() throws {
         let env = try Env()
         defer { env.cleanup() }
-        let factory = VMFactory(paths: env.paths, runner: SeedRunner(status: 0))
+        let factory = VMFactory(paths: env.paths, runner: SeedRunner(status: 0), host: .appleSilicon)
         let req = try env.request(disk: mib / 2)
         #expect(throws: NidoError.self) { try factory.createLinux(req) }
         do { _ = try factory.createLinux(req) } catch let e as NidoError {
@@ -148,7 +177,7 @@ private final class NetworkConfigRecorder: ProcessRunner, @unchecked Sendable {
     @Test func failingRunnerLeavesNoBundle() throws {
         let env = try Env()
         defer { env.cleanup() }
-        let factory = VMFactory(paths: env.paths, runner: SeedRunner(status: 1))
+        let factory = VMFactory(paths: env.paths, runner: SeedRunner(status: 1), host: .appleSilicon)
         let req = try env.request(disk: 4 * mib)
         #expect(throws: NidoError.processFailed(executable: "/usr/bin/hdiutil", status: 1)) {
             try factory.createLinux(req)
@@ -159,7 +188,7 @@ private final class NetworkConfigRecorder: ProcessRunner, @unchecked Sendable {
     @Test func invalidKeyAndMissingImageCreateNothing() throws {
         let env = try Env()
         defer { env.cleanup() }
-        let factory = VMFactory(paths: env.paths, runner: SeedRunner(status: 0))
+        let factory = VMFactory(paths: env.paths, runner: SeedRunner(status: 0), host: .appleSilicon)
         let badKey = try env.request(disk: 4 * mib, key: "nope")
         #expect(throws: NidoError.invalidPublicKey) { try factory.createLinux(badKey) }
         let missing = env.tmp.appendingPathComponent("missing.img")
@@ -173,7 +202,7 @@ private final class NetworkConfigRecorder: ProcessRunner, @unchecked Sendable {
         defer { env.cleanup() }
         let link = env.tmp.appendingPathComponent("link.img")
         try FileManager.default.createSymbolicLink(at: link, withDestinationURL: env.image)
-        let factory = VMFactory(paths: env.paths, runner: SeedRunner(status: 0))
+        let factory = VMFactory(paths: env.paths, runner: SeedRunner(status: 0), host: .appleSilicon)
         let req = try env.request(disk: 4 * mib, image: link)
         #expect(throws: NidoError.notFound(link.path)) { try factory.createLinux(req) }
     }
@@ -193,7 +222,7 @@ extension VMFactoryTests {
         var request = try env.request(disk: 4 * mib, image: qcow2)
         request.distribution = .ubuntu2604
         let recorder = NetworkConfigRecorder()
-        let bundle = try VMFactory(paths: env.paths, runner: recorder).createLinux(request)
+        let bundle = try VMFactory(paths: env.paths, runner: recorder, host: .appleSilicon).createLinux(request)
 
         let disk = try FileHandle(forReadingFrom: bundle.diskURL)
         defer { try? disk.close() }
@@ -220,7 +249,7 @@ extension VMFactoryTests {
         var request = try env.request(disk: 4 * mib)
         request.distribution = .ubuntu2404
         let recorder = NetworkConfigRecorder()
-        let bundle = try VMFactory(paths: env.paths, runner: recorder).createLinux(request)
+        let bundle = try VMFactory(paths: env.paths, runner: recorder, host: .appleSilicon).createLinux(request)
         #expect(try bundle.readConfig().distribution == .ubuntu2404)
         let userData = try #require(recorder.userData)
         #expect(userData.contains(GuestTimeSync.holdBootCommand))
@@ -237,7 +266,7 @@ extension VMFactoryTests {
         fixture.virtualSize = 8 * mib
         try Data(fixture.bytes()).write(to: qcow2)
         #expect(throws: NidoError.self) {
-            try VMFactory(paths: env.paths, runner: SeedRunner(status: 0))
+            try VMFactory(paths: env.paths, runner: SeedRunner(status: 0), host: .appleSilicon)
                 .createLinux(try env.request(disk: 4 * mib, image: qcow2))
         }
         #expect((try? VMBundle.list(paths: env.paths))?.isEmpty ?? true)
@@ -252,7 +281,7 @@ extension VMFactoryTests {
         fixture.firstEntry = 1 << 20 | 1 << 63
         try Data(fixture.bytes()).write(to: qcow2)
         #expect(throws: NidoError.unsupportedDiskImage("cluster fuori dal file")) {
-            try VMFactory(paths: env.paths, runner: SeedRunner(status: 0))
+            try VMFactory(paths: env.paths, runner: SeedRunner(status: 0), host: .appleSilicon)
                 .createLinux(try env.request(disk: 4 * mib, image: qcow2))
         }
         #expect((try? VMBundle.list(paths: env.paths))?.isEmpty ?? true)

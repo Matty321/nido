@@ -35,8 +35,10 @@ extension CLISupport {
         hostMajor: Int = ProcessInfo.processInfo.operatingSystemVersion.majorVersion,
         readStdinLine: () -> String? = { readLine(strippingNewline: true) },
         askPassword: (String) -> String? = { readPassphrase(prompt: $0) },
-        stdinIsTerminal: Bool = isatty(0) != 0
+        stdinIsTerminal: Bool = isatty(0) != 0,
+        host: HostPlatform = .current
     ) throws -> MacCreateOptions {
+        try HostChecks.requireMacGuests(host)
         guard image == nil, imageFile == nil, !noPackages, !noGuestTools else { throw CLIError.ipswConflict }
         let vmName = try VMName(name)
         guard let user else { throw CLIError.missingUser }

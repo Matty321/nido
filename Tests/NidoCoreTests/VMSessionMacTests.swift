@@ -7,6 +7,7 @@ import Virtualization
 /// `VMSession` on a macOS bundle (`MacFixture`: the files `MacInstaller` leaves, without an
 /// installed system). Building the machine needs the virtualization entitlement, which `swift
 /// test` lacks: those tests are skipped there; the file checks run everywhere.
+#if arch(arm64)
 @Suite struct VMSessionMacTests {
     /// Both inits check the macOS file set (auxiliary storage, hardware model), not Linux's
     /// (`nvram.efi`, `seed.iso`, which a macOS bundle never has).
@@ -80,3 +81,4 @@ import Virtualization
         #expect((device.share as? VZMultipleDirectoryShare)?.directories.keys.sorted() == ["docs"])
     }
 }
+#endif

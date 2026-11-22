@@ -55,7 +55,7 @@ final class NetworkSettingsModel {
         self.bundle = bundle
         name = config.name.rawValue
         guest = config.guest
-        basePolicy = config.guest == .macos ? EgressPolicy.macOSBase : EgressPolicy.base(for: config.distribution)
+        basePolicy = config.guest == .macos ? EgressPolicy.macOSBase : EgressPolicy.base(for: config.distribution, architecture: config.architecture)
         controlled = config.controlledNetwork == true
         self.authenticator = authenticator
         self.isRunning = isRunning

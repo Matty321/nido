@@ -163,12 +163,35 @@ final class WizardModelTests {
 
     func makeModel(registry: FakeRegistry = FakeRegistry(), creator: FakeCreator = FakeCreator(),
                    keyURL: URL? = nil, physicalMemory: UInt64 = 32 << 30, hostCores: Int = 8,
-                   checkHeadroom: (@Sendable (UInt64) async -> MemoryHeadroom?)? = nil) -> WizardModel {
+                   checkHeadroom: (@Sendable (UInt64) async -> MemoryHeadroom?)? = nil,
+                   host: HostPlatform = .appleSilicon) -> WizardModel {
         let store = ImageStore(cacheRoot: cache, session: session())
         return WizardModel(
             registry: registry, images: .catalog(image, store: store, cacheRoot: cache), creator: creator,
             defaultKeyURL: keyURL, physicalMemory: physicalMemory, hostCores: hostCores,
-            checkHeadroom: checkHeadroom)
+            checkHeadroom: checkHeadroom, host: host)
+    }
+
+    @Test func macTileDisabledOnIntel() {
+        #expect(!makeModel(host: .intel).supportsMacGuests)
+    }
+
+    @Test func macTileUnchangedOnAppleSilicon() {
+        #expect(makeModel(host: .appleSilicon).supportsMacGuests)
+    }
+
+    @Test func labelsShowAmd64OnIntel() async {
+        let model = makeModel(host: .intel)
+        await model.load()
+        #expect(model.systemDetail(for: .debian13) == "amd64 · immagine cloud")
+        #expect(model.localImageHint == "Usa un’immagine amd64 su questo Mac")
+    }
+
+    @Test func labelsShowArm64OnAppleSilicon() async {
+        let model = makeModel(host: .appleSilicon)
+        await model.load()
+        #expect(model.systemDetail(for: .debian13) == "arm64 · immagine cloud")
+        #expect(model.localImageHint == "Usa un’immagine arm64 su questo Mac")
     }
 
     @Test func smallerMemoryDefaultOn16GiBMacs() {
@@ -884,6 +907,22 @@ final class WizardModelTests {
         #expect(model.phaseTwoPlan == nil)
         model.installOllama = true
         #expect(!model.installOllama)
+    }
+
+    /// A template made for the other architecture is not offered (it would only be refused at the end).
+    @Test func templatesFollowTheHostArchitecture() async {
+        let summaries = [
+            VMSummary(configID: UUID(), name: "arm-base", status: .stopped, cpuCount: 2, memoryBytes: 2 << 30,
+                      diskBytes: 8 << 30, isTemplate: true, architecture: .arm64),
+            VMSummary(configID: UUID(), name: "intel-base", status: .stopped, cpuCount: 2, memoryBytes: 2 << 30,
+                      diskBytes: 8 << 30, isTemplate: true, architecture: .x86_64),
+        ]
+        let intel = makeModel(registry: FakeRegistry(summaries), host: .intel)
+        await intel.load()
+        #expect(intel.templates.map(\.name) == ["intel-base"])
+        let arm = makeModel(registry: FakeRegistry(summaries), host: .appleSilicon)
+        await arm.load()
+        #expect(arm.templates.map(\.name) == ["arm-base"])
     }
 
     /// "Da modello": choose the template, then the summary (2 steps); no download, no phase 1

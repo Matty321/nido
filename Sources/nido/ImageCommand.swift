@@ -24,7 +24,7 @@ struct ImageCommand: AsyncParsableCommand {
         func run() async throws {
             let store = ImageCommand.makeStore()
             var rows: [(image: CloudImage, cached: Bool)] = []
-            for image in CloudImageCatalog.all { rows.append((image, await store.isCached(image))) }
+            for image in CloudImageCatalog.all(for: HostPlatform.current.architecture) { rows.append((image, await store.isCached(image))) }
             CLISupport.imageListLines(rows).forEach { print($0) }
         }
     }
@@ -39,7 +39,7 @@ struct ImageCommand: AsyncParsableCommand {
         var id: String?
 
         func run() async throws {
-            let images = try id.map { [try CLISupport.catalogImage(id: $0)] } ?? CloudImageCatalog.all
+            let images = try id.map { [try CLISupport.catalogImage(id: $0)] } ?? CloudImageCatalog.all(for: HostPlatform.current.architecture)
             let store = ImageCommand.makeStore()
             var failed = false
             for image in images {
@@ -106,9 +106,8 @@ struct ImageCommand: AsyncParsableCommand {
         }
 
         func run() async throws {
-            let downloader = MacImageDownloader()
-            // --output is checked before anything goes online.
-            let chosen = try output.map { try downloader.outputDestination(URL(fileURLWithPath: $0)) }
+            // Refused on Intel; then --output is checked before anything goes online.
+            let (downloader, chosen) = try CLISupport.beginMacImage(output: output)
             let offer = try await LiveMacImageCatalog().latestSupported()
             // The size is part of the same ask (one HEAD request to Apple); unknown if it fails.
             let size = try? await downloader.remoteSize(of: offer)

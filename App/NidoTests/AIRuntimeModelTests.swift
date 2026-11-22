@@ -153,6 +153,11 @@ func runtimeStatus(
 
 @MainActor
 struct AIRuntimeModelTests {
+    @Test func aiCpuNoteOnlyOnIntel() {
+        #expect(AIRuntimeView.showsCPUNote(host: .intel))
+        #expect(!AIRuntimeView.showsCPUNote(host: .appleSilicon))
+    }
+
     private func makeModel(_ runtime: FakeAIRuntime, guestToolsVersion: String? = "1.0.0") -> AIRuntimeModel {
         let model = AIRuntimeModel(
             readGuestToolsVersion: { guestToolsVersion }, makeRuntime: { runtime })

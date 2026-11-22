@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+import CryptoKit
 import Foundation
 import Testing
 @testable import NidoCore
@@ -70,6 +71,31 @@ private final class FakeRunner: ProcessRunner, @unchecked Sendable {
     /// keys) must not leave the guest without SSH. Every boot, before sshd, `ssh-keygen -A`
     /// creates the host keys that are missing (it never replaces one that exists). Constants only,
     /// in every new Linux seed (with or without a profile) and in every clone's.
+    private func sha256(_ s: String) -> String {
+        SHA256.hash(data: Data(s.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Pinned from the output of the code before the `rosetta` parameter existed.
+    @Test func seedWithRosettaUnchanged() {
+        let plain = CloudInitSeed.userData(username: "nido", publicKey: "ssh-ed25519 AAAA", rosetta: true)
+        #expect(sha256(plain) == "bc28675f39f2f737da1fa732cc5b4efff639cd65fc32e31e66f6f63fedea8cdb")
+        let full = CloudInitSeed.userData(
+            username: "nido", publicKey: "ssh-ed25519 AAAA", profile: .standard, pinnedTimeServer: true,
+            timeClient: .chrony, quietUbuntu: true, aptQuiet: true, rosetta: true)
+        #expect(sha256(full) == "b8411b9bdc3761293867ed63231b80847e18c480b95a773fc08ec4f1f0a2e1af")
+        #expect(CloudInitSeed.userData(username: "nido", publicKey: "ssh-ed25519 AAAA") == plain)
+    }
+
+    @Test func seedWithoutRosetta() throws {
+        let ud = CloudInitSeed.userData(username: "nido", publicKey: validKey, rosetta: false)
+        #expect(!ud.contains(RosettaSupport.unitName))
+        #expect(!ud.contains(RosettaSupport.binfmtConfigPath))
+        #expect(!ud.contains("rosetta"))
+        #expect(ud.contains(SharedFolder.unitName))
+        #expect(ud.contains("[systemctl, enable, --now, \(SharedFolder.unitName)]"))
+        _ = try MiniYAML.parse(ud)
+    }
+
     @Test func seedRegeneratesMissingHostKeys() throws {
         let command = CloudInitSeed.regenerateHostKeysBootCommand
         #expect(command == "[sh, -c, 'command -v ssh-keygen >/dev/null 2>&1 || exit 0; ssh-keygen -A']")

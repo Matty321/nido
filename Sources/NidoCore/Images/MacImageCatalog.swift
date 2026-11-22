@@ -75,6 +75,7 @@ public struct LiveMacImageCatalog: MacImageCataloging {
     }
 
     private static func fetchFromVirtualization() async throws -> Fetched {
+        #if arch(arm64)
         try await withCheckedThrowingContinuation { continuation in
             VZMacOSRestoreImage.fetchLatestSupported { result in
                 // Called on an arbitrary thread: copy the values out of the image here.
@@ -89,5 +90,8 @@ public struct LiveMacImageCatalog: MacImageCataloging {
                 }
             }
         }
+        #else
+        throw NidoError.needsAppleSilicon
+        #endif
     }
 }

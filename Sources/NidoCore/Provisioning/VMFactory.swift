@@ -47,10 +47,12 @@ public struct LinuxVMRequest: Sendable {
 public struct VMFactory: Sendable {
     private let paths: NidoPaths
     private let runner: ProcessRunner
+    private let host: HostPlatform
 
-    public init(paths: NidoPaths, runner: ProcessRunner) {
+    public init(paths: NidoPaths, runner: ProcessRunner, host: HostPlatform = .current) {
         self.paths = paths
         self.runner = runner
+        self.host = host
     }
 
     /// `isCancelled` stops the qcow2 conversion (the longest part); the bundle is then removed.
@@ -73,17 +75,18 @@ public struct VMFactory: Sendable {
             id: UUID(), name: r.name, guest: .linux, cpuCount: r.cpuCount,
             memoryBytes: r.memoryBytes, diskBytes: r.diskBytes,
             macAddress: VZMACAddress.randomLocallyAdministered().string, clipboardSharing: false,
-            guestMountsSharedFolders: true, guestRegistersRosetta: true,
+            guestMountsSharedFolders: true, guestRegistersRosetta: host.supportsRosetta,
             provisioning: r.profile == .empty ? nil : r.profile,
             guestToolsVersion: r.profile.guestTools ? GuestToolsPayload.version : nil,
             sshPublicKeyPath: r.sshPublicKeyPath, pendingProvisioning: r.pendingProvisioning,
             controlledNetwork: true, distribution: r.distribution,
             // The seed below turns them off (`aptQuiet`, `quietUbuntu`).
-            backgroundRequestsOff: true)
+            backgroundRequestsOff: true,
+            architecture: host.architecture)
         let bundle = try VMBundle.create(config: config, paths: paths)
         do {
             // Before the first boot: cloud-init's packages come through the relay.
-            try EgressPolicyStore.save(EgressPolicy.base(for: r.distribution), bundle: bundle)
+            try EgressPolicyStore.save(EgressPolicy.base(for: r.distribution, architecture: host.architecture), bundle: bundle)
             if isQcow2 {
                 try Qcow2Image.convert(r.baseImage, toRaw: bundle.diskURL, isCancelled: isCancelled)
                 try growDisk(bundle.diskURL, to: r.diskBytes)
@@ -103,7 +106,7 @@ public struct VMFactory: Sendable {
                 userData: CloudInitSeed.userData(
                     username: "nido", publicKey: key, profile: r.profile, pinnedTimeServer: true,
                     timeClient: r.distribution.timeClient, quietUbuntu: r.distribution.isUbuntu,
-                    aptQuiet: true),
+                    aptQuiet: true, rosetta: host.supportsRosetta),
                 metaData: CloudInitSeed.metaData(instanceID: config.id, hostname: r.name),
                 networkConfig: CloudInitSeed.networkConfig(macAddress: config.macAddress),
                 runner: runner)

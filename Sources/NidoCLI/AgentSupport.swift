@@ -321,6 +321,50 @@ public enum AgentSupport {
         guard config.agentAccess == true else { throw CLIError.agentAccessOff(config.name.rawValue) }
     }
 
+    /// Opens the named VM for an agent or MCP command. On a Mac without Apple silicon it refuses
+    /// first (`needsAppleSilicon`): no path is prepared and no bundle is read. `paths` is the data
+    /// root of the process unless a test gives one.
+    public static func openBundle(
+        _ name: String, paths: NidoPaths? = nil, host: HostPlatform = .current
+    ) throws -> (VMName, VMBundle) {
+        try HostChecks.requireMacGuests(host)
+        let vmName = try VMName(name)
+        let paths = try paths ?? CLISupport.preparedPaths()
+        return (vmName, try VMBundle.open(vmName, paths: paths))
+    }
+
+    /// `nido agent enable|disable`: refused on this host first, then `setAgentAccess`.
+    public static func switchAgentAccess(
+        _ on: Bool, vm: String, paths: NidoPaths? = nil, host: HostPlatform = .current
+    ) throws -> String {
+        let (_, bundle) = try openBundle(vm, paths: paths, host: host)
+        return try setAgentAccess(on, bundle: bundle)
+    }
+
+    /// `nido act`: refused on this host first, then the action is parsed and the VM opened with
+    /// agent access checked.
+    public static func openForAct(
+        vm: String, action: [String], paths: NidoPaths? = nil, host: HostPlatform = .current
+    ) throws -> (invocation: Invocation, name: VMName, bundle: VMBundle, config: VMConfig) {
+        try HostChecks.requireMacGuests(host)
+        let invocation = try parseInvocation(action)
+        let (name, bundle) = try openBundle(vm, paths: paths, host: host)
+        let config = try bundle.readConfig()
+        try requireAgentAccess(config)
+        return (invocation, name, bundle, config)
+    }
+
+    /// `nido mcp --fresh`: refused on this host first, then the base VM is opened and checked.
+    public static func openFreshBase(
+        vm: String, requireStopped: Bool, paths: NidoPaths? = nil, host: HostPlatform = .current
+    ) throws -> (VMName, VMBundle, NidoPaths) {
+        try HostChecks.requireMacGuests(host)
+        let resolved = try paths ?? CLISupport.preparedPaths()
+        let (base, bundle) = try openBundle(vm, paths: resolved, host: host)
+        try FreshMac.checkBase(try bundle.readConfig(), bundle: bundle, requireStopped: requireStopped)
+        return (base, bundle, resolved)
+    }
+
     /// Turns agent access on (macOS VMs only) or off in `config.json` and returns the message to
     /// print. The running VM's owner reads the setting before every command, so turning it off is
     /// immediate; turning it on needs a start, because the socket device exists only in a VM

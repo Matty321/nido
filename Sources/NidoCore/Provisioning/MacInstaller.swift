@@ -127,6 +127,7 @@ public struct MacInstaller: Sendable {
         _ r: MacVMRequest, owner: LockOwner = .cliOperation,
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> VMBundle {
+        #if arch(arm64)
         try VMConfig.validateSSHUser(r.sshUser)
         // An account macOS refuses at the first start would leave a VM that never starts: refused
         // now, before the long installation.
@@ -235,6 +236,9 @@ public struct MacInstaller: Sendable {
             try? FileManager.default.removeItem(at: staging)
             throw error
         }
+        #else
+        throw NidoError.needsAppleSilicon
+        #endif
     }
 
     /// `CancellationError` when the task was cancelled (whatever the installer reported);
@@ -298,6 +302,7 @@ public struct LiveMacOSInstaller: MacOSInstalling {
     public func install(
         bundle: VMBundle, config: VMConfig, ipsw: URL, progress: @escaping @Sendable (Double) -> Void
     ) async throws {
+        #if arch(arm64)
         // A controlled VM installs on its relay too (never Apple's NAT); the installer does not
         // need the guest's network, and the relay ends with the installation. The relay has the
         // default `EgressRelay.Options()`: no events handler, so a block during the installation
@@ -312,9 +317,13 @@ public struct LiveMacOSInstaller: MacOSInstalling {
         } onCancel: {
             run.cancel()
         }
+        #else
+        throw NidoError.needsAppleSilicon
+        #endif
     }
 }
 
+#if arch(arm64)
 /// One installation. Every property is used only on `queue`, the VM's serial queue.
 private final class InstallRun: @unchecked Sendable {
     private let queue = DispatchQueue(label: "nido.mac-install")
@@ -384,3 +393,4 @@ private final class InstallRun: @unchecked Sendable {
         }
     }
 }
+#endif

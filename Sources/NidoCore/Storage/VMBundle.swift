@@ -292,7 +292,7 @@ public struct VMBundle: Sendable {
     /// `withConfigLock`.
     func writeConfigUnlocked(_ c: VMConfig) throws {
         var current = c
-        current.schemaVersion = VMConfig.currentSchemaVersion
+        current.schemaVersion = current.writtenSchemaVersion
         let data = try current.encoded()
         let tmp = url.appendingPathComponent(".config.json.\(UUID().uuidString).tmp")
         let fd = Darwin.open(tmp.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o600)

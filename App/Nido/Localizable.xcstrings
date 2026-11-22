@@ -23803,6 +23803,91 @@
         }
       }
     },
+    "Stop %@ to take a snapshot on this Mac" : {
+      "comment" : "%@ is the VM's name.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stoppe %@, um auf diesem Mac einen Schnappschuss zu erstellen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detén %@ para tomar una instantánea en este Mac"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrêtez %@ pour prendre un instantané sur ce Mac"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arresta %@ per fare uno snapshot su questo Mac"
+          }
+        }
+      }
+    },
+    "Stop and Quit asks %@ to shut down cleanly and, if it’s still running after 30 seconds, forces it to stop." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Stoppen und beenden“ fordert %@ auf, sich ordnungsgemäß herunterzufahren, und erzwingt den Stopp, wenn sie nach 30 Sekunden noch läuft."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detener y salir le pide a %@ que se apague de forma ordenada y, si sigue en ejecución pasados 30 segundos, la detiene a la fuerza."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrêter et quitter demande à %@ de s’éteindre proprement et force son arrêt si elle est encore en marche après 30 secondes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arresta ed esci chiede a %@ di spegnersi in modo ordinato e, se dopo 30 secondi è ancora accesa, la arresta forzatamente."
+          }
+        }
+      }
+    },
+    "Stop and Quit asks each virtual machine to shut down cleanly and forces those still running after 30 seconds to stop." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Stoppen und beenden“ fordert jede virtuelle Maschine auf, sich ordnungsgemäß herunterzufahren, und erzwingt bei allen, die nach 30 Sekunden noch laufen, den Stopp."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detener y salir pide a cada máquina virtual que se apague de forma ordenada y detiene a la fuerza las que sigan en ejecución pasados 30 segundos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrêter et quitter demande à chaque machine virtuelle de s’éteindre proprement et force l’arrêt de celles encore en marche après 30 secondes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arresta ed esci chiede a ogni macchina virtuale di spegnersi in modo ordinato e arresta forzatamente quelle ancora accese dopo 30 secondi."
+          }
+        }
+      }
+    },
     "Suspend and Quit" : {
       "localizations" : {
         "de" : {
@@ -30183,90 +30268,6 @@
         }
       }
     },
-    "arm64 · cached" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "arm64 · im Cache"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "arm64 · en la caché"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "arm64 · en cache"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "arm64 · nella cache"
-          }
-        }
-      }
-    },
-    "arm64 · cloud image" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "arm64 · Cloud-Image"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "arm64 · imagen cloud"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "arm64 · image cloud"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "arm64 · immagine cloud"
-          }
-        }
-      }
-    },
-    "arm64 · local image" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "arm64 · lokales Image"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "arm64 · imagen local"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "arm64 · image locale"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "arm64 · immagine locale"
-          }
-        }
-      }
-    },
     "at most %lld (this Mac’s cores)" : {
       "comment" : "CPUs. [not a count]",
       "localizations" : {
@@ -34263,6 +34264,230 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%@ · cached" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · im Cache"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · en la caché"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · en cache"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · nella cache"
+          }
+        }
+      }
+    },
+    "%@ · cloud image" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · Cloud-Image"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · imagen cloud"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · image cloud"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · immagine cloud"
+          }
+        }
+      }
+    },
+    "%@ · local image" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · lokales Image"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · imagen local"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · image locale"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · immagine locale"
+          }
+        }
+      }
+    },
+    "Needs Apple silicon" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Benötigt Apple Silicon"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requiere Apple silicon"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nécessite Apple silicon"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Richiede Apple silicon"
+          }
+        }
+      }
+    },
+    "Use an amd64 image on this Mac" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende auf diesem Mac ein amd64-Image"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa una imagen amd64 en este Mac"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilisez une image amd64 sur ce Mac"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa un’immagine amd64 su questo Mac"
+          }
+        }
+      }
+    },
+    "Use an arm64 image on this Mac" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende auf diesem Mac ein arm64-Image"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa una imagen arm64 en este Mac"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilisez une image arm64 sur ce Mac"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa un’immagine arm64 su questo Mac"
+          }
+        }
+      }
+    },
+    "The VM didn’t start: check that the image is for amd64" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die VM wurde nicht gestartet: Prüfe, ob das Image für amd64 ist"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La VM no arrancó: comprueba que la imagen sea para amd64"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La VM n’a pas démarré : vérifiez que l’image est pour amd64"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La VM non è partita: controlla che l’immagine sia per amd64"
+          }
+        }
+      }
+    },
+    "Without Apple silicon, models run on the VM’s CPU: choose a small model" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ohne Apple Silicon laufen Modelle auf der CPU der VM: Wähle ein kleines Modell"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin Apple silicon, los modelos se ejecutan en la CPU de la VM: elige un modelo pequeño"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sans Apple silicon, les modèles tournent sur le processeur de la VM : choisissez un petit modèle"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senza Apple silicon i modelli girano sulla CPU della VM: scegli un modello piccolo"
           }
         }
       }

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+#if arch(arm64)
 import Darwin
 import Foundation
 import Testing
@@ -247,3 +248,4 @@ struct MacFixture {
         try built.configuration.validate()
     }
 }
+#endif

@@ -146,13 +146,16 @@ final class LiveSessionFactory: SessionFactory {
     /// The account passwords each session reads for the first-boot provisioning
     /// (`AppEnvironment.guestPasswords`): never the Keychain default of `VMSession`.
     let passwords: any GuestPasswordStore
+    /// The Mac the app acts as (`AppEnvironment.host`): the sessions' architecture gate uses it.
+    let host: HostPlatform
 
     init(
         imageCache: URL = ImageStore.defaultCacheRoot(), aiBridge: AIBridgeServices? = nil,
-        passwords: any GuestPasswordStore,
+        passwords: any GuestPasswordStore, host: HostPlatform = .current,
         startRelay: @escaping @Sendable (VMBundle, String) async throws -> EgressRelay = LiveSessionFactory.startRelayOffMain
     ) {
         self.passwords = passwords
+        self.host = host
         self.imageCache = imageCache
         self.aiBridge = aiBridge
         self.startRelay = startRelay
@@ -176,7 +179,7 @@ final class LiveSessionFactory: SessionFactory {
         guard config.guest == .linux else {
             // The session owns the relay from here, also when it throws.
             let session = try VMSession(
-                bundle: bundle, serialConsole: nil, display: nil, imageCache: imageCache, egressRelay: relay)
+                bundle: bundle, serialConsole: nil, display: nil, imageCache: imageCache, egressRelay: relay, host: host)
             session.guestPasswords = passwords
             return session
         }
@@ -191,7 +194,7 @@ final class LiveSessionFactory: SessionFactory {
         do {
             // The session owns the relay from here, also when it throws.
             session = try VMSession(
-                bundle: bundle, serialConsole: console, display: nil, imageCache: imageCache, egressRelay: relay)
+                bundle: bundle, serialConsole: console, display: nil, imageCache: imageCache, egressRelay: relay, host: host)
         } catch {
             console.close()
             throw error
@@ -405,6 +408,8 @@ final class VMWindowModel {
     /// The snapshot operation that runs is the agent's (its checkpoint, its rollback's restore),
     /// not the user's: the agent's session stays usable for it.
     @ObservationIgnored private var agentSnapshotWork = false
+    /// The Mac the app acts as (`AppEnvironment.host`), shown in the AI view and the provisioning.
+    let host: HostPlatform
 
     init(
         name: VMName, paths: NidoPaths, factory: any SessionFactory, passwords: any GuestPasswordStore,
@@ -415,9 +420,10 @@ final class VMWindowModel {
         firstRunSetup: (@Sendable (
             VMBundle, VMConfig, @escaping @Sendable (MacAgentSetupEvent) -> Void
         ) async throws -> Bool)? = nil,
-        rollbackGrace: Duration = .milliseconds(500)
+        rollbackGrace: Duration = .milliseconds(500), host: HostPlatform = .current
     ) {
         self.rollbackGrace = rollbackGrace
+        self.host = host
         self.agentHoldSleep = agentHoldSleep
         self.firstRunSetupRunner = firstRunSetup ?? { bundle, config, onEvent in
             try await VMWindowModel.liveFirstRunSetup(
@@ -435,7 +441,7 @@ final class VMWindowModel {
         self.aiRuntime = aiRuntime
         self.aiBridge = AIBridgeModel(name: name, paths: paths, services: aiBridgeServices)
         let provisioning = ProvisioningModel(
-            name: name.rawValue, aiRuntime: aiRuntime, monitor: monitor,
+            name: name.rawValue, aiRuntime: aiRuntime, monitor: monitor, host: host,
             clearPending: {
                 // The phase-2 record goes once verified or given up ("Non installare").
                 _ = await Task.detached {
@@ -573,6 +579,10 @@ final class VMWindowModel {
         var agentTarget: (bundle: VMBundle, config: VMConfig)?
         do {
             let bundle = try VMBundle.open(name, paths: paths)
+            // Refused before any work on the bundle (lock, recovery, claim, relay): a VM made for
+            // another architecture is never touched.
+            // An unreadable config is reported by the session itself, as before.
+            if let config = try? bundle.readConfig() { try ArchitectureGate.check(config, host: host) }
             // Retries a brief contention without blocking the main actor.
             lock = try await BundleLock.acquireAsync(bundle, owner: .app)
             if stopBeforeSession || refusesStart {
@@ -1077,6 +1087,8 @@ final class VMWindowModel {
 
     /// Why this VM cannot be suspended (its configuration), nil when it can or has no machine.
     func suspendBlocker() -> String? {
+        // Intel: no suspend at all; the reason is the error's own text, so a quit stop says why.
+        guard host.supportsSaveRestore else { return NidoError.suspendUnavailable.localizedDescription }
         guard let session else { return nil }
         do {
             try session.validateSaveRestoreSupport()
@@ -1190,6 +1202,7 @@ final class VMWindowModel {
                     .init(action: .settings, kind: .secondary, isEnabled: true)]
         }
         var buttons = Self.toolbarButtons(for: state, machineMayRun: !isGone)
+        if !host.supportsSaveRestore { buttons.removeAll { $0.action == .suspend } }
         if guest == .macos, state == .running, let index = buttons.firstIndex(where: { $0.action == .fullScreen }) {
             // S07 macOS: "Accesso da terminale" before Schermo intero.
             buttons.insert(.init(action: .terminalAccess, kind: .secondary, isEnabled: true), at: index)

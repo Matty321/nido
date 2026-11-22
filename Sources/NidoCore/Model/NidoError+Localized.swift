@@ -78,6 +78,16 @@ extension NidoError: LocalizedError {
             L10n.string("folder not found on the Mac: \(path)", language: language)
         case .vmMustBeStopped(let name):
             L10n.string("the VM \(name) is running: stop it before changing it", language: language)
+        case .needsAppleSilicon:
+            L10n.string("Needs Apple silicon: this Mac runs Linux VMs only", language: language)
+        case .suspendUnavailable:
+            L10n.string("suspend isn’t available on this Mac: stop the VM instead", language: language)
+        case .wrongArchitecture(let name, .arm64):
+            L10n.string("\(name) was made for Apple silicon: it can’t start on this Mac", language: language)
+        case .wrongArchitecture(let name, .x86_64):
+            L10n.string("\(name) was made for an Intel Mac: it can’t start on this Mac", language: language)
+        case .translatedProcess:
+            L10n.string("nido runs natively: open Terminal without Rosetta", language: language)
         case .rosettaUnavailable:
             L10n.string("Rosetta isn’t available on this Mac", language: language)
         case .rosettaNotInstalled:

@@ -54,7 +54,10 @@ import Testing
         }
         let version = try String(contentsOf: guest.appendingPathComponent("VERSION"), encoding: .utf8)
         #expect(GuestToolsPayload.version == version.trimmingCharacters(in: .whitespacesAndNewlines))
-        #expect(GuestToolsPayload.version == "1.5.0")
+    }
+
+    @Test func payloadVersionIs160() {
+        #expect(GuestToolsPayload.version == "1.6.0")
     }
 
     @Test func payloadHasRuntimeFilesOnly() {
@@ -109,10 +112,18 @@ import Testing
         let data = try #require(Data(base64Encoded: file.base64))
         let release = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         #expect(release["version"] as? String == "0.40.10")
-        #expect(release["url"] as? String
+        let entries = try #require(release["architectures"] as? [String: [String: Any]])
+        let arm = try #require(entries["aarch64"])
+        #expect(arm["file"] as? String == "ollama-linux-arm64.tar.zst")
+        #expect(arm["url"] as? String
             == "https://github.com/ollama/ollama/releases/download/v0.40.10/ollama-linux-arm64.tar.zst")
-        #expect(release["sha256"] as? String == "57dca26f51efc050112b733a65dea6f6c8e68da7a2946afd7c1eb8834d9eeb92")
-        #expect(release["size"] as? Int == 1_564_567_595)
-        #expect(release["checked"] as? String == "2026-10-24")
+        #expect(arm["sha256"] as? String == "57dca26f51efc050112b733a65dea6f6c8e68da7a2946afd7c1eb8834d9eeb92")
+        #expect(arm["size"] as? Int == 1_564_567_595)
+        #expect(arm["extracted_size_estimate"] as? Int == 3_221_225_472)
+        let intel = try #require(entries["x86_64"])
+        #expect(intel["file"] as? String == "ollama-linux-amd64.tar.zst")
+        #expect(intel["sha256"] as? String == "1e8ad2d2a394efdd235bee74deec237badd95142ffba77588140ab2a9ecec227")
+        #expect(intel["size"] as? Int == 1_509_264_197)
+        #expect(release["checked"] as? String == "2026-11-22")
     }
 }

@@ -39,6 +39,14 @@ public enum NidoError: Error, Equatable, Sendable {
     case sharedFolderRefused(String)
     case sharedFolderMissing(String)
     case vmMustBeStopped(String)
+    /// A macOS guest was asked for on a Mac without Apple silicon (`HostPlatform.supportsMacGuests`).
+    case needsAppleSilicon
+    /// Suspending (saving the machine state) is not possible on this Mac (`HostPlatform.supportsSaveRestore`).
+    case suspendUnavailable
+    /// The VM was made for another architecture than this Mac's: it cannot start here.
+    case wrongArchitecture(name: String, made: CPUArchitecture)
+    /// `nido` runs translated by Rosetta: it must run natively.
+    case translatedProcess
     /// Rosetta for Linux cannot run on this Mac (`RosettaState.unsupported`).
     case rosettaUnavailable
     /// Rosetta for Linux is supported but not installed (`RosettaState.notInstalled`).

@@ -82,11 +82,16 @@ struct WizardView: View {
                     // Choosing macOS goes to the image page with Next: Choose… or Download from
                     // Apple, nothing goes online before that button. (DEBUG `-NidoIPSWFile` takes
                     // its file at once.)
-                    tile(glyph: "M", name: "macOS",
-                         detail: String(localized: "from an IPSW file or from Apple", comment: "Detail under the macOS tile of the wizard."),
-                         isSelected: model.isMac) {
-                        model.selectSystem(.macos)
-                        if model.ipswURL == nil, model.presetIPSW != nil { chooseIPSW() }
+                    if model.supportsMacGuests {
+                        tile(glyph: "M", name: "macOS",
+                             detail: String(localized: "from an IPSW file or from Apple", comment: "Detail under the macOS tile of the wizard."),
+                             isSelected: model.isMac) {
+                            model.selectSystem(.macos)
+                            if model.ipswURL == nil, model.presetIPSW != nil { chooseIPSW() }
+                        }
+                    } else {
+                        // Intel Macs run Linux VMs only: a tile like Windows, not a button.
+                        NidoOSTile(glyph: "M", name: "macOS", detail: "Needs Apple silicon", state: .disabled)
                     }
                     NidoOSTile(glyph: "W", name: "Windows 11", detail: "Coming soon", state: .disabled)
                 }

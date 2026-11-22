@@ -20,7 +20,7 @@ struct StopCommand: ParsableCommand {
     static let suspendTimeout: TimeInterval = 300
 
     func run() throws {
-        let (vmName, bundle) = try Terminal.openBundle(name)
+        let (vmName, bundle) = try CLISupport.openForStop(name, suspend: suspend)
         guard suspend else {
             try VMControl.requestStop(bundle: bundle, name: vmName)
             print(L10n.string("Stop requested."))

@@ -38,6 +38,13 @@ struct Nido: AsyncParsableCommand {
         {
             Foundation.exit(code)
         }
+        // Never translated: a Rosetta process would see an Intel Mac and misreport the host.
+        do {
+            try HostChecks.refuseTranslated(isTranslated: HostChecks.isTranslatedProcess)
+        } catch {
+            Terminal.error(L10n.string("Error: \(CLISupport.message(for: error))"))
+            exit(withError: ExitCode.failure)
+        }
         let command: any ParsableCommand
         do {
             command = try parseAsRoot()

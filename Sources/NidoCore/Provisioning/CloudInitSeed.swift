@@ -64,17 +64,19 @@ public enum CloudInitSeed {
     public static func userData(
         username: String, publicKey: String, profile: ProvisioningProfile = .empty,
         pinnedTimeServer: Bool = false, timeClient: GuestTimeSync.Client = .timesyncd,
-        quietUbuntu: Bool = false, aptQuiet: Bool = false
+        quietUbuntu: Bool = false, aptQuiet: Bool = false, rosetta: Bool = true
     ) -> String {
         let packages =
             profile.essentialPackages
             ? "package_update: true\npackages:\n"
                 + ProvisioningProfile.packages.map { "  - \($0)" }.joined(separator: "\n") + "\n"
             : ""
-        var files = GuestSetup.writeFiles(SharedFolder.guestFiles + RosettaSupport.guestFiles)
+        // `rosetta: false` (an Intel Mac has none) leaves out the Rosetta files and unit.
+        var files = GuestSetup.writeFiles(SharedFolder.guestFiles + (rosetta ? RosettaSupport.guestFiles : []))
+        let units = [SharedFolder.unitName] + (rosetta ? [RosettaSupport.unitName] : [])
         var commands = [
             "  - [systemctl, daemon-reload]",
-            "  - [systemctl, enable, --now, \(SharedFolder.unitName), \(RosettaSupport.unitName)]",
+            "  - [systemctl, enable, --now, \(units.joined(separator: ", "))]",
         ]
         if pinnedTimeServer {
             files += "\n  - path: \(timeClient.path)\n    owner: root:root\n"

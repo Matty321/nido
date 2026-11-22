@@ -78,6 +78,7 @@ public struct LiveRestoreImageLoader: MacRestoreImageLoading {
     public func load(_ url: URL) async throws -> LoadedMacRestoreImage {
         // A non-file URL raises an Objective-C exception in Virtualization: never pass one.
         guard url.isFileURL else { throw NidoError.notARestoreImage(url.absoluteString) }
+        #if arch(arm64)
         return try await withCheckedThrowingContinuation { continuation in
             VZMacOSRestoreImage.load(from: url) { result in
                 // Called on an arbitrary thread: copy the values out of the image here.
@@ -100,6 +101,9 @@ public struct LiveRestoreImageLoader: MacRestoreImageLoading {
                 }
             }
         }
+        #else
+        throw NidoError.needsAppleSilicon
+        #endif
     }
 }
 

@@ -4,6 +4,7 @@ import Synchronization
 import NidoAgentKit
 import Testing
 @testable import NidoCore
+#if arch(arm64)
 
 /// `AgentHost.startIfEnabled` with a real `VMSession`. Building one needs the virtualization
 /// entitlement, which `swift test` lacks: these tests are skipped there (`AgentHostLogicTests`
@@ -35,6 +36,7 @@ import Testing
         #expect(!FileManager.default.fileExists(atPath: root.path))
     }
 }
+#endif
 
 /// The activity wrapper around a forwarded request.
 @Suite struct AgentHostActivityTests {

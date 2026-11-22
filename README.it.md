@@ -2,7 +2,7 @@
 
 [English](README.md) · **Italiano** · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)
 
-Nido è un gestore di macchine virtuali per i Mac con chip Apple. Fa girare VM Linux e macOS con il framework Virtualization di Apple, da un'app nativa o dal comando `nido` nel Terminale. È prudente per impostazione predefinita: Nido non si collega mai alla rete da solo, una VM raggiunge solo i domini che permetti e non vede nessuna cartella del Mac finché non ne condividi una.
+Nido è un gestore di macchine virtuali per i Mac con chip Apple e, in via sperimentale, per i Mac Intel. Fa girare VM Linux e macOS con il framework Virtualization di Apple, da un'app nativa o dal comando `nido` nel Terminale. È prudente per impostazione predefinita: Nido non si collega mai alla rete da solo, una VM raggiunge solo i domini che permetti e non vede nessuna cartella del Mac finché non ne condividi una.
 
 Il nome è un acronimo inglese: **N**ative **I**solated, **D**efault **O**ffline, cioè nativo, isolato e offline per impostazione predefinita.
 
@@ -10,7 +10,7 @@ Il nome è un acronimo inglese: **N**ative **I**solated, **D**efault **O**ffline
 
 ## Cosa fa Nido
 
-- **VM Linux dalle immagini cloud ufficiali**: Debian 13, Ubuntu Server 26.04 LTS e 24.04 LTS, per arm64. Nido le scarica solo dalle fonti ufficiali dei progetti e le verifica prima di usarle (SHA-512 per Debian, SHA-256 e firma di Ubuntu per Ubuntu). Puoi anche partire da un'immagine disco locale, raw o qcow2.
+- **VM Linux dalle immagini cloud ufficiali**: Debian 13, Ubuntu Server 26.04 LTS e 24.04 LTS, per arm64 (amd64 sui Mac Intel). Nido le scarica solo dalle fonti ufficiali dei progetti e le verifica prima di usarle (SHA-512 per Debian, SHA-256 e firma di Ubuntu per Ubuntu). Puoi anche partire da un'immagine disco locale, raw o qcow2.
 - **VM macOS da un file IPSW**, tuo o scaricato da Apple quando lo chiedi. Nido non modifica né sposta un file che hai scelto, e scarica macOS da Apple solo quando lo chiedi. L'installazione richiede da 4 a 20 minuti.
 - **Snapshot, sospensione, cloni e modelli**: torna a uno stato precedente, riprendi una VM sospesa da dove l'avevi lasciata, copia una VM ferma in un istante o salvala come modello per creare nuove VM.
 - **Cartelle condivise e Rosetta**: condividi una cartella del Mac con una VM, in sola lettura salvo scelta diversa, ed esegui i programmi x86_64 nelle VM Linux con Rosetta.
@@ -31,8 +31,9 @@ Il nome è un acronimo inglese: **N**ative **I**solated, **D**efault **O**ffline
 
 ## Requisiti
 
-- Un Mac con chip Apple.
+- Un Mac con chip Apple, oppure un Mac Intel con macOS 26 (solo VM Linux, sperimentale).
 - macOS 26 o successivo.
+- Su un Mac Intel non ci sono VM macOS, Mac agente (`nido mcp`, `nido act`, `nido agent`), Rosetta, sospensione e istantanee di una VM in esecuzione (le istantanee di una VM spenta funzionano); Ollama gira sulla CPU della VM. Una VM creata per un'architettura non si avvia mai sull'altra. Il supporto Intel è sperimentale: se usi Nido su un Mac Intel, segnala ogni problema che trovi.
 - Spazio su disco per le VM. Per una VM Linux la creazione guidata (Nuova VM) propone un disco da 16 GiB con il profilo Base e da 32 GiB con AI Starter (di più se l'immagine è più grande), mentre `nido create` usa 20 GiB; una VM macOS ha 64 GiB. Puoi scegliere un'altra dimensione.
 - Per una VM macOS: un'immagine di ripristino IPSW di una versione di macOS non più recente di quella del tuo Mac (Nido può scaricarla da Apple quando lo chiedi; l'offerta di Apple può essere una minor più recente, e Nido controlla la versione major).
 

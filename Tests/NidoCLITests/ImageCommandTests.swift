@@ -6,7 +6,8 @@ import Testing
 
 @Suite(.italian) struct ImageCommandTests {
     @Test func catalogImageIsLookedUpById() throws {
-        #expect(try CLISupport.catalogImage(id: "ubuntu-24.04") == CloudImageCatalog.ubuntu2404)
+        #expect(try CLISupport.catalogImage(id: "ubuntu-24.04", architecture: .arm64) == CloudImageCatalog.ubuntu2404)
+        #expect(try CLISupport.catalogImage(id: "ubuntu-24.04", architecture: .x86_64) == CloudImageCatalog.ubuntu2404Amd64)
         #expect(throws: CLIError.unknownImage("fedora")) { _ = try CLISupport.catalogImage(id: "fedora") }
     }
 

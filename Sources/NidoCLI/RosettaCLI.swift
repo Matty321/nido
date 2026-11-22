@@ -27,8 +27,10 @@ extension CLISupport {
     public static func installRosetta(
         state: RosettaState, assumeYes: Bool,
         confirm: (String) -> Bool,
-        install: () async throws -> Void
+        install: () async throws -> Void,
+        host: HostPlatform = .current
     ) async throws -> String {
+        try HostChecks.requireRosetta(host)
         switch state {
         case .installed:
             return L10n.string("Rosetta for Linux is already installed.")
@@ -50,8 +52,10 @@ extension CLISupport {
     /// concern it). Returns the text for stdout.
     @discardableResult
     public static func setRosetta(
-        vm: String, enabled: Bool, paths: NidoPaths, state: RosettaState = .current
+        vm: String, enabled: Bool, paths: NidoPaths, state: RosettaState = .current,
+        host: HostPlatform = .current
     ) throws -> String {
+        if enabled { try HostChecks.requireRosetta(host) }
         let bundle = try VMBundle.open(try VMName(vm), paths: paths)
         // Checked before Rosetta's state on this Mac, which says nothing about a macOS guest.
         guard try bundle.readConfig().guest == .linux else { throw CLIError.rosettaNotForMac }

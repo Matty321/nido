@@ -14,7 +14,7 @@ struct AISectionView: View {
         HStack(alignment: .top, spacing: Theme.Space.l) {
             AIRuntimeView(
                 runtime: model.aiRuntime, vmName: model.name.rawValue, runsElsewhere: runsElsewhere,
-                onOpenTerminal: onOpenTerminal)
+                onOpenTerminal: onOpenTerminal, host: model.host)
             AIBridgeView(bridge: model.aiBridge, vmName: model.name.rawValue, runsElsewhere: runsElsewhere)
         }
         .padding(Theme.Space.xl)
@@ -124,6 +124,11 @@ struct AIRuntimeView: View {
     let vmName: String
     let runsElsewhere: Bool?
     let onOpenTerminal: () -> Void
+    /// The Mac the app acts as (`AppEnvironment.host`).
+    var host: HostPlatform = .current
+
+    /// Without Apple silicon the models run on the VM's CPU: the view says so (`ai-cpu-note`).
+    nonisolated static func showsCPUNote(host: HostPlatform) -> Bool { host.architecture == .x86_64 }
 
     private enum Mode: CaseIterable {
         case models, chat
@@ -171,6 +176,11 @@ struct AIRuntimeView: View {
     }
 
     @ViewBuilder private var content: some View {
+        if Self.showsCPUNote(host: host) {
+            NidoNotice(
+                kind: .info, title: "Without Apple silicon, models run on the VM’s CPU: choose a small model",
+                identifier: "ai-cpu-note")
+        }
         if !runtime.isVMRunning {
             stoppedMessage
         } else if runtime.phase1 == .notInstalled {

@@ -63,6 +63,14 @@ final class AppEnvironment {
     /// fixtures' files take a few KiB).
     nonisolated static let fakeTemplateSizesFlag = "-NidoFakeTemplateSizes"
 
+    /// DEBUG only: "intel" makes this Apple silicon Mac act as an Intel one (wizard, labels,
+    /// library, Rosetta and AI of the Intel build). The wizard really creates x86_64 (schema 6)
+    /// bundles in the root: use it only with a test root (`-NidoRoot`).
+    nonisolated static let fakeHostFlag = "-NidoFakeHost"
+
+    /// The Mac the app acts as: `HostPlatform.current`, or Intel with DEBUG `-NidoFakeHost intel`.
+    /// Every architecture-dependent choice of the app goes through it, never `HostPlatform.current`.
+    let host: HostPlatform
     let paths: NidoPaths
     let registry: VMRegistry
     let imageStore: ImageStore
@@ -145,12 +153,13 @@ final class AppEnvironment {
             if isDebug, root == NidoPaths.defaultRoot() {
                 for flag in [Self.fakeSessionsFlag, Self.fakeStatesFlag, Self.wizardFixtureFlag, Self.fakeAIRouterFlag,
                              Self.fakeGuestFlag, Self.ipswFileFlag, Self.fakeMacInstallerFlag, Self.openVMFlag,
-                             Self.notificationsFlag, Self.fakeTemplateSizesFlag]
+                             Self.notificationsFlag, Self.fakeTemplateSizesFlag, Self.fakeHostFlag]
                 where arguments.contains(flag) {
                     throw LaunchError.requiresRoot(flag)
                 }
             }
         #endif
+        self.host = try Self.resolveHost(arguments: arguments, isDebug: isDebug)
         try Self.prepareRoot(root, isCustom: root != NidoPaths.defaultRoot())
         let paths = NidoPaths(root: root)
         self.paths = paths
@@ -238,8 +247,8 @@ final class AppEnvironment {
         checksMemoryHeadroom = checksHeadroom
         let neverWarns: @Sendable (VMBundle) -> MemoryHeadroom? = { _ in nil }
         let sessions = VMSessionStore(
-            paths: paths, factory: factory ?? LiveSessionFactory(imageCache: cacheRoot, aiBridge: aiBridge, passwords: guestPasswords),
-            aiBridge: aiBridge, passwords: guestPasswords, checkHeadroom: checksHeadroom ? nil : neverWarns)
+            paths: paths, factory: factory ?? LiveSessionFactory(imageCache: cacheRoot, aiBridge: aiBridge, passwords: guestPasswords, host: host),
+            aiBridge: aiBridge, passwords: guestPasswords, checkHeadroom: checksHeadroom ? nil : neverWarns, host: host)
         self.sessions = sessions
         var poster: (any EgressNotificationPosting)?
         var authenticator: any OwnerAuthenticator = LocalOwnerAuthenticator()
@@ -309,6 +318,16 @@ final class AppEnvironment {
     nonisolated static func resolveImageFile(arguments: [String], isDebug: Bool) throws -> URL? {
         try debugPath(after: imageFileFlag, in: arguments, isDebug: isDebug)
             .map { URL(fileURLWithPath: $0, isDirectory: false).standardizedFileURL }
+    }
+
+    /// The host of the app: the real Mac, or (DEBUG `-NidoFakeHost intel`) an Intel one. Any other
+    /// value is refused; Release builds ignore the flag.
+    nonisolated static func resolveHost(arguments: [String], isDebug: Bool) throws -> HostPlatform {
+        guard let value = try debugValue(after: fakeHostFlag, in: arguments, isDebug: isDebug) else {
+            return HostPlatform.current(environment: [:])
+        }
+        guard value == "intel" else { throw LaunchError.invalidValue(fakeHostFlag, value) }
+        return .intel
     }
 
     /// Release builds always ask for the IPSW (nil). Debug builds honour `-NidoIPSWFile <absolute

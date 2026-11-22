@@ -22,12 +22,18 @@ public enum LinuxDistribution: String, Codable, Sendable, CaseIterable {
     /// The guest's NTP client, which the seed pins to `GuestTimeSync.server`.
     public var timeClient: GuestTimeSync.Client { self == .ubuntu2604 ? .chrony : .timesyncd }
 
-    /// The catalog image of this distribution.
-    public var image: CloudImage {
-        switch self {
-        case .debian13: CloudImageCatalog.debian13
-        case .ubuntu2604: CloudImageCatalog.ubuntu2604
-        case .ubuntu2404: CloudImageCatalog.ubuntu2404
+    /// The catalog image of this distribution for this Mac's architecture.
+    public var image: CloudImage { image(for: HostPlatform.current.architecture) }
+
+    /// The catalog image of this distribution for `architecture`.
+    public func image(for architecture: CPUArchitecture) -> CloudImage {
+        switch (self, architecture) {
+        case (.debian13, .arm64): CloudImageCatalog.debian13
+        case (.ubuntu2604, .arm64): CloudImageCatalog.ubuntu2604
+        case (.ubuntu2404, .arm64): CloudImageCatalog.ubuntu2404
+        case (.debian13, .x86_64): CloudImageCatalog.debian13Amd64
+        case (.ubuntu2604, .x86_64): CloudImageCatalog.ubuntu2604Amd64
+        case (.ubuntu2404, .x86_64): CloudImageCatalog.ubuntu2404Amd64
         }
     }
 }
@@ -136,10 +142,47 @@ public enum CloudImageCatalog {
             keys: UbuntuCloudImageKey.keys)
     )
 
-    /// Every catalog image, in the order the wizard and `nido create` show them.
+    /// The amd64 images (Intel Macs): the arm64 URLs with `arm64` replaced by `amd64`, the same
+    /// checksum lists and the same verification.
+    public static let debian13Amd64 = CloudImage(
+        id: "debian-13",
+        fileName: "debian-13-genericcloud-amd64.raw",
+        url: URL(string: "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.raw")!,
+        checksumsURL: debian13.checksumsURL,
+        maxBytes: debian13.maxBytes,
+        manifest: .init(
+            url: URL(string: "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.json")!,
+            imageFormat: "raw")
+    )
+
+    public static let ubuntu2604Amd64 = CloudImage(
+        id: "ubuntu-26.04",
+        fileName: "ubuntu-26.04-server-cloudimg-amd64.img",
+        url: URL(string: "https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-amd64.img")!,
+        checksumsURL: ubuntu2604.checksumsURL,
+        maxBytes: ubuntu2604.maxBytes, checksum: .sha256, distribution: .ubuntu2604,
+        signature: ubuntu2604.signature
+    )
+
+    public static let ubuntu2404Amd64 = CloudImage(
+        id: "ubuntu-24.04",
+        fileName: "ubuntu-24.04-server-cloudimg-amd64.img",
+        url: URL(string: "https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-amd64.img")!,
+        checksumsURL: ubuntu2404.checksumsURL,
+        maxBytes: ubuntu2404.maxBytes, checksum: .sha256, distribution: .ubuntu2404,
+        signature: ubuntu2404.signature
+    )
+
+    /// Every arm64 catalog image, in the order the wizard and `nido create` show them.
     public static let all = [debian13, ubuntu2604, ubuntu2404]
 
-    public static func image(id: String) -> CloudImage? {
-        all.first { $0.id == id }
+    /// Every catalog image of `architecture`, in the same order.
+    public static func all(for architecture: CPUArchitecture) -> [CloudImage] {
+        LinuxDistribution.allCases.map { $0.image(for: architecture) }
+    }
+
+    /// The image with id `id` for `architecture` (this Mac's by default).
+    public static func image(id: String, architecture: CPUArchitecture = HostPlatform.current.architecture) -> CloudImage? {
+        all(for: architecture).first { $0.id == id }
     }
 }

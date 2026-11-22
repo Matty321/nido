@@ -25,11 +25,12 @@ private let validKey = "ssh-ed25519 \(keyBody)"
     private func parse(
         name: String = "vm", image: String? = "debian-13", imageFile: String? = nil,
         sshKey: String? = "/tmp/id.pub", cpus: Int = 2, memory: String = "4G", disk: String = "20G",
-        noPackages: Bool = false, noGuestTools: Bool = false
+        noPackages: Bool = false, noGuestTools: Bool = false, architecture: CPUArchitecture = .arm64
     ) throws -> CreateOptions {
         try CLISupport.parseCreateOptions(
             name: name, image: image, imageFile: imageFile, sshKey: sshKey,
-            cpus: cpus, memory: memory, disk: disk, noPackages: noPackages, noGuestTools: noGuestTools)
+            cpus: cpus, memory: memory, disk: disk, noPackages: noPackages, noGuestTools: noGuestTools,
+            architecture: architecture)
     }
 
     @Test func createFlagsMapToProfile() throws {
@@ -85,6 +86,7 @@ private let validKey = "ssh-ed25519 \(keyBody)"
         let catalog = try parse()
         #expect(catalog.name == (try VMName("vm")))
         #expect(catalog.image == .catalog(CloudImageCatalog.debian13))
+        #expect(try parse(architecture: .x86_64).image == .catalog(CloudImageCatalog.debian13Amd64))
         #expect(catalog.sshKeyPath == URL(fileURLWithPath: "/tmp/id.pub"))
         #expect(catalog.cpuCount == 2)
         #expect(catalog.memoryBytes == 4 << 30)
@@ -203,6 +205,8 @@ extension CLIParsingTests {
     @Test func createWithUbuntuCatalogImages() throws {
         #expect(try parse(image: "ubuntu-26.04").image == .catalog(CloudImageCatalog.ubuntu2604))
         #expect(try parse(image: "ubuntu-24.04").image == .catalog(CloudImageCatalog.ubuntu2404))
+        #expect(try parse(image: "ubuntu-26.04", architecture: .x86_64).image == .catalog(CloudImageCatalog.ubuntu2604Amd64))
+        #expect(try parse(image: "ubuntu-24.04", architecture: .x86_64).image == .catalog(CloudImageCatalog.ubuntu2404Amd64))
     }
 
     @Test func unknownImageListsTheWholeCatalog() {

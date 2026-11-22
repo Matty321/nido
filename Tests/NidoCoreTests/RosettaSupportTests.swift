@@ -37,7 +37,7 @@ private let x86Mask =
             try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
             let image = tmp.appendingPathComponent("base.img")
             try Data(count: Int(mib)).write(to: image)
-            let factory = VMFactory(paths: NidoPaths(root: tmp.appendingPathComponent("VMs")), runner: SeedRunner())
+            let factory = VMFactory(paths: NidoPaths(root: tmp.appendingPathComponent("VMs")), runner: SeedRunner(), host: .appleSilicon)
             bundle = try factory.createLinux(
                 LinuxVMRequest(
                     name: try VMName("vm1"), baseImage: image, cpuCount: 2,
@@ -67,6 +67,7 @@ private let x86Mask =
             .filter { $0.tag == RosettaSupport.tag }
     }
 
+    #if arch(arm64)
     @Test func rosettaDeviceOnlyWhenInstalled() throws {
         let f = try Fixture()
         defer { f.cleanup() }
@@ -95,7 +96,9 @@ private let x86Mask =
         if RosettaState.current == .installed {
             let devices = Self.rosettaDevices(installed.configuration)
             #expect(devices.count == 1)
+#if arch(arm64)
             #expect(devices.first?.share is VZLinuxRosettaDirectoryShare)
+#endif
             #expect(installed.warnings.isEmpty)
         } else {
             // The injected state says installed, but the share cannot be made on this Mac:
@@ -104,6 +107,7 @@ private let x86Mask =
             #expect(installed.warnings.count == 1)
         }
     }
+    #endif
 
     @Test(.enabled(if: RosettaState.current == .installed, "Rosetta is not installed on this Mac"))
     func rosettaSitsNextToSharedFolders() throws {
@@ -188,8 +192,14 @@ private let x86Mask =
         #expect(RosettaState.installed.reason == nil)
         #expect(RosettaState.notInstalled.reason?.contains("non è installata") == true)
         #expect(RosettaState.unsupported.reason?.contains("non è disponibile") == true)
+#if arch(arm64)
         #expect(RosettaState(VZLinuxRosettaAvailability.installed) == .installed)
+#endif
+#if arch(arm64)
         #expect(RosettaState(VZLinuxRosettaAvailability.notInstalled) == .notInstalled)
+#endif
+#if arch(arm64)
         #expect(RosettaState(VZLinuxRosettaAvailability.notSupported) == .unsupported)
+#endif
     }
 }

@@ -43,7 +43,7 @@ struct MCPCommand: AsyncParsableCommand {
             try await runFresh()
             return
         }
-        let (vmName, bundle) = try Terminal.openBundle(vm)
+        let (vmName, bundle) = try AgentSupport.openBundle(vm)
         let vmConfig = try bundle.readConfig()
         try AgentSupport.requireAgentAccess(vmConfig)
 
@@ -64,10 +64,7 @@ struct MCPCommand: AsyncParsableCommand {
     private func runFresh() async throws {
         // A client gone mid-answer must not kill the process before the copy is torn down.
         signal(SIGPIPE, SIG_IGN)
-        let paths = try CLISupport.preparedPaths()
-        let base = try VMName(vm)
-        let baseBundle = try VMBundle.open(base, paths: paths)
-        try FreshMac.checkBase(try baseBundle.readConfig(), bundle: baseBundle, requireStopped: !config)
+        let (base, _, paths) = try AgentSupport.openFreshBase(vm: vm, requireStopped: !config)
 
         if config {
             print(AgentSupport.mcpConfigSnippet(vm: base.rawValue, executable: Self.executablePath(), fresh: true, keep: keep))

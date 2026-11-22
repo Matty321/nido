@@ -20,8 +20,7 @@ struct AgentCommand: ParsableCommand {
         var vm: String
 
         func run() throws {
-            let (_, bundle) = try Terminal.openBundle(vm)
-            print(try AgentSupport.setAgentAccess(true, bundle: bundle))
+            print(try AgentSupport.switchAgentAccess(true, vm: vm))
         }
     }
 
@@ -33,8 +32,7 @@ struct AgentCommand: ParsableCommand {
         var vm: String
 
         func run() throws {
-            let (_, bundle) = try Terminal.openBundle(vm)
-            print(try AgentSupport.setAgentAccess(false, bundle: bundle))
+            print(try AgentSupport.switchAgentAccess(false, vm: vm))
         }
     }
 
@@ -48,7 +46,7 @@ struct AgentCommand: ParsableCommand {
         var vm: String
 
         func run() async throws {
-            let (vmName, bundle) = try Terminal.openBundle(vm)
+            let (vmName, bundle) = try AgentSupport.openBundle(vm)
             let config = try bundle.readConfig()
             let name = vmName.rawValue
             let ready: Bool
@@ -107,7 +105,7 @@ struct AgentCommand: ParsableCommand {
         var vm: String
 
         func run() async throws {
-            let (_, bundle) = try Terminal.openBundle(vm)
+            let (_, bundle) = try AgentSupport.openBundle(vm)
             let config = try bundle.readConfig()
             print(try await AgentSupport.storedPassword(
                 config: config, store: KeychainGuestPasswordStore(), owner: LocalOwnerAuthenticator()))
@@ -123,7 +121,7 @@ struct AgentCommand: ParsableCommand {
         var vm: String
 
         func run() throws {
-            let (vmName, bundle) = try Terminal.openBundle(vm)
+            let (vmName, bundle) = try AgentSupport.openBundle(vm)
             let config = try bundle.readConfig()
             let running = BundleLock.holder(bundle) != nil
             let access = config.agentAccess == true
@@ -159,7 +157,7 @@ struct AgentCommand: ParsableCommand {
 
         func run() throws {
             try AgentSupport.validateLogOptions(clear: clear, limit: limit, json: json, yes: yes)
-            let (vmName, bundle) = try Terminal.openBundle(vm)
+            let (vmName, bundle) = try AgentSupport.openBundle(vm)
             if clear {
                 guard try AgentSupport.clearLog(
                     bundle: bundle, yes: yes, stdinIsTerminal: isatty(0) != 0, confirm: Terminal.confirm)

@@ -85,8 +85,18 @@ func package(
 }
 
 let gvSha = string(gv, "sha256", gvPath)
-let ollamaSha = string(ollama, "sha256", ollamaPath)
 let ollamaVersion = string(ollama, "version", ollamaPath)
+guard let ollamaEntries = ollama["architectures"] as? [String: Any] else { fail("\(ollamaPath): missing architectures") }
+
+/// The SPDX package of the Ollama archive for one guest architecture (`aarch64` / `x86_64`).
+func ollamaPackage(machine: String, id: String) -> [String: Any] {
+    guard let entry = ollamaEntries[machine] as? [String: Any] else { fail("\(ollamaPath): missing \(machine)") }
+    let path = "\(ollamaPath) (\(machine))"
+    return package(
+        id: id, name: "ollama", version: ollamaVersion,
+        download: string(entry, "url", path), license: "MIT", sha256: string(entry, "sha256", path),
+        comment: "Downloaded into the VM at runtime, not included in the DMG. Archive \(string(entry, "file", path))")
+}
 
 var nido = package(
     id: "SPDXRef-Nido", name: "Nido", version: version,
@@ -107,10 +117,8 @@ let packages: [[String: Any]] = [
         id: "SPDXRef-gvproxy", name: "gvproxy", version: string(gv, "version", gvPath),
         download: string(gv, "url", gvPath), license: "Apache-2.0", sha256: gvSha,
         comment: "Universal binary (arm64 + x86_64) from \(string(gv, "project", gvPath))"),
-    package(
-        id: "SPDXRef-ollama", name: "ollama", version: ollamaVersion,
-        download: string(ollama, "url", ollamaPath), license: "MIT", sha256: ollamaSha,
-        comment: "Downloaded into the VM at runtime, not included in the DMG. Archive \(string(ollama, "file", ollamaPath))"),
+    ollamaPackage(machine: "aarch64", id: "SPDXRef-ollama-arm64"),
+    ollamaPackage(machine: "x86_64", id: "SPDXRef-ollama-amd64"),
 ]
 
 let relationships: [[String: Any]] = [
@@ -118,7 +126,9 @@ let relationships: [[String: Any]] = [
     ["spdxElementId": "SPDXRef-Nido", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-swift-argument-parser"],
     ["spdxElementId": "SPDXRef-Nido", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Sparkle"],
     ["spdxElementId": "SPDXRef-Nido", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-gvproxy"],
-    ["spdxElementId": "SPDXRef-Nido", "relationshipType": "OTHER", "relatedSpdxElement": "SPDXRef-ollama",
+    ["spdxElementId": "SPDXRef-Nido", "relationshipType": "OTHER", "relatedSpdxElement": "SPDXRef-ollama-arm64",
+        "comment": "Downloaded into the VM, not included in the DMG"],
+    ["spdxElementId": "SPDXRef-Nido", "relationshipType": "OTHER", "relatedSpdxElement": "SPDXRef-ollama-amd64",
         "comment": "Downloaded into the VM, not included in the DMG"],
 ]
 

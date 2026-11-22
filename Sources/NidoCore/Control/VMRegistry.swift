@@ -30,13 +30,16 @@ public struct VMSummary: Identifiable, Equatable, Sendable {
     /// The distribution of a Linux guest (`VMConfig.linuxDistribution`); nil for macOS and when
     /// the config is unreadable.
     public let distribution: LinuxDistribution?
+    /// The architecture the VM was made for (`VMConfig.architecture`; arm64 when unreadable).
+    public let architecture: CPUArchitecture
 
     public var id: String { name }
 
     public init(
         configID: UUID?, name: String, status: VMStatus, cpuCount: Int?, memoryBytes: UInt64?,
         diskBytes: UInt64?, isSuspended: Bool = false, isTemplate: Bool = false, guest: GuestOS = .linux,
-        osVersion: String? = nil, distribution: LinuxDistribution? = nil
+        osVersion: String? = nil, distribution: LinuxDistribution? = nil,
+        architecture: CPUArchitecture = .arm64
     ) {
         self.configID = configID
         self.name = name
@@ -49,6 +52,7 @@ public struct VMSummary: Identifiable, Equatable, Sendable {
         self.guest = guest
         self.osVersion = osVersion
         self.distribution = distribution
+        self.architecture = architecture
     }
 }
 
@@ -90,7 +94,7 @@ public actor VMRegistry {
                 diskBytes: config.diskBytes,
                 isSuspended: holder == nil && bundle.hasSuspendedState(config),
                 isTemplate: config.isTemplate, guest: config.guest, osVersion: config.osVersion,
-                distribution: config.linuxDistribution)
+                distribution: config.linuxDistribution, architecture: config.architecture)
         }
         return rows.sorted { $0.name.lowercased() < $1.name.lowercased() }
     }

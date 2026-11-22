@@ -36,9 +36,60 @@ import Virtualization
 
     @Test func rejectsNewerSchema() throws {
         var config = try makeConfig()
-        config.schemaVersion = VMConfig.currentSchemaVersion + 1
+        config.schemaVersion = VMConfig.intelSchemaVersion + 1
         let data = try config.encoded()
-        #expect(throws: NidoError.unsupportedSchema(VMConfig.currentSchemaVersion + 1)) { try VMConfig.decode(data) }
+        #expect(throws: NidoError.unsupportedSchema(VMConfig.intelSchemaVersion + 1)) { try VMConfig.decode(data) }
+    }
+
+    @Test func missingArchitectureIsArm64() throws {
+        let json = """
+            {
+              "clipboardSharing" : false, "cpuCount" : 2, "diskBytes" : 21474836480, "guest" : "linux",
+              "id" : "8A1C2E4B-6D3F-4A5B-9C7D-0E1F2A3B4C5D", "macAddress" : "02:00:00:00:00:01",
+              "memoryBytes" : 4294967296, "name" : "debian-13", "schemaVersion" : 5
+            }
+            """
+        #expect(try VMConfig.decode(Data(json.utf8)).architecture == .arm64)
+    }
+
+    private func writtenText(_ config: VMConfig) throws -> String {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("nido-test-\(UUID().uuidString).nidovm", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let bundle = VMBundle(url: dir)
+        try bundle.writeConfig(config)
+        return String(decoding: try Data(contentsOf: bundle.configURL), as: UTF8.self)
+    }
+
+    @Test func writesSchema6ForIntel() throws {
+        var config = try makeConfig()
+        config.architecture = .x86_64
+        let text = try writtenText(config)
+        #expect(text.contains("\"schemaVersion\" : 6"))
+        #expect(text.contains("\"architecture\" : \"x86_64\""))
+    }
+
+    @Test func arm64StaysSchema5() throws {
+        let text = try writtenText(try makeConfig())
+        #expect(text.contains("\"schemaVersion\" : 5"))
+        #expect(!text.contains("architecture"))
+    }
+
+    @Test func decodesSchema6() throws {
+        var config = try makeConfig()
+        config.architecture = .x86_64
+        config.schemaVersion = 6
+        let decoded = try VMConfig.decode(try config.encoded())
+        #expect(decoded.architecture == .x86_64)
+        #expect(decoded.schemaVersion == 6)
+    }
+
+    @Test func rejectsSchema7() throws {
+        var config = try makeConfig()
+        config.schemaVersion = 7
+        let data = try config.encoded()
+        #expect(throws: NidoError.unsupportedSchema(7)) { try VMConfig.decode(data) }
     }
 
     @Test func v1ConfigDecodesWithDefaults() throws {
@@ -184,7 +235,7 @@ import Virtualization
     @Test func aNewerSchemaIsRefusedNotRewritten() throws {
         var config = try makeConfig()
         config.controlledNetwork = true
-        config.schemaVersion = VMConfig.currentSchemaVersion + 1
+        config.schemaVersion = VMConfig.intelSchemaVersion + 1
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("nido-test-\(UUID().uuidString).nidovm", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -192,8 +243,8 @@ import Virtualization
         let bundle = VMBundle(url: dir)
         let data = try config.encoded()
         try data.write(to: bundle.configURL)
-        #expect(throws: NidoError.unsupportedSchema(VMConfig.currentSchemaVersion + 1)) { try bundle.readConfig() }
-        #expect(throws: NidoError.unsupportedSchema(VMConfig.currentSchemaVersion + 1)) {
+        #expect(throws: NidoError.unsupportedSchema(VMConfig.intelSchemaVersion + 1)) { try bundle.readConfig() }
+        #expect(throws: NidoError.unsupportedSchema(VMConfig.intelSchemaVersion + 1)) {
             try bundle.updateConfig { $0.controlledNetwork = false }
         }
         #expect(try Data(contentsOf: bundle.configURL) == data)

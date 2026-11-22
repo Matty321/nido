@@ -2,6 +2,20 @@
 
 Todas las versiones de Nido, de la más reciente a la más antigua. La primera vez que Nido se abre tras una actualización, muestra las novedades de la versión instalada (para volver a verlas, elige Ayuda › Novedades de Nido).
 
+## [0.10.0] – 2026-11-22
+
+### Mac con Intel (experimental)
+- **Nido ya funciona en los Mac con Intel y macOS 26, para VM Linux.** Debian 13 y Ubuntu Server 26.04 y 24.04 usan sus imágenes cloud amd64, verificadas igual que en los Mac con chip de Apple. Nido es ahora una sola app universal con un solo comando `nido` universal.
+- **Lo que no tienen los Mac con Intel:** las VM macOS y el Mac para agentes, Rosetta, la suspensión y las instantáneas de una VM en marcha (las instantáneas de una VM detenida funcionan). Ollama usa la CPU de la VM: elige un modelo pequeño.
+- **Una VM creada en un tipo de Mac no se inicia en el otro.** Nido lo avisa antes de tocarla; aun así puedes mostrarla en el Finder o eliminarla.
+- **Experimental:** esta versión aún no ha iniciado una VM en un Mac con Intel. Si tienes uno, pruébala y cuéntanos cómo fue en una incidencia en la página de GitHub de Nido.
+
+### Mac con chip de Apple
+- Tus VM no cambian. Las VM Linux nuevas reciben Guest Tools 1.6.0.
+
+### Guest Tools 1.6.0
+- Instala Ollama también en las VM amd64.
+
 ## [0.9.4] – 2026-11-22
 
 ### Un Mac para agentes

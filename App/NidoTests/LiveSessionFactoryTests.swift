@@ -21,6 +21,7 @@ private let canCreateVirtualMachines: Bool = {
 /// `LiveSessionFactory` on a macOS bundle: the AI bridge is Linux-only in M3b.
 @MainActor
 struct LiveSessionFactoryTests {
+    #if arch(arm64)
     /// A macOS bundle as `MacInstaller` leaves it (minus the installed system).
     private func makeMacBundle(in root: URL) throws -> VMBundle {
         let paths = NidoPaths(root: root.appendingPathComponent("VMs", isDirectory: true))
@@ -50,7 +51,9 @@ struct LiveSessionFactoryTests {
         try write(VZMacMachineIdentifier().dataRepresentation, to: bundle.machineIdentifierURL)
         return bundle
     }
+    #endif
 
+    #if arch(arm64)
     @Test(.enabled(if: canCreateVirtualMachines, "needs the virtualization entitlement"))
     func macSessionGetsNoAIBridge() async throws {
         let root = FileManager.default.temporaryDirectory
@@ -76,6 +79,7 @@ struct LiveSessionFactoryTests {
         #expect(handle.guestChannel == nil)
         #expect(handle.console == nil)
     }
+    #endif
 
     /// The relay of a controlled VM starts off the main actor (vmnet blocks up to 10 s), with
     /// the VM's MAC; its failure fails the session (never a VM on Apple's NAT).
@@ -101,6 +105,7 @@ struct LiveSessionFactoryTests {
         #expect(call.mac == "02:00:00:00:00:07")
     }
 
+    #if arch(arm64)
     /// A controlled macOS VM starts its relay the same way (M3d): never Apple's NAT.
     @Test func controlledMacVMStartsItsRelayOffTheMainActor() async throws {
         struct Sentinel: Error {}
@@ -120,4 +125,5 @@ struct LiveSessionFactoryTests {
         #expect(!call.onMain)
         #expect(call.mac == mac)
     }
+    #endif
 }

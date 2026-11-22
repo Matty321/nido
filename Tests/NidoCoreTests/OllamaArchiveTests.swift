@@ -23,7 +23,7 @@ private func releaseJSON(
 @Suite struct OllamaReleaseTests {
     /// The host downloads exactly what the Guest Tools pin (their `ollama/release.json`).
     @Test func pinnedReleaseIsTheGuestToolsOne() throws {
-        let pinned = OllamaRelease.pinned
+        let pinned = OllamaRelease.pinned(for: .arm64)
         #expect(pinned.version == "0.40.10")
         #expect(pinned.file == "ollama-linux-arm64.tar.zst")
         #expect(pinned.size == 1_564_567_595)
@@ -31,6 +31,22 @@ private func releaseJSON(
         #expect(pinned.url.absoluteString
             == "https://github.com/ollama/ollama/releases/download/v0.40.10/ollama-linux-arm64.tar.zst")
         #expect(try OllamaRelease.parse(releaseJSON()) == pinned)
+    }
+
+    @Test func pinnedPerArchitecture() throws {
+        let arm = OllamaRelease.pinned(for: .arm64)
+        #expect(arm.version == "0.40.10")
+        #expect(arm.file == "ollama-linux-arm64.tar.zst")
+        #expect(arm.size == 1_564_567_595)
+        #expect(arm.sha256 == "57dca26f51efc050112b733a65dea6f6c8e68da7a2946afd7c1eb8834d9eeb92")
+        let intel = OllamaRelease.pinned(for: .x86_64)
+        #expect(intel.version == "0.40.10")
+        #expect(intel.file == "ollama-linux-amd64.tar.zst")
+        #expect(intel.size == 1_509_264_197)
+        #expect(intel.sha256 == "1e8ad2d2a394efdd235bee74deec237badd95142ffba77588140ab2a9ecec227")
+        #expect(intel.url.absoluteString
+            == "https://github.com/ollama/ollama/releases/download/v0.40.10/ollama-linux-amd64.tar.zst")
+        #expect(OllamaRelease.pinned == OllamaRelease.pinned(for: HostPlatform.current.architecture))
     }
 
     @Test func doubtfulReleasesAreRefused() {

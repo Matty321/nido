@@ -20,7 +20,7 @@ struct LibraryView: View {
         #endif
         _model = State(initialValue: LibraryModel(
             registry: environment.registry, control: LiveVMControl(paths: paths, passwords: environment.guestPasswords),
-            cloner: LiveVMCloner(paths: paths, passwords: environment.guestPasswords), templates: LiveVMTemplates(paths: paths),
+            cloner: LiveVMCloner(paths: paths, passwords: environment.guestPasswords, host: environment.host), templates: LiveVMTemplates(paths: paths),
             stopAppVM: { name in await environment.sessions.stop(name) },
             resumeAppVM: { name in await environment.sessions.resume(name) },
             // A deleted VM's tint goes too: a new VM with its name starts from its own.
@@ -37,7 +37,7 @@ struct LibraryView: View {
             measureTemplate: { name in
                 fakeTemplateSizes[name] ?? LiveVMTemplates.allocatedBytes(of: name, paths: paths)
             },
-            installs: environment.macInstalls))
+            installs: environment.macInstalls, host: environment.host))
         self.environment = environment
     }
 
@@ -317,9 +317,9 @@ struct LibraryView: View {
     private func startWizard() {
         guard wizard == nil else { return }
         let images: WizardImageSource = environment.imageFile.map { .localFile($0) }
-            ?? .catalog(CloudImageCatalog.debian13, store: environment.imageStore,
+            ?? .catalog(LinuxDistribution.debian13.image(for: environment.host.architecture), store: environment.imageStore,
                         cacheRoot: environment.imageCacheRoot)
-        let creator = LiveVMCreator(paths: environment.paths, passwords: environment.guestPasswords)
+        let creator = LiveVMCreator(paths: environment.paths, passwords: environment.guestPasswords, host: environment.host)
         var checkHeadroom: (@Sendable (UInt64) async -> MemoryHeadroom?)?
         if environment.checksMemoryHeadroom {
             checkHeadroom = { bytes in await creator.headroom(memoryBytes: bytes) }
@@ -329,7 +329,7 @@ struct LibraryView: View {
             freeDiskBytes: Self.freeSpace(at: environment.paths.root), checkHeadroom: checkHeadroom,
             macInstaller: environment.macInstaller, installs: environment.macInstalls,
             macImageDownloader: environment.macImageDownloader,
-            presetIPSW: environment.ipswFile)
+            presetIPSW: environment.ipswFile, host: environment.host)
         wizard.tint = environment.tints.freshTint(for: wizard.name, among: model.items.map(\.name))
         configure(wizard)
         self.wizard = wizard

@@ -10,6 +10,7 @@ public enum RosettaState: Equatable, Sendable {
     case notInstalled
     case installed
 
+    #if arch(arm64)
     public init(_ availability: VZLinuxRosettaAvailability) {
         switch availability {
         case .installed: self = .installed
@@ -17,9 +18,16 @@ public enum RosettaState: Equatable, Sendable {
         default: self = .unsupported
         }
     }
+    #endif
 
-    /// What this Mac has right now.
-    public static var current: RosettaState { RosettaState(VZLinuxRosettaDirectoryShare.availability) }
+    /// What this Mac has right now (always `.unsupported` on an Intel Mac).
+    public static var current: RosettaState {
+        #if arch(arm64)
+        RosettaState(VZLinuxRosettaDirectoryShare.availability)
+        #else
+        .unsupported
+        #endif
+    }
 
     /// Why a VM cannot use Rosetta, as an error (the CLI refuses with it), nil when it can.
     public var error: NidoError? {
@@ -104,12 +112,17 @@ public enum RosettaSupport {
     /// Asks macOS to download and install Rosetta for Linux. This prompts the user through a
     /// system install: call it only from an explicit, confirmed user action.
     public static func install() async throws {
+        #if arch(arm64)
         try await VZLinuxRosettaDirectoryShare.installRosetta()
+        #else
+        throw NidoError.rosettaUnavailable
+        #endif
     }
 
     /// The Rosetta device for a VM with Rosetta on, or the reason it is left out (localized
     /// sentence for `GuestConfiguration.warnings`). Never throws: the VM starts without it.
     static func device(state: RosettaState) -> (device: VZVirtioFileSystemDeviceConfiguration?, warning: String?) {
+        #if arch(arm64)
         switch state {
         case .unsupported:
             return (nil, L10n.string("Rosetta isn’t available on this Mac: the VM starts without it."))
@@ -125,5 +138,8 @@ public enum RosettaSupport {
                 return (nil, L10n.string("Rosetta can’t be used (\(error.localizedDescription)): the VM starts without it."))
             }
         }
+        #else
+        return (nil, nil)
+        #endif
     }
 }

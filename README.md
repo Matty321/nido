@@ -2,7 +2,7 @@
 
 **English** · [Italiano](README.it.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)
 
-Nido is a virtual machine manager for Macs with Apple silicon. It runs Linux and macOS VMs on Apple’s Virtualization framework, from a native app or from the `nido` command in Terminal. It’s careful by default: Nido never goes online on its own, a VM reaches only the domains you allow, and it sees none of your Mac’s folders until you share one.
+Nido is a virtual machine manager for Macs with Apple silicon and, experimentally, for Intel Macs. It runs Linux and macOS VMs on Apple’s Virtualization framework, from a native app or from the `nido` command in Terminal. It’s careful by default: Nido never goes online on its own, a VM reaches only the domains you allow, and it sees none of your Mac’s folders until you share one.
 
 The name stands for **N**ative **I**solated, **D**efault **O**ffline. *Nido* is also Italian for “nest”.
 
@@ -10,7 +10,7 @@ The name stands for **N**ative **I**solated, **D**efault **O**ffline. *Nido* is 
 
 ## What Nido does
 
-- **Linux VMs from official cloud images**: Debian 13, Ubuntu Server 26.04 LTS and 24.04 LTS, for arm64. Nido downloads them only from the projects’ official sources and verifies them before use (SHA-512 for Debian, SHA-256 and Ubuntu’s signature for Ubuntu). You can also start from a local disk image, raw or qcow2.
+- **Linux VMs from official cloud images**: Debian 13, Ubuntu Server 26.04 LTS and 24.04 LTS, for arm64 (amd64 on Intel Macs). Nido downloads them only from the projects’ official sources and verifies them before use (SHA-512 for Debian, SHA-256 and Ubuntu’s signature for Ubuntu). You can also start from a local disk image, raw or qcow2.
 - **macOS VMs from an IPSW file**, yours or downloaded from Apple when you ask. Nido never changes or moves a file you chose, and downloads macOS from Apple only when you ask. Installation takes 4 to 20 minutes.
 - **Snapshots, suspend, clones and templates**: go back to an earlier state, pick up a suspended VM where you left it, copy a stopped VM in an instant, or save one as a template for new VMs.
 - **Shared folders and Rosetta**: share a Mac folder with a VM, read only unless you choose otherwise, and run x86_64 programs in Linux VMs with Rosetta.
@@ -31,8 +31,9 @@ The name stands for **N**ative **I**solated, **D**efault **O**ffline. *Nido* is 
 
 ## Requirements
 
-- A Mac with Apple silicon.
+- A Mac with Apple silicon, or an Intel Mac with macOS 26 (Linux VMs only, experimental).
 - macOS 26 or later.
+- On an Intel Mac there are no macOS VMs, no agent Mac (`nido mcp`, `nido act`, `nido agent`), no Rosetta, and no suspend or snapshots of a running VM (snapshots of a stopped VM work); Ollama runs on the VM’s CPU. A VM made for one architecture never starts on the other. Intel support is experimental: if you run Nido on an Intel Mac, please report any problem you find.
 - Disk space for your VMs. For a Linux VM, the New VM wizard proposes a 16 GiB disk with the Base profile and 32 GiB with AI Starter (more if the image is larger), and `nido create` uses 20 GiB; a macOS VM gets 64 GiB. You can choose another size.
 - For a macOS VM: an IPSW restore image of a macOS version no newer than the one on your Mac (Nido can download it from Apple when you ask; Apple’s offer may be a newer minor version, and Nido checks the major version).
 

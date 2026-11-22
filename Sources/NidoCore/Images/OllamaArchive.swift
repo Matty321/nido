@@ -23,16 +23,33 @@ public struct OllamaRelease: Sendable, Equatable {
 
     /// The release of this build's Guest Tools. Their `release.json` is a constant checked by
     /// the tests, so a failure here is a build error.
-    public static let pinned: OllamaRelease = {
+    public static var pinned: OllamaRelease { pinned(for: HostPlatform.current.architecture) }
+
+    /// The release for guests of one architecture (the same Ollama version for both).
+    public static func pinned(for architecture: CPUArchitecture) -> OllamaRelease {
         guard let entry = GuestToolsPayload.files.first(where: { $0.path == payloadPath }),
             let data = Data(base64Encoded: entry.base64)
         else { preconditionFailure("GuestToolsPayload has no \(payloadPath)") }
         do {
-            return try parse(data)
+            return try parse(data, architecture: architecture)
         } catch {
             preconditionFailure("GuestToolsPayload: invalid \(payloadPath): \(error)")
         }
-    }()
+    }
+
+    /// Reads the `release.json` of the Guest Tools: the shared `version` with the entry of
+    /// `architectures` for `architecture` (keyed by its `unameMachine`), then `parse`.
+    public static func parse(_ data: Data, architecture: CPUArchitecture) throws(NidoError) -> OllamaRelease {
+        let refusal = NidoError.downloadFailed(L10n.string("invalid Ollama release.json"))
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let version = object["version"] as? String,
+            let entries = object["architectures"] as? [String: Any],
+            var entry = entries[architecture.unameMachine] as? [String: Any]
+        else { throw refusal }
+        entry["version"] = version
+        guard let flat = try? JSONSerialization.data(withJSONObject: entry) else { throw refusal }
+        return try parse(flat)
+    }
 
     /// Reads a `release.json`. Refuses (`.downloadFailed`) anything but an HTTPS URL under the
     /// official GitHub releases of ollama/ollama (no credentials, default port), a plain file and

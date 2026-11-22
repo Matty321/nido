@@ -223,8 +223,13 @@ public struct EgressPolicy: Codable, Equatable, Sendable {
     ])
 
     /// The base list for a VM of `distribution` (nil: Debian 13, as every VM without one).
-    public static func base(for distribution: LinuxDistribution?) -> EgressPolicy {
-        (distribution ?? .debian13).isUbuntu ? ubuntuBase : base
+    /// On amd64 Ubuntu's archive is `archive.ubuntu.com`: `ports.ubuntu.com` (arm64) is dropped.
+    public static func base(
+        for distribution: LinuxDistribution?, architecture: CPUArchitecture = .arm64
+    ) -> EgressPolicy {
+        guard (distribution ?? .debian13).isUbuntu else { return base }
+        guard architecture == .x86_64 else { return ubuntuBase }
+        return EgressPolicy(v: ubuntuBase.v, allow: ubuntuBase.allow.filter { $0.name != "ports.ubuntu.com" })
     }
 
     /// `ollama pull` and the time server: in every distribution's base list.
