@@ -39,6 +39,11 @@ public protocol PermissionState: Sendable {
 public protocol ClipboardSink: Sendable {
     /// Writes `text`, marked concealed, and clears it after `seconds` unless it changed meanwhile.
     func set(_ text: String, clearAfter seconds: Int) async
+    /// The plain text now on the pasteboard; never the text of a concealed item.
+    func readPlain() async -> PasteboardText
+    /// Replaces the pasteboard with `text` as plain text: not concealed, never cleared. False when
+    /// the pasteboard refused it.
+    func writePlain(_ text: String) async -> Bool
 }
 
 /// A request frame decoded, or the reply that refuses it.
@@ -145,6 +150,10 @@ public struct AgentDispatcher: Sendable {
             return (act(request), nil)
         case .setClipboard(let text, let clearAfter):
             return (await setClipboard(text, clearAfter: clearAfter), nil)
+        case .readClipboard:
+            return (await readClipboard(), nil)
+        case .writeClipboard(let text):
+            return (await writeClipboard(text), nil)
         case .uiTree(let maxElements):
             return (await uiTree(request, maxElements: maxElements), nil)
         case .checkpoint, .rollback, .checkpoints:
@@ -287,6 +296,45 @@ public struct AgentDispatcher: Sendable {
         return AgentReply(ok: true)
     }
 
+    /// Needs no permission, like `setClipboard`. A concealed item is refused whole, and the text
+    /// is never logged. Cut at a character boundary (a whole grapheme), never inside one.
+    private func readClipboard() async -> AgentReply {
+        guard let clipboard else { return Self.failure(.internalError, "the clipboard is not available") }
+        switch await clipboard.readPlain() {
+        case .concealed:
+            return Self.failure(.badRequest, "the clipboard holds a concealed item: its text is not shown")
+        case .denied:
+            return Self.failure(.badRequest, "the VM doesn't let Nido Agent read the clipboard: allow it in System Settings › Privacy & Security › Paste from Other Apps")
+        case .none, .text(""):
+            return Self.failure(.badRequest, "the clipboard has no text")
+        case .text(let text):
+            let limit = AgentProtocol.maxClipboardBytes
+            guard text.utf8.count > limit else {
+                return AgentReply(ok: true, truncated: false, clipboard: text)
+            }
+            var result = ""
+            var bytes = 0
+            for character in text {
+                bytes += character.utf8.count
+                if bytes > limit { break }
+                result.append(character)
+            }
+            return AgentReply(ok: true, truncated: true, clipboard: result)
+        }
+    }
+
+    private func writeClipboard(_ text: String) async -> AgentReply {
+        guard !text.isEmpty, text.utf8.count <= AgentProtocol.maxClipboardBytes else {
+            return Self.failure(.badRequest,
+                                "the clipboard text must be 1 to \(AgentProtocol.maxClipboardBytes) UTF-8 bytes")
+        }
+        guard let clipboard else { return Self.failure(.internalError, "the clipboard is not available") }
+        guard await clipboard.writePlain(text) else {
+            return Self.failure(.internalError, "the clipboard could not be written")
+        }
+        return AgentReply(ok: true)
+    }
+
     // MARK: - Files
 
     /// Files need no permission and work on a locked screen: nothing is captured or posted.
@@ -375,7 +423,7 @@ public struct AgentDispatcher: Sendable {
                     throw Refusal(error.description)
                 }
                 try input.key(stroke)
-            case .status, .screenshot, .setClipboard, .zoom, .uiTree, .checkpoint, .rollback, .checkpoints,
+            case .status, .screenshot, .setClipboard, .readClipboard, .writeClipboard, .zoom, .uiTree, .checkpoint, .rollback, .checkpoints,
                  .putFile, .getFile, .listFiles:
                 throw Refusal("not an input action")
             }

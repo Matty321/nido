@@ -2,6 +2,19 @@
 
 Every Nido release, newest first. The first time Nido opens after an update, it shows the notes for the installed version (choose Help › What’s New in Nido to read them again).
 
+## [0.10.1] – 2026-11-24
+
+### A Mac for Agents
+- **The agent sees the menu bar and the Dock.** After the app’s controls, `ui_tree` now lists the menus of the app that owns the menu bar, the status items on the right and the Dock, each under its own header. It needs Nido Agent 1.0.7.
+- **The agent reads text that has no controls.** The new `read_text` action (the MCP tool `read_text`, or `nido act <vm> ocr`) reads the text on the VM’s screen (images, canvases, some web pages) with the position of each line, so the agent can click it. The text is recognized on your Mac from a sharp capture of the VM’s display: nothing is installed in the VM and nothing leaves your Mac.
+- **Clipboard.** `set_clipboard` puts text on the VM’s clipboard (up to 1 MiB), so the agent pastes long text with ⌘V instead of typing it; `get_clipboard` reads what an app in the VM copied (`nido act <vm> clipboard-set` and `clipboard`). An item marked concealed, such as Nido’s own password copy or a password manager’s, is never shown. Your Mac’s clipboard is never touched, and the activity log keeps only the number of characters.
+
+### Fixes
+- **Allowing a domain on a base skips fresh copies that ended in the meantime**; if a copy’s list is damaged, Nido tells you to run `nido net reset`.
+
+### Nido Agent 1.0.8
+- Adds the menu bar and the Dock to `ui_tree` (1.0.7) and the clipboard (1.0.8). Update it from the VM’s **Settings › Agent** or with `nido agent setup <vm>`.
+
 ## [0.10.0] – 2026-11-22
 
 ### Intel Macs (experimental)

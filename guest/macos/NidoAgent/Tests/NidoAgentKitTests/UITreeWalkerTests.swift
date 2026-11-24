@@ -17,7 +17,17 @@ private struct FakeNode {
     var menusHang = false
     /// Children shown only later, like a WebKit web view (see `LazyChildren`).
     var lazyChildren: LazyChildren?
+    /// The app's menu bar items, and the menu bar extras of the system processes and the app.
+    var menuBar: [FakeNode] = []
+    var extras: [FakeNode] = []
+    var menuBarHangs = false
+    /// Reading this process's extras throws.
+    var extrasHang = false
+    /// Counts the reads of this process's extras.
+    var attempts: Attempts?
 }
+
+private final class Attempts { var count = 0 }
 
 /// A web view in Safari: its group has no children until an accessibility request reached it and
 /// a moment passed (`settle`), then the page.
@@ -39,6 +49,10 @@ private struct FakeTimeout: Error {}
 
 /// Root's children are the app's windows.
 private struct FakeSource: AXNodeSource {
+    /// The other running apps (Control Center, MenuBarAgent...): processes with extras of their own.
+    var system: [FakeNode] = []
+    var dock: [FakeNode] = []
+    var dockHangs = false
     func windows(of app: FakeNode) throws -> [FakeNode] { app.children }
     func attributes(of node: FakeNode) throws -> AXNodeAttributes {
         if node.hangs { throw FakeTimeout() }
@@ -48,6 +62,20 @@ private struct FakeSource: AXNodeSource {
     func menus(of app: FakeNode) throws -> [FakeNode] {
         if app.menusHang { throw FakeTimeout() }
         return app.menus
+    }
+    func menuBar(of app: FakeNode) throws -> [FakeNode] {
+        if app.menuBarHangs { throw FakeTimeout() }
+        return app.menuBar
+    }
+    func extrasOwners(of app: FakeNode?) -> [FakeNode] { system + (app.map { [$0] } ?? []) }
+    func extras(ofProcess process: FakeNode) throws -> [FakeNode] {
+        process.attempts?.count += 1
+        if process.extrasHang { throw FakeTimeout() }
+        return process.extras
+    }
+    func dockItems() throws -> [FakeNode] {
+        if dockHangs { throw FakeTimeout() }
+        return dock
     }
 }
 
@@ -72,10 +100,13 @@ private func app(_ windows: [FakeNode]) -> FakeNode {
 /// display 1024x640 points, screenshot 512x320 pixels.
 private let space = CoordinateSpace(display: PixelSize(1024, 640), maxLongEdge: 512)
 
-private func walk(_ root: FakeNode, maxElements: Int = 300,
+/// `menuBarRoot` is the frontmost app, the walked app itself unless told otherwise (`noFrontmost`).
+private func walk(_ root: FakeNode, menuBarRoot: FakeNode? = nil, noFrontmost: Bool = false,
+                  system: [FakeNode] = [], dock: [FakeNode] = [], dockHangs: Bool = false, maxElements: Int = 300,
                   now: () -> ContinuousClock.Instant = { ContinuousClock.now }) -> UITree {
-    UITreeWalker.walk(app: "Test", root: root, source: FakeSource(), space: space, maxElements: maxElements,
-                      deadline: ContinuousClock.now + .seconds(60), now: now)
+    UITreeWalker.walk(app: "Test", root: root, menuBarRoot: noFrontmost ? nil : (menuBarRoot ?? root),
+                      source: FakeSource(system: system, dock: dock, dockHangs: dockHangs), space: space,
+                      maxElements: maxElements, deadline: ContinuousClock.now + .seconds(60), now: now)
 }
 
 // MARK: - Brief tests
@@ -192,7 +223,7 @@ private final class FakeClock {
     let clock = FakeClock(limit: 2)
     let buttons = (0..<10).map { node("AXButton", title: "B\($0)") }
     let root = app([node("AXWindow", frame: nil, buttons)])
-    let tree = UITreeWalker.walk(app: "Test", root: root, source: FakeSource(), space: space, maxElements: 300,
+    let tree = UITreeWalker.walk(app: "Test", root: root, menuBarRoot: root, source: FakeSource(), space: space, maxElements: 300,
                                  deadline: clock.start + .seconds(3), now: clock.now)
     #expect(tree.truncated == true)
     #expect(tree.elements.count < 10)
@@ -233,7 +264,7 @@ private func safari() -> (root: FakeNode, page: LazyChildren) {
     let start = ContinuousClock.now
     var deadlines: [ContinuousClock.Instant] = []
     var slept: [Duration] = []
-    let result = UITreeWalker.walkApp(app: "Safari", root: root, space: space, maxElements: 300, firstContact: true,
+    let result = UITreeWalker.walkApp(app: "Safari", root: root, menuBarRoot: root, space: space, maxElements: 300, firstContact: true,
                                       source: { deadlines.append($0); return FakeSource() },
                                       now: { start }, sleep: { slept.append($0); page.settle() })
     let tree = result.tree
@@ -254,7 +285,7 @@ private func safari() -> (root: FakeNode, page: LazyChildren) {
     page.settle()
     var walks = 0
     var slept = false
-    let result = UITreeWalker.walkApp(app: "Safari", root: root, space: space, maxElements: 300, firstContact: false,
+    let result = UITreeWalker.walkApp(app: "Safari", root: root, menuBarRoot: root, space: space, maxElements: 300, firstContact: false,
                                       source: { _ in walks += 1; return FakeSource() }, sleep: { _ in slept = true })
     #expect(result.tree.elements.contains { $0.name == "Link number 1" })
     #expect(result.reachedAWindow)
@@ -263,7 +294,7 @@ private func safari() -> (root: FakeNode, page: LazyChildren) {
 }
 
 private func reachedAWindow(_ root: FakeNode) -> Bool {
-    UITreeWalker.walkApp(app: "Test", root: root, space: space, maxElements: 300, firstContact: false,
+    UITreeWalker.walkApp(app: "Test", root: root, menuBarRoot: root, space: space, maxElements: 300, firstContact: false,
                          source: { _ in FakeSource() }, sleep: { _ in }).reachedAWindow
 }
 
@@ -554,4 +585,249 @@ private func reachedAWindow(_ root: FakeNode) -> Bool {
     let windows = [OnScreenWindow(pid: 40, layer: 0, ownerName: "TextEdit")]
     #expect(UITreeWalker.appToWalk(windows: windows, frontmost: nil) == AppToWalk(pid: 40, ownerName: "TextEdit"))
     #expect(UITreeWalker.appToWalk(windows: [], frontmost: nil) == nil)
+}
+
+// MARK: - Menu bar and Dock
+
+private func barItem(_ title: String?, description: String? = nil, x: Double = 0,
+                     _ children: [FakeNode] = []) -> FakeNode {
+    node("AXMenuBarItem", title: title, description: description,
+         frame: CGRect(x: x, y: 0, width: 60, height: 24), children)
+}
+
+private func dockItem(_ title: String, running: Bool? = nil, x: Double = 100, y: Double = 600) -> FakeNode {
+    var item = node("AXDockItem", title: title, frame: CGRect(x: x, y: y, width: 48, height: 40))
+    item.attributes.running = running
+    return item
+}
+
+@Test func menuBarAndDockFollowTheWindows() {
+    var root = app([window([node("AXButton", title: "Save")])])
+    root.menuBar = [barItem("Apple"), barItem("File", x: 60), barItem("Edit", x: 120)]
+    root.extras = [barItem("Wi-Fi", x: 900)]
+    let dock = [dockItem("Finder", running: true), dockItem("Trash", running: false, x: 160)]
+    let tree = walk(root, dock: dock)
+    #expect(tree.elements.compactMap(\.name) == ["Save", "Apple", "File", "Edit", "Wi-Fi", "Finder", "Trash"])
+    #expect(tree.elements.map(\.area) == [nil, .menuBar, .menuBar, .menuBar, .menuBar, .dock, .dock])
+    #expect(tree.elements.map(\.id) == Array(0..<7))
+    #expect(tree.elements[1].role == "menuBarItem")
+    #expect(tree.elements[5].role == "dockItem")
+    #expect(tree.elements[5].value == "running")
+    #expect(tree.elements[6].value == nil)
+    #expect(tree.truncated == false)
+}
+
+@Test func noMenuBarNoSection() {
+    let tree = walk(app([window([node("AXButton", title: "Save")])]))
+    #expect(tree.elements.count == 1)
+    #expect(tree.elements.allSatisfy { $0.area == nil })
+    #expect(tree.truncated == false)
+}
+
+@Test func closedMenusAreNotWalked() {
+    var root = app([])
+    root.menuBar = [barItem("File", [node("AXMenu", [node("AXMenuItem", title: "Open")])])]
+    let tree = walk(root)
+    #expect(tree.elements.compactMap(\.name) == ["File"])
+}
+
+@Test func extraWithoutTitleUsesDescription() {
+    var root = app([])
+    root.extras = [barItem(nil, description: "Battery")]
+    let tree = walk(root)
+    #expect(tree.elements.compactMap(\.name) == ["Battery"])
+    #expect(tree.elements.first?.area == .menuBar)
+}
+
+@Test func capReachedSkipsSections() {
+    var root = app([window([node("AXButton", title: "Save")])])
+    root.menuBar = [barItem("File")]
+    let tree = walk(root, dock: [dockItem("Finder")], maxElements: 1)
+    #expect(tree.elements.compactMap(\.name) == ["Save"])
+    #expect(tree.truncated == true)
+}
+
+@Test func hangingDockKeepsWindows() {
+    var root = app([window([node("AXButton", title: "Save")])])
+    root.menuBar = [barItem("File")]
+    let tree = walk(root, dock: [dockItem("Finder")], dockHangs: true)
+    #expect(tree.elements.compactMap(\.name) == ["Save", "File"])
+    #expect(tree.truncated == true)
+}
+
+@Test func hangingMenuBarKeepsTheRest() {
+    var root = app([window([node("AXButton", title: "Save")])])
+    root.menuBarHangs = true
+    root.extras = [barItem("Wi-Fi")]
+    let tree = walk(root, dock: [dockItem("Finder")])
+    #expect(tree.elements.compactMap(\.name) == ["Save", "Wi-Fi", "Finder"])
+    #expect(tree.truncated == true)
+}
+
+@Test func offScreenDockItemsAreDropped() {
+    // An auto-hidden Dock sits below the 640-point display.
+    let tree = walk(app([]), dock: [dockItem("Finder", y: 700), dockItem("Mail", y: 630), dockItem("Safari")])
+    // Mail shows only its top 10 points, clipped to the screen.
+    #expect(tree.elements.compactMap(\.name) == ["Mail", "Safari"])
+    #expect(tree.elements.first?.frame == PixelRect(x: 50, y: 315, w: 24, h: 5))
+}
+
+@Test func sectionsAreSkippedPastTheDeadline() {
+    var root = app([])
+    root.menuBar = [barItem("File")]
+    let past = ContinuousClock.now + .seconds(120)
+    let tree = walk(root, dock: [dockItem("Finder")], now: { past })
+    #expect(tree.elements.isEmpty)
+    #expect(tree.truncated == true)
+}
+
+/// Finder frontmost with no window, TextEdit's window on top: the walk goes into TextEdit's
+/// window, but the screen shows Finder's menu bar and extras.
+@Test func menuBarAndExtrasComeFromTheFrontmostApp() {
+    var textEdit = app([window([node("AXButton", title: "Save")])])
+    textEdit.menuBar = [barItem("TextEdit"), barItem("Format", x: 60)]
+    textEdit.extras = [barItem("TextEdit extra", x: 800)]
+    var finder = app([])
+    finder.menuBar = [barItem("Finder"), barItem("Go", x: 60)]
+    finder.extras = [barItem("Finder extra", x: 800)]
+    var clock = app([])
+    clock.extras = [barItem("Clock", x: 900)]
+    let tree = walk(textEdit, menuBarRoot: finder, system: [clock])
+    #expect(tree.elements.compactMap(\.name) == ["Save", "Finder", "Go", "Finder extra", "Clock"])
+    #expect(tree.truncated == false)
+}
+
+/// Extras of two owners come back out of x order: listed left to right; a hanging owner still
+/// says truncated.
+@Test func extrasAreListedLeftToRight() {
+    var clock = app([])
+    clock.extras = [barItem("Clock", x: 900), barItem("Wi-Fi", x: 840)]
+    var other = app([])
+    other.extras = [barItem("Status", x: 870), barItem("Siri", x: 700)]
+    let tree = walk(app([]), system: [clock, other])
+    #expect(tree.elements.compactMap(\.name) == ["Siri", "Wi-Fi", "Status", "Clock"])
+    #expect(tree.truncated == false)
+    var broken = app([])
+    broken.extrasHang = true
+    #expect(walk(app([]), system: [clock, broken, other]).truncated == true)
+}
+
+/// No frontmost app: no app menu titles or app extras, the system extras and the Dock stay.
+@Test func noFrontmostAppNoAppMenus() {
+    var root = app([window([node("AXButton", title: "Save")])])
+    root.menuBar = [barItem("File")]
+    root.extras = [barItem("App extra", x: 800)]
+    var clock = app([])
+    clock.extras = [barItem("Clock", x: 900)]
+    let tree = walk(root, noFrontmost: true, system: [clock], dock: [dockItem("Finder")])
+    #expect(tree.elements.compactMap(\.name) == ["Save", "Clock", "Finder"])
+}
+
+/// Control Center does not answer, the others do: its extras are missing and the walk says so.
+@Test func hangingExtrasProcessSaysTruncated() {
+    var root = app([])
+    root.extras = [barItem("App extra", x: 800)]
+    var controlCenter = app([])
+    controlCenter.extrasHang = true
+    var uiServer = app([])
+    uiServer.extras = [barItem("Input", x: 700)]
+    let tree = walk(root, system: [controlCenter, uiServer])
+    #expect(tree.elements.compactMap(\.name) == ["Input", "App extra"])
+    #expect(tree.truncated == true)
+}
+
+/// A deadline that passes inside the list call stops the section.
+@Test func deadlinePassingDuringTheListTruncates() {
+    var root = app([])
+    root.menuBar = [barItem("File")]
+    let start = ContinuousClock.now
+    var calls = 0
+    // The first check (before the list) is in time, the second (after it) is not.
+    let tree = UITreeWalker.walk(app: "Test", root: root, menuBarRoot: root, source: FakeSource(), space: space,
+                                 maxElements: 300, deadline: start + .seconds(1),
+                                 now: { calls += 1; return calls <= 3 ? start : start + .seconds(2) })
+    #expect(!tree.elements.contains { $0.name == "File" })
+    #expect(tree.truncated == true)
+}
+
+/// An item that does not answer gives up the whole section, not 0.5 s per remaining item.
+@Test func hangingMenuBarItemGivesUpTheSection() {
+    var root = app([])
+    var broken = barItem("Broken", x: 60)
+    broken.hangs = true
+    root.menuBar = [barItem("File"), broken, barItem("Edit", x: 120)]
+    root.extras = [barItem("Wi-Fi", x: 900)]
+    let tree = walk(root)
+    #expect(tree.elements.compactMap(\.name) == ["File", "Wi-Fi"])
+    #expect(tree.truncated == true)
+}
+
+/// Three owners that do not answer: only two are tried, the rest skipped; the Dock still shows.
+@Test func extrasStopAfterTwoHungOwners() {
+    let attempts = Attempts()
+    var hung: [FakeNode] = []
+    for _ in 0..<3 {
+        var owner = app([])
+        owner.extrasHang = true
+        owner.attempts = attempts
+        hung.append(owner)
+    }
+    let tree = walk(app([]), system: hung, dock: [dockItem("Finder")])
+    #expect(attempts.count == 2)
+    #expect(tree.elements.compactMap(\.name) == ["Finder"])
+    #expect(tree.truncated == true)
+}
+
+/// The cap counts the extras left to right: the leftmost are kept.
+@Test func capKeepsTheLeftmostExtras() {
+    var a = app([])
+    a.extras = [barItem("C", x: 900), barItem("A", x: 700)]
+    var b = app([])
+    b.extras = [barItem("B", x: 800)]
+    let tree = walk(app([]), system: [a, b], maxElements: 2)
+    #expect(tree.elements.compactMap(\.name) == ["A", "B"])
+    #expect(tree.truncated == true)
+}
+
+/// An extra without a frame is not listed, does not count against the cap and does not disturb
+/// the order of the others.
+@Test func extraWithoutFrameIsLeftOut() {
+    var owner = app([])
+    var framed = barItem("Ghost", x: 0)
+    framed.attributes.frame = nil
+    owner.extras = [barItem("B", x: 800), framed, barItem("A", x: 700)]
+    let tree = walk(app([]), system: [owner], maxElements: 2)
+    #expect(tree.elements.compactMap(\.name) == ["A", "B"])
+    #expect(tree.truncated == false)
+}
+
+/// A list that stops part way keeps what was read and says truncated.
+@Test func partialExtrasAreKept() {
+    struct Partial: AXNodeSource {
+        let inner = FakeSource()
+        func windows(of app: FakeNode) throws -> [FakeNode] { [] }
+        func attributes(of node: FakeNode) throws -> AXNodeAttributes { node.attributes }
+        func children(of node: FakeNode) throws -> [FakeNode] { [] }
+        func menus(of app: FakeNode) throws -> [FakeNode] { [] }
+        func menuBar(of app: FakeNode) throws -> [FakeNode] { [] }
+        func extrasOwners(of app: FakeNode?) -> [FakeNode] { [barItem(nil)] }
+        func extras(ofProcess process: FakeNode) throws -> [FakeNode] {
+            throw PartialList(items: [barItem("Kept", x: 800)])
+        }
+        func dockItems() throws -> [FakeNode] { [] }
+    }
+    let tree = UITreeWalker.walk(app: "Test", root: app([]), menuBarRoot: nil, source: Partial(), space: space,
+                                 maxElements: 300, deadline: ContinuousClock.now + .seconds(60))
+    #expect(tree.elements.compactMap(\.name) == ["Kept"])
+    #expect(tree.truncated == true)
+}
+
+// MARK: - Extras owners
+
+@Test func ownersAreForegroundAppsThenTheMenuBarOwner() {
+    let apps: [(pid: Int32, backgroundOnly: Bool)] = [(1, false), (2, true), (3, false), (4, false)]
+    #expect(ExtrasOwners.pids(apps: apps, menuBarOwner: 3) == [1, 4, 3])
+    #expect(ExtrasOwners.pids(apps: apps, menuBarOwner: nil) == [1, 3, 4])
+    // The owner is there even when background-only, and only once.
+    #expect(ExtrasOwners.pids(apps: apps, menuBarOwner: 2) == [1, 3, 4, 2])
 }

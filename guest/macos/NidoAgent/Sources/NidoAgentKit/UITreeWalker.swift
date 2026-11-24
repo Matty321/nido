@@ -24,10 +24,12 @@ public struct AXNodeAttributes: Equatable, Sendable {
     public var frame: CGRect?
     /// `AXMinimized`: only windows say; a minimized window is not walked.
     public var minimized: Bool?
+    /// `AXIsApplicationRunning`: only a Dock item says.
+    public var running: Bool?
 
     public init(role: String? = nil, subrole: String? = nil, title: String? = nil, description: String? = nil,
                 label: String? = nil, value: String? = nil, enabled: Bool? = nil, focused: Bool? = nil,
-                frame: CGRect? = nil, minimized: Bool? = nil) {
+                frame: CGRect? = nil, minimized: Bool? = nil, running: Bool? = nil) {
         self.role = role
         self.subrole = subrole
         self.title = title
@@ -38,6 +40,7 @@ public struct AXNodeAttributes: Equatable, Sendable {
         self.focused = focused
         self.frame = frame
         self.minimized = minimized
+        self.running = running
     }
 }
 
@@ -57,6 +60,17 @@ public protocol AXNodeSource {
     /// The app's open menus that are children of the application element, not of a window
     /// (a context menu).
     func menus(of app: Node) throws -> [Node]
+    /// The top-level items of the app's menu bar (`AXMenuBar`'s children), not the items of a menu.
+    func menuBar(of app: Node) throws -> [Node]
+    /// The processes whose menu bar extras (clock, Wi-Fi, ...) may show: the other running apps
+    /// (Control Center, SystemUIServer, MenuBarAgent, Siri for Spotlight, apps with a status
+    /// item), then `app` (the frontmost app) when there is one.
+    func extrasOwners(of app: Node?) -> [Node]
+    /// The menu bar extras of one process from `extrasOwners`; throws when it does not answer, so
+    /// the walk says `truncated` for that process alone.
+    func extras(ofProcess process: Node) throws -> [Node]
+    /// The Dock's items (apps, folders, the Trash); none when there is no Dock.
+    func dockItems() throws -> [Node]
 }
 
 /// One window on screen as the window server lists it (`CGWindowListCopyWindowInfo`), owner and
@@ -119,29 +133,40 @@ public enum UITreeWalker {
     /// to the window or scroll area they were opened from.
     static let ownWindowRoles: Set<String> = ["AXMenu", "AXPopover", "AXSheet"]
 
+    /// Extras owners that may fail to answer before the walk skips the remaining ones.
+    static let maxHungExtrasOwners = 2
+
     /// Walks `source.windows(of: root)` and their descendants. Stops, with `truncated`, at
     /// `maxElements` kept elements, below `maxDepth`, at `deadline` (read with `now`) or when the
     /// app stops answering.
     ///
     /// The windows come first, then the app's open menus. A window (or the menus) that stops
     /// answering is given up, the rest is still walked: the walk says `truncated`.
+    ///
+    /// The menu bar and its extras are the frontmost app's, `menuBarRoot` (nil with no frontmost
+    /// app), not `root`'s: with Finder frontmost and no window of its own, `root` is the owner
+    /// of the topmost window while the screen shows Finder's menus.
     public static func walk<Source: AXNodeSource>(
-        app: String, root: Source.Node, source: Source, space: CoordinateSpace, maxElements: Int,
-        deadline: ContinuousClock.Instant, now: () -> ContinuousClock.Instant = { ContinuousClock.now }
+        app: String, root: Source.Node, menuBarRoot: Source.Node?, source: Source, space: CoordinateSpace,
+        maxElements: Int, deadline: ContinuousClock.Instant,
+        now: () -> ContinuousClock.Instant = { ContinuousClock.now }
     ) -> UITree {
-        walkReachingWindows(app: app, root: root, source: source, space: space, maxElements: maxElements,
-                            deadline: deadline, now: now).tree
+        walkReachingWindows(app: app, root: root, menuBarRoot: menuBarRoot, source: source, space: space,
+                            maxElements: maxElements, deadline: deadline, now: now).tree
     }
 
     /// `walk`, and whether it went into one of the app's windows (`AppWalk.reachedAWindow`).
     static func walkReachingWindows<Source: AXNodeSource>(
-        app: String, root: Source.Node, source: Source, space: CoordinateSpace, maxElements: Int,
-        deadline: ContinuousClock.Instant, now: () -> ContinuousClock.Instant
+        app: String, root: Source.Node, menuBarRoot: Source.Node?, source: Source, space: CoordinateSpace,
+        maxElements: Int, deadline: ContinuousClock.Instant, now: () -> ContinuousClock.Instant
     ) -> AppWalk {
         withoutActuallyEscaping(now) { now in
             var walk = UITreeWalk(source: source, space: space, maxElements: maxElements, deadline: deadline, now: now)
             walk.visitTops(windows: true) { try source.windows(of: root) }
             walk.visitTops(windows: false) { try source.menus(of: root) }
+            if let menuBarRoot { walk.visitFlat(area: .menuBar) { try source.menuBar(of: menuBarRoot) } }
+            walk.visitExtras(owners: source.extrasOwners(of: menuBarRoot)) { try source.extras(ofProcess: $0) }
+            walk.visitFlat(area: .dock) { try source.dockItems() }
             return AppWalk(tree: UITree(app: app, elements: walk.elements, truncated: walk.truncated),
                            reachedAWindow: walk.reachedAWindow)
         }
@@ -159,21 +184,22 @@ public enum UITreeWalker {
     /// `wakeDuration`, wakes the web views and its tree is dropped; after `settleDelay` comes
     /// the walk that answers, bounded by `maxDuration`. `source` makes the reader for a deadline.
     public static func walkApp<Source: AXNodeSource>(
-        app: String, root: Source.Node, space: CoordinateSpace, maxElements: Int, firstContact: Bool,
-        source: (_ deadline: ContinuousClock.Instant) -> Source,
+        app: String, root: Source.Node, menuBarRoot: Source.Node?, space: CoordinateSpace, maxElements: Int,
+        firstContact: Bool, source: (_ deadline: ContinuousClock.Instant) -> Source,
         now: () -> ContinuousClock.Instant = { ContinuousClock.now },
         sleep: (Duration) -> Void
     ) -> AppWalk {
         var woke = false
         if firstContact {
             let wake = now() + wakeDuration
-            woke = walkReachingWindows(app: app, root: root, source: source(wake), space: space,
-                                       maxElements: maxElements, deadline: wake, now: now).reachedAWindow
+            woke = walkReachingWindows(app: app, root: root, menuBarRoot: menuBarRoot, source: source(wake),
+                                       space: space, maxElements: maxElements, deadline: wake,
+                                       now: now).reachedAWindow
             sleep(settleDelay)
         }
         let deadline = now() + maxDuration
-        var answer = walkReachingWindows(app: app, root: root, source: source(deadline), space: space,
-                                         maxElements: maxElements, deadline: deadline, now: now)
+        var answer = walkReachingWindows(app: app, root: root, menuBarRoot: menuBarRoot, source: source(deadline),
+                                         space: space, maxElements: maxElements, deadline: deadline, now: now)
         answer.reachedAWindow = answer.reachedAWindow || woke
         return answer
     }
@@ -257,6 +283,8 @@ private struct UITreeWalk<Source: AXNodeSource> {
     var elements: [UIElement] = []
     var truncated = false
     var stopped = false
+    /// Lists and items of the flat sections that did not answer (`visitExtras` counts them).
+    private var hangs = 0
     /// Went into an `AXWindow` of the windows list (`AppWalk.reachedAWindow`).
     var reachedAWindow = false
     /// The tops being walked come from the windows list, not the menus.
@@ -293,6 +321,87 @@ private struct UITreeWalk<Source: AXNodeSource> {
                 truncated = true
             }
         }
+    }
+
+    /// Lists the items `list` gives (menu bar, Dock) one by one, without going into them, those
+    /// that show on the screen. The section is skipped, with `truncated`, once the walk is out of
+    /// time or elements; one that does not answer (the list or an item) is given up.
+    mutating func visitFlat(area: UIArea, _ list: () throws -> [Source.Node]) {
+        guard !stopped else { return }
+        guard let shown = readShown(list) else { return }
+        for (attributes, frame) in shown {
+            guard emit(attributes, frame: frame, area: area) else { return }
+        }
+    }
+
+    /// The menu bar extras of all `owners`, left to right as on the screen (by frame x), not in
+    /// owner order. Each owner is read like `visitFlat` (one that does not answer, or the time
+    /// running out, says `truncated` and keeps what was read), then all are sorted and listed
+    /// under the same cap.
+    mutating func visitExtras(owners: [Source.Node], _ list: (Source.Node) throws -> [Source.Node]) {
+        var collected: [(attributes: AXNodeAttributes, frame: CGRect?)] = []
+        var hung = 0
+        for owner in owners where !stopped {
+            // Two owners that do not answer: the rest is skipped, so stopped processes cannot eat
+            // the budget the Dock needs.
+            if hung >= UITreeWalker.maxHungExtrasOwners {
+                truncated = true
+                break
+            }
+            let before = hangs
+            if let shown = readShown({ try list(owner) }) { collected += shown }
+            if hangs > before { hung += 1 }
+        }
+        let sorted = collected.enumerated().sorted { a, b in
+            let (x, y) = (a.element.frame?.minX ?? .infinity, b.element.frame?.minX ?? .infinity)
+            return x == y ? a.offset < b.offset : x < y
+        }
+        for (_, entry) in sorted {
+            guard emit(entry.attributes, frame: entry.frame, area: .menuBar) else { return }
+        }
+    }
+
+    /// The attributes and frames of the items `list` gives; nil (with `truncated`) when the time
+    /// is out or the list does not answer. An item that does not answer gives up the rest of the
+    /// list (`truncated`): the items read before it are kept.
+    private mutating func readShown(_ list: () throws -> [Source.Node]) -> [(AXNodeAttributes, CGRect?)]? {
+        guard now() < deadline else { stop(); return nil }
+        let items: [Source.Node]
+        do {
+            items = try list()
+        } catch let partial as PartialList<Source.Node> {
+            items = partial.items
+            truncated = true
+            hangs += 1
+        } catch {
+            truncated = true
+            hangs += 1
+            return nil
+        }
+        guard now() < deadline else { stop(); return nil }
+        var shown: [(AXNodeAttributes, CGRect?)] = []
+        for item in items {
+            guard now() < deadline else { stop(); return shown }
+            // An app that stops answering is given up for the section, not paid for per item.
+            guard let attributes = try? source.attributes(of: item) else {
+                truncated = true
+                hangs += 1
+                return shown
+            }
+            shown.append((attributes, attributes.frame.map(\.standardized)))
+        }
+        return shown
+    }
+
+    /// Lists one flat item when it shows on the screen; false when the cap is reached (`stop`).
+    private mutating func emit(_ attributes: AXNodeAttributes, frame: CGRect?, area: UIArea) -> Bool {
+        let screen = CGRect(x: 0, y: 0, width: space.display.width, height: space.display.height)
+        guard var element = element(attributes, frame: frame, clip: screen, requiringName: true) else { return true }
+        guard elements.count < maxElements else { stop(); return false }
+        element.area = area
+        if area == .dock { element.value = attributes.running == true ? "running" : nil }
+        elements.append(element)
+        return true
     }
 
     /// Lists `node` when it shows inside `clip` (display points; nil is no clip), then its
@@ -340,13 +449,18 @@ private struct UITreeWalk<Source: AXNodeSource> {
     /// The element to list for `attributes`, or nil for a plain container, an empty element or
     /// one that does not show inside `clip`. Its frame is the part that shows. A secure text
     /// field never carries its value.
-    private func element(_ attributes: AXNodeAttributes, frame: CGRect?, clip: CGRect?) -> UIElement? {
+    private func element(_ attributes: AXNodeAttributes, frame: CGRect?, clip: CGRect?,
+                         requiringName: Bool = false) -> UIElement? {
         let role = UITreeWalker.shortRole(attributes.role, subrole: attributes.subrole)
         let secure = UITreeWalker.isSecure(role: attributes.role, subrole: attributes.subrole)
         let name = UITreeWalker.text(attributes.title) ?? UITreeWalker.text(attributes.description)
             ?? UITreeWalker.text(attributes.label)
         let value = secure ? nil : UITreeWalker.text(attributes.value)
-        guard name != nil || value != nil || UITreeWalker.actionableRoles.contains(role) else { return nil }
+        if requiringName {
+            guard name != nil else { return nil }
+        } else {
+            guard name != nil || value != nil || UITreeWalker.actionableRoles.contains(role) else { return nil }
+        }
         guard var frame else { return nil }
         if let clip { frame = frame.intersection(clip) }
         guard !Self.isEmpty(frame), let pixels = space.toImageRect(frame) else { return nil }

@@ -101,6 +101,15 @@ struct AgentActivityModelTests {
              "Albero dell’interfaccia di Safari: 42 elementi"),
             (entry("uiTree", ["maxElements": "200", "elements": "1"]), "Albero dell’interfaccia: 1 elemento"),
             (entry("uiTree", ["maxElements": "200"], ok: false, error: "permissionMissing"), "Albero dell’interfaccia"),
+            (entry("readText", ["region": "0,0,100,50", "lines": "12"]), "Lettura del testo: 12 righe"),
+            (entry("readText", ["lines": "1"]), "Lettura del testo: 1 riga"),
+            (entry("readText", [:], ok: false, error: "noScreenshot"), "Lettura del testo"),
+            (entry("readClipboard", ["chars": "12"]), "Appunti letti: 12 caratteri"),
+            (entry("readClipboard", ["chars": "1"]), "Appunti letti: 1 carattere"),
+            (entry("readClipboard", [:], ok: false, error: "badRequest"), "Appunti letti"),
+            (entry("writeClipboard", ["chars": "340"]), "Appunti impostati: 340 caratteri"),
+            (entry("writeClipboard", ["chars": "1"]), "Appunti impostati: 1 carattere"),
+            (entry("writeClipboard", [:], ok: false, error: "notReady"), "Appunti impostati"),
             (entry("click", ["x": "120", "y": "340", "button": "left", "count": "1"]), "Clic su 120, 340"),
             (entry("click", ["x": "120", "y": "340", "button": "left", "count": "2"]), "Doppio clic su 120, 340"),
             (entry("click", ["x": "1", "y": "2", "button": "left", "count": "3"]), "Clic ×3 su 1, 2"),
@@ -138,6 +147,8 @@ struct AgentActivityModelTests {
         }
         #expect(AgentActivityModel.symbol(for: "click") == "cursorarrow.click")
         #expect(AgentActivityModel.symbol(for: "teleport") == "questionmark.circle")
+        #expect(AgentActivityModel.symbol(for: "readClipboard") == "doc.on.clipboard")
+        #expect(AgentActivityModel.symbol(for: "writeClipboard") == "doc.on.clipboard")
         #expect(AgentActivityModel.symbol(for: "key", detail: ["combo": "cmd+a"]) == "command")
         #expect(AgentActivityModel.symbol(for: "key", detail: ["chars": "1"]) == "keyboard")
         #expect(AgentActivityModel.symbol(for: "key") == "command")

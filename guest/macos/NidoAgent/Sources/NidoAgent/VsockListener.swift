@@ -25,8 +25,9 @@ final class VsockListener: Sendable {
     static let handleTimeout: TimeInterval = 20
     /// Delay before trying to listen again.
     static let retryDelay: TimeInterval = 5
-    /// Largest request frame accepted (a request is small JSON; text is at most 4096 bytes).
-    static let maxRequestBytes = 1 << 16
+    /// Largest request frame accepted. A request is small JSON, but a `writeClipboard` text of
+    /// `maxClipboardBytes` can grow up to six times when escaped (control characters as `\u00XX`).
+    static let maxRequestBytes = 8 << 20
 
     private let dispatcher: AgentDispatcher
     private let onState: @Sendable (State) -> Void

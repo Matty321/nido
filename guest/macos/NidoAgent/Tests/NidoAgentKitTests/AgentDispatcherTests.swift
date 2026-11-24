@@ -90,6 +90,24 @@ private final class FakeClipboard: ClipboardSink, @unchecked Sendable {
     func set(_ text: String, clearAfter seconds: Int) async {
         lock.withLock { calls.append((text, seconds)) }
     }
+
+    /// What `readPlain` answers.
+    var pasteboardText: PasteboardText {
+        get { lock.withLock { content } }
+        set { lock.withLock { content = newValue } }
+    }
+    private var content: PasteboardText = .none
+    private var plain: [String] = []
+    /// The plain writes that reached the pasteboard.
+    var plainWrites: [String] { lock.withLock { plain } }
+
+    func readPlain() async -> PasteboardText { pasteboardText }
+    /// False makes the write fail, as when the pasteboard refuses the string.
+    var writeSucceeds = true
+    func writePlain(_ text: String) async -> Bool {
+        lock.withLock { plain.append(text) }
+        return writeSucceeds
+    }
 }
 
 private func dispatcher(screen: FakeScreen = FakeScreen(), input: FakeInput = FakeInput(),
@@ -405,6 +423,116 @@ private struct LyingScreen: ScreenSource {
     let (reply, _) = await d.handle(AgentRequest(action: .setClipboard(text: "abcde", clearAfter: 60)))
     #expect(reply.ok == false)
     #expect(reply.error == .internalError)
+}
+
+// MARK: - The agent's clipboard
+
+@Test func readReturnsText() async {
+    let clipboard = FakeClipboard()
+    clipboard.pasteboardText = .text("hello é")
+    let (reply, data) = await dispatcher(clipboard: clipboard).handle(AgentRequest(action: .readClipboard))
+    #expect(reply == AgentReply(ok: true, truncated: false, clipboard: "hello é"))
+    #expect(data == nil)
+}
+
+@Test func readNeedsNoPermission() async {
+    let clipboard = FakeClipboard()
+    clipboard.pasteboardText = .text("x")
+    let d = dispatcher(permissions: FakePermissions(screenRecording: false, accessibility: false), clipboard: clipboard)
+    let (reply, _) = await d.handle(AgentRequest(action: .readClipboard))
+    #expect(reply.ok == true)
+}
+
+@Test func concealedItemIsRefused() async {
+    let clipboard = FakeClipboard()
+    clipboard.pasteboardText = .concealed
+    let (reply, _) = await dispatcher(clipboard: clipboard).handle(AgentRequest(action: .readClipboard))
+    #expect(reply.ok == false)
+    #expect(reply.clipboard == nil)
+    #expect(reply.message == "the clipboard holds a concealed item: its text is not shown")
+}
+
+@Test func emptyStringClipboardHasNoText() async {
+    let clipboard = FakeClipboard()
+    clipboard.pasteboardText = .text("")
+    let (reply, _) = await dispatcher(clipboard: clipboard).handle(AgentRequest(action: .readClipboard))
+    #expect(reply.ok == false)
+    #expect(reply.clipboard == nil)
+    #expect(reply.message == "the clipboard has no text")
+}
+
+@Test func deniedPasteAccessIsExplained() async {
+    let clipboard = FakeClipboard()
+    clipboard.pasteboardText = .denied
+    let (reply, _) = await dispatcher(clipboard: clipboard).handle(AgentRequest(action: .readClipboard))
+    #expect(reply.ok == false)
+    #expect(reply.clipboard == nil)
+    #expect(reply.message == "the VM doesn't let Nido Agent read the clipboard: allow it in System Settings › Privacy & Security › Paste from Other Apps")
+}
+
+@Test func failedWriteIsReported() async {
+    let clipboard = FakeClipboard()
+    clipboard.writeSucceeds = false
+    let (reply, _) = await dispatcher(clipboard: clipboard).handle(AgentRequest(action: .writeClipboard(text: "hi")))
+    #expect(reply.ok == false)
+    #expect(reply.message == "the clipboard could not be written")
+}
+
+@Test func emptyClipboardHasNoText() async {
+    let clipboard = FakeClipboard()
+    clipboard.pasteboardText = .none
+    let (reply, _) = await dispatcher(clipboard: clipboard).handle(AgentRequest(action: .readClipboard))
+    #expect(reply.ok == false)
+    #expect(reply.clipboard == nil)
+    #expect(reply.message == "the clipboard has no text")
+}
+
+@Test func readCutsAtACharacterBoundary() async throws {
+    let clipboard = FakeClipboard()
+    clipboard.pasteboardText = .text(String(repeating: "a", count: AgentProtocol.maxClipboardBytes - 1) + "é")
+    let (reply, _) = await dispatcher(clipboard: clipboard).handle(AgentRequest(action: .readClipboard))
+    let text = try #require(reply.clipboard)
+    #expect(reply.truncated == true)
+    #expect(text.utf8.count == AgentProtocol.maxClipboardBytes - 1)
+    #expect(text.allSatisfy { $0 == "a" })
+}
+
+@Test func readOfExactlyTheLimitIsNotTruncated() async throws {
+    let clipboard = FakeClipboard()
+    clipboard.pasteboardText = .text(String(repeating: "a", count: AgentProtocol.maxClipboardBytes))
+    let (reply, _) = await dispatcher(clipboard: clipboard).handle(AgentRequest(action: .readClipboard))
+    #expect(reply.clipboard?.utf8.count == AgentProtocol.maxClipboardBytes)
+    #expect(reply.truncated == false)
+}
+
+@Test func writePutsPlainText() async {
+    let clipboard = FakeClipboard()
+    let (reply, _) = await dispatcher(clipboard: clipboard).handle(AgentRequest(action: .writeClipboard(text: "hi")))
+    #expect(reply == AgentReply(ok: true))
+    #expect(clipboard.plainWrites == ["hi"])
+    #expect(clipboard.recorded.isEmpty)
+}
+
+@Test func writeLimit() async {
+    let clipboard = FakeClipboard()
+    let d = dispatcher(clipboard: clipboard)
+    let max = AgentProtocol.maxClipboardBytes
+    for text in ["", String(repeating: "a", count: max + 1)] {
+        let (reply, _) = await d.handle(AgentRequest(action: .writeClipboard(text: text)))
+        #expect(reply.error == .badRequest)
+    }
+    #expect(clipboard.plainWrites.isEmpty)
+    let (ok, _) = await d.handle(AgentRequest(action: .writeClipboard(text: String(repeating: "a", count: max))))
+    #expect(ok.ok == true)
+    #expect(clipboard.plainWrites.count == 1)
+}
+
+@Test func clipboardOpsWithoutPasteboardFail() async {
+    let d = AgentDispatcher(screen: FakeScreen(), input: FakeInput(), permissions: FakePermissions())
+    for action: AgentAction in [.readClipboard, .writeClipboard(text: "a")] {
+        let (reply, _) = await d.handle(AgentRequest(action: action))
+        #expect(reply.error == .internalError)
+    }
 }
 
 // MARK: - zoom
@@ -753,7 +881,7 @@ private func fileDispatcher(permissions: FakePermissions = FakePermissions(), lo
     let d = dispatcher(input: input)
     let (status, _) = await d.handle(AgentRequest(action: .status), data: Data("x".utf8))
     #expect(status.ok)
-    #expect(status.status?.helperVersion == "1.0.6")
+    #expect(status.status?.helperVersion == "1.0.8")
     #expect(status.files == nil && status.bytes == nil && status.truncated == nil)
     let (typed, _) = await d.handle(AgentRequest(action: .type(text: "hi")))
     #expect(typed.ok)

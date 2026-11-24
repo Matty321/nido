@@ -9,7 +9,8 @@ import Synchronization
 /// One action an agent asked of a VM's owner, as the activity log keeps it: what (`op` and its
 /// parameters in `detail`), for whom (`session`, `client`), when (`time`, UTC, milliseconds), how
 /// long (`ms`) and how it ended (`ok`, or `error` and `message`). Never the typed text (`type`
-/// keeps only `chars`), never the clipboard (`setClipboard` is not recorded), never a tree's
+/// keeps only `chars`), never the clipboard's text (`readClipboard` and `writeClipboard` keep only
+/// `chars`; `setClipboard` is not recorded), never a tree's
 /// contents (only its size and app), never a file's contents (only its guest path and size, or
 /// how many entries a folder listed).
 public struct AgentActivityEntry: Codable, Equatable, Sendable {
@@ -31,7 +32,7 @@ public struct AgentActivityEntry: Codable, Equatable, Sendable {
     public var ok: Bool
     /// `AgentErrorCode`'s raw value when `ok` is false.
     public var error: String?
-    /// The failure's message, cleaned; nil for an ok answer and for every `type` and `key`.
+    /// The failure's message, cleaned; nil for an ok answer and for every `type`, `key` and `writeClipboard`.
     public var message: String?
     /// How long the owner took, in milliseconds.
     public var ms: Int
@@ -145,6 +146,10 @@ public struct AgentActivityEntry: Codable, Equatable, Sendable {
             return Description(op: "key", detail: keyDetail(combo))
         case .setClipboard:
             return nil
+        case .readClipboard:
+            return Description(op: "readClipboard", detail: [:])
+        case .writeClipboard(let text):
+            return Description(op: "writeClipboard", detail: ["chars": String(text.count)])
         case .checkpoint(let name):
             return Description(op: "checkpoint", detail: nameDetail(name))
         case .rollback(let name):
@@ -239,15 +244,18 @@ public struct AgentActivityEntry: Codable, Equatable, Sendable {
             if cleaned.ok, let bytes = cleaned.bytes { detail["bytes"] = String(bytes) }
         case .listFiles:
             if cleaned.ok, let files = cleaned.files { detail["entries"] = String(files.count) }
+        case .readClipboard:
+            // How many characters came back, never which.
+            if cleaned.ok, let text = cleaned.clipboard { detail["chars"] = String(text.count) }
         default:
             break
         }
         var message = cleaned.ok ? nil : cleaned.message
-        // Only `type` and `key` carry the agent's text, and their failures can echo it (Nido
+        // Only `type`, `key` and `writeClipboard` carry the agent's text, and their failures can echo it (Nido
         // Agent's "unknown key 'hunter2'", "cannot type 'é'"); the other ops' messages name only
         // numbers, fields or the system's errors.
         switch action {
-        case .type, .key: message = nil
+        case .type, .key, .writeClipboard: message = nil
         default: break
         }
         let milliseconds = (time.timeIntervalSince1970 * 1000).rounded(.down) / 1000
@@ -255,6 +263,20 @@ public struct AgentActivityEntry: Codable, Equatable, Sendable {
             v: version, time: Date(timeIntervalSince1970: milliseconds), session: session, client: client,
             op: description.op, detail: detail, ok: answer.ok, error: answer.error?.rawValue, message: message,
             ms: max(0, ms), thumb: nil)
+    }
+
+    /// The entry for a read-text request (op `readText`), answered with `answer`: the region
+    /// captured (nil when it was not known) and how many lines came back, never the text.
+    static func makeReadText(region: PixelRect?, answer: AgentAnswer, session: String, client: String, time: Date,
+                             ms: Int) -> AgentActivityEntry {
+        var detail: [String: String] = [:]
+        if let region { detail["region"] = [region.x, region.y, region.w, region.h].map(String.init).joined(separator: ",") }
+        if answer.ok, let lines = answer.lines { detail["lines"] = String(lines.count) }
+        let milliseconds = (time.timeIntervalSince1970 * 1000).rounded(.down) / 1000
+        return AgentActivityEntry(
+            v: version, time: Date(timeIntervalSince1970: milliseconds), session: session, client: client,
+            op: "readText", detail: detail, ok: answer.ok, error: answer.error?.rawValue,
+            message: answer.ok ? nil : answer.cleaned.message, ms: max(0, ms), thumb: nil)
     }
 
     /// `100`, `20.5`, `200.25`: whole numbers without a fraction, others with at most two digits.

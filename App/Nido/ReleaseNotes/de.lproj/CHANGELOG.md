@@ -2,6 +2,19 @@
 
 Alle Versionen von Nido, die neueste zuerst. Beim ersten Öffnen nach einem Update zeigt Nido die Neuerungen der installierten Version (unter Hilfe › Neue Funktionen in Nido kannst du sie erneut lesen).
 
+## [0.10.1] – 2026-11-24
+
+### Ein Mac für Agenten
+- **Der Agent sieht die Menüleiste und das Dock.** Nach den Bedienelementen der App listet `ui_tree` jetzt die Menüs der App, der die Menüleiste gehört, die Statussymbole rechts und das Dock, jeweils unter einer eigenen Überschrift. Dafür ist Nido Agent 1.0.7 nötig.
+- **Der Agent liest Text ohne Bedienelemente.** Die neue Aktion `read_text` (das MCP-Werkzeug `read_text` oder `nido act <vm> ocr`) liest den Text auf dem Bildschirm der VM (Bilder, Zeichenflächen, manche Webseiten) mit der Position jeder Zeile, damit der Agent sie anklicken kann. Der Text wird auf deinem Mac aus einer scharfen Aufnahme des VM-Bildschirms erkannt: In der VM wird nichts installiert, und nichts verlässt deinen Mac.
+- **Zwischenablage.** `set_clipboard` legt Text in die Zwischenablage der VM (bis 1 MiB), damit der Agent langen Text mit ⌘V einfügt, statt ihn zu tippen; `get_clipboard` liest, was eine App in der VM kopiert hat (`nido act <vm> clipboard-set` und `clipboard`). Ein als verborgen markiertes Objekt, etwa Nidos eigene Passwortkopie oder die eines Passwortmanagers, wird nie angezeigt. Die Zwischenablage deines Macs wird nie angerührt, und das Aktivitätsprotokoll behält nur die Anzahl der Zeichen.
+
+### Fehlerbehebungen
+- **Beim Erlauben einer Domain auf einer Basis überspringt Nido neue Kopien, die inzwischen beendet wurden**; ist die Liste einer Kopie beschädigt, sagt Nido dir, dass du `nido net reset` ausführen sollst.
+
+### Nido Agent 1.0.8
+- Bringt Menüleiste und Dock in `ui_tree` (1.0.7) und die Zwischenablage (1.0.8). Aktualisiere ihn unter **Einstellungen › Agent** der VM oder mit `nido agent setup <vm>`.
+
 ## [0.10.0] – 2026-11-22
 
 ### Intel-Macs (experimentell)

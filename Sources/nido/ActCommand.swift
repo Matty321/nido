@@ -19,6 +19,9 @@ struct ActCommand: ParsableCommand {
             "  screenshot [--max N] [--output PATH]",
             "  zoom X Y W H [--max N] [--output PATH]",
             "  ui-tree [--max N]",
+            "  ocr [X Y W H] [--max N]",
+            "  clipboard",
+            "  clipboard-set TEXT|-",
             "  click X Y [--right] [--count N]",
             "  drag X1 Y1 X2 Y2",
             "  scroll --dx DX --dy DY [--x X --y Y]",
@@ -34,6 +37,7 @@ struct ActCommand: ParsableCommand {
             "",
             L10n.string("Coordinates are in the pixels of the last screenshot. The VM must be running with agent access on (nido agent enable). The exit code is 0 when the action succeeded and 1 otherwise; --output saves a copy of the screenshot or zoom and never overwrites a file."),
             L10n.string("checkpoint saves the running VM, memory included (the newest 3 are kept); rollback brings it back to the named checkpoint, or the newest, and restarts it; checkpoints lists them. Only an agent’s checkpoints, never your snapshots."),
+            L10n.string("clipboard prints the text on the VM’s clipboard (never a concealed item such as a password); clipboard-set puts text on it, up to 1 MiB, and - reads the text from the standard input; then press cmd+v in the VM. Your Mac’s clipboard is never touched."),
             L10n.string("put-file, get-file and files work in the folder ~/NidoTransfer of the VM: GUEST-PATH is relative to it. At most 16 MiB per file. get-file writes the file for you only (0600) and never replaces an existing file or link unless you add --force."),
         ].joined(separator: "\n")
     )
@@ -59,6 +63,18 @@ struct ActCommand: ParsableCommand {
             }
             let client = AgentSupport.client(bundle: bundle, config: config, for: .act)
             let answer = AgentSupport.completeScreenshot(try client.send(agentAction), output: output)
+            print(AgentSupport.json(answer))
+            if !answer.ok { throw ExitCode(1) }
+        case .readText(let region, let maxLines):
+            let client = AgentSupport.client(bundle: bundle, config: config, for: .act)
+            let answer = try client.readText(region: region, maxLines: maxLines)
+            print(AgentSupport.json(answer))
+            if !answer.ok { throw ExitCode(1) }
+        case .writeClipboardFromStdin:
+            // Read and checked before anything is sent.
+            let agentAction = try AgentSupport.clipboardTextFromStdin()
+            let client = AgentSupport.client(bundle: bundle, config: config, for: .act)
+            let answer = try client.send(agentAction)
             print(AgentSupport.json(answer))
             if !answer.ok { throw ExitCode(1) }
         case .putFile(let local, let guestPath):

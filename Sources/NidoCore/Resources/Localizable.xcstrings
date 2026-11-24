@@ -9653,6 +9653,42 @@
         }
       }
     },
+    "Couldn’t apply it to the fresh Mac %@: %@. To repair its list: nido net reset %@" : {
+      "comment" : "nido net allow|deny: the change did not reach one fresh copy because its domain list is damaged; the first and third %@ are the copy's VM name, the second the reason.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf den neuen Mac %@ konnte es nicht angewendet werden: %@. So wird seine Liste repariert: nido net reset %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t apply it to the fresh Mac %@: %@. To repair its list: nido net reset %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se ha podido aplicar al Mac nuevo %@: %@. Para reparar su lista: nido net reset %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de l’appliquer au nouveau Mac %@ : %@. Pour réparer sa liste : nido net reset %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile applicarlo al Mac nuovo %@: %@. Per riparare la sua lista: nido net reset %@"
+          }
+        }
+      }
+    },
     "Replace an existing SKILL.md that nido did not write." : {
       "comment" : "Agent Mac: help of nido skill install --force.",
       "extractionState" : "manual",
@@ -18008,6 +18044,42 @@
         }
       }
     },
+    "Nido Agent is too old for the clipboard: run nido agent setup %@ to update it" : {
+      "comment" : "Agent Mac: get_clipboard and set_clipboard need a newer Nido Agent in the VM; %@ is the VM name, nido agent setup is a command.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent ist zu alt für die Zwischenablage: Führe nido agent setup %@ aus, um es zu aktualisieren"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent is too old for the clipboard: run nido agent setup %@ to update it"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent es demasiado antiguo para el portapapeles: ejecuta nido agent setup %@ para actualizarlo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent est trop ancien pour le presse-papiers : exécutez nido agent setup %@ pour le mettre à jour"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent è troppo vecchio per gli appunti: esegui nido agent setup %@ per aggiornarlo"
+          }
+        }
+      }
+    },
     "Nido Agent is too old for ui_tree: run nido agent setup %@ to update it" : {
       "comment" : "Agent Mac: ui_tree needs a newer Nido Agent in the VM; %@ is the VM name, nido agent setup is a command.",
       "extractionState" : "manual",
@@ -18076,6 +18148,222 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nido Agent è troppo vecchio per lo zoom: esegui nido agent setup %@ per aggiornarlo"
+          }
+        }
+      }
+    },
+    "Nido Agent is too old for read_text: run nido agent setup %@ to update it" : {
+      "comment" : "Agent Mac: read_text needs a newer Nido Agent in the VM; %@ is the VM name, nido agent setup is a command.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent ist zu alt für read_text: Führe nido agent setup %@ aus, um es zu aktualisieren"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent is too old for read_text: run nido agent setup %@ to update it"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent es demasiado antiguo para read_text: ejecuta nido agent setup %@ para actualizarlo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent est trop ancien pour read_text : exécutez nido agent setup %@ pour le mettre à jour"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nido Agent è troppo vecchio per read_text: esegui nido agent setup %@ per aggiornarlo"
+          }
+        }
+      }
+    },
+    "the region is outside the screenshot" : {
+      "comment" : "Agent Mac: read_text was asked for a region that does not overlap the latest screenshot.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "der Bereich liegt außerhalb des Screenshots"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "the region is outside the screenshot"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "la región está fuera de la captura"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "la zone est en dehors de la capture d’écran"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "la regione è fuori dallo screenshot"
+          }
+        }
+      }
+    },
+    "could not read the text on the screen" : {
+      "comment" : "Agent Mac: the text recognition on the Mac failed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Text auf dem Bildschirm konnte nicht gelesen werden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "could not read the text on the screen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no se pudo leer el texto de la pantalla"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "impossible de lire le texte à l’écran"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "impossibile leggere il testo sullo schermo"
+          }
+        }
+      }
+    },
+    "Text recognition is still starting on this Mac: try read_text again in a minute" : {
+      "comment" : "Agent Mac: read_text timed out because Vision's text model is still loading in the process that runs the VM; read_text is a tool name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Texterkennung startet auf diesem Mac noch: Versuche read_text in einer Minute erneut"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text recognition is still starting on this Mac: try read_text again in a minute"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El reconocimiento de texto aún se está iniciando en este Mac: vuelve a probar read_text en un minuto"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La reconnaissance de texte démarre encore sur ce Mac : réessayez read_text dans une minute"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il riconoscimento del testo si sta ancora avviando su questo Mac: riprova read_text tra un minuto"
+          }
+        }
+      }
+    },
+    "read_text does not go with another action" : {
+      "comment" : "Agent Mac: a malformed command asks to read text and to do another action at once; read_text is a tool name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "read_text passt nicht zu einer anderen Aktion"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "read_text does not go with another action"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "read_text no va con otra acción"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "read_text ne va pas avec une autre action"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "read_text non va con un'altra azione"
+          }
+        }
+      }
+    },
+    "The VM was started by an older Nido that can’t read text: restart %@ with this version" : {
+      "comment" : "Agent Mac: the owner process of the running VM predates read_text; %@ is the VM name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die VM wurde von einem älteren Nido gestartet, das keinen Text lesen kann: Starte %@ mit dieser Version neu"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The VM was started by an older Nido that can’t read text: restart %@ with this version"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La VM fue iniciada por un Nido anterior que no puede leer texto: reinicia %@ con esta versión"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La VM a été démarrée par un Nido plus ancien qui ne sait pas lire le texte : redémarrez %@ avec cette version"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La VM è stata avviata da un Nido più vecchio che non sa leggere il testo: riavvia %@ con questa versione"
           }
         }
       }
@@ -23635,38 +23923,38 @@
         }
       }
     },
-    "unknown action “%@”: use status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file or files" : {
+    "unknown action “%@”: use status, screenshot, zoom, ui-tree, ocr, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file, files, clipboard or clipboard-set" : {
       "comment" : "Agent Mac: nido act with an unknown action; %@ is what was typed. Keep the action names untranslated.",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "unbekannte Aktion „%@“: verwende status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file oder files"
+            "value" : "unbekannte Aktion „%@“: verwende status, screenshot, zoom, ui-tree, ocr, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file, files, clipboard oder clipboard-set"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "unknown action “%@”: use status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file or files"
+            "value" : "unknown action “%@”: use status, screenshot, zoom, ui-tree, ocr, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file, files, clipboard or clipboard-set"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "acción desconocida «%@»: usa status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file o files"
+            "value" : "acción desconocida «%@»: usa status, screenshot, zoom, ui-tree, ocr, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file, files, clipboard o clipboard-set"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "action inconnue « %@ » : utilisez status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file ou files"
+            "value" : "action inconnue « %@ » : utilisez status, screenshot, zoom, ui-tree, ocr, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file, files, clipboard ou clipboard-set"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "azione sconosciuta “%@”: usa status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file o files"
+            "value" : "azione sconosciuta “%@”: usa status, screenshot, zoom, ui-tree, ocr, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file, files, clipboard o clipboard-set"
           }
         }
       }
@@ -25866,6 +26154,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "put-file, get-file e files lavorano nella cartella ~/NidoTransfer della VM: GUEST-PATH è relativo a quella. Al massimo 16 MiB per file. get-file scrive il file solo per te (0600) e non sostituisce mai un file o un link esistente, a meno che tu non aggiunga --force."
+          }
+        }
+      }
+    },
+    "clipboard prints the text on the VM’s clipboard (never a concealed item such as a password); clipboard-set puts text on it, up to 1 MiB, and - reads the text from the standard input; then press cmd+v in the VM. Your Mac’s clipboard is never touched." : {
+      "comment" : "nido act --help: the clipboard actions. Keep clipboard, clipboard-set, cmd+v and - as they are.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "clipboard gibt den Text in der Zwischenablage der VM aus (nie ein verborgenes Objekt wie ein Passwort); clipboard-set legt Text darin ab, bis zu 1 MiB, und - liest den Text von der Standardeingabe; drücke dann cmd+v in der VM. Die Zwischenablage deines Mac wird nie berührt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "clipboard prints the text on the VM’s clipboard (never a concealed item such as a password); clipboard-set puts text on it, up to 1 MiB, and - reads the text from the standard input; then press cmd+v in the VM. Your Mac’s clipboard is never touched."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "clipboard muestra el texto del portapapeles de la VM (nunca un elemento oculto como una contraseña); clipboard-set pone texto en él, hasta 1 MiB, y - lee el texto de la entrada estándar; luego pulsa cmd+v en la VM. El portapapeles de tu Mac nunca se toca."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "clipboard affiche le texte du presse-papiers de la VM (jamais un élément masqué comme un mot de passe) ; clipboard-set y place du texte, jusqu’à 1 Mio, et - lit le texte sur l’entrée standard ; appuyez ensuite sur cmd+v dans la VM. Le presse-papiers de votre Mac n’est jamais touché."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "clipboard stampa il testo negli appunti della VM (mai un elemento nascosto come una password); clipboard-set vi mette del testo, fino a 1 MiB, e - legge il testo dallo standard input; poi premi cmd+v nella VM. Gli appunti del tuo Mac non vengono mai toccati."
           }
         }
       }

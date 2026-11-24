@@ -93,6 +93,45 @@ import Testing
         #expect(throws: (any Error).self) { _ = try AgentSupport.parseAction(["click", "a", "b"]) }
     }
 
+    @Test func clipboardParses() throws {
+        #expect(try AgentSupport.parseInvocation(["clipboard"]) == .send(.readClipboard, output: nil))
+        #expect(throws: (any Error).self) { _ = try AgentSupport.parseInvocation(["clipboard", "x"]) }
+        #expect(try AgentSupport.parseInvocation(["clipboard-set", "hello\nworld"])
+            == .send(.writeClipboard(text: "hello\nworld"), output: nil))
+        // The text is taken as it is, even when it starts with "--".
+        #expect(try AgentSupport.parseAction(["clipboard-set", "--x"]) == .writeClipboard(text: "--x"))
+        for bad in [[], ["a", "b"], [""], [String(repeating: "a", count: AgentProtocol.maxClipboardBytes + 1)]] {
+            #expect(throws: (any Error).self) { _ = try AgentSupport.parseInvocation(["clipboard-set"] + bad) }
+        }
+        let full = String(repeating: "a", count: AgentProtocol.maxClipboardBytes)
+        #expect(try AgentSupport.parseAction(["clipboard-set", full]) == .writeClipboard(text: full))
+    }
+
+    @Test func clipboardSetReadsStdinWithDash() throws {
+        #expect(try AgentSupport.parseInvocation(["clipboard-set", "-"]) == .writeClipboardFromStdin)
+        #expect(throws: (any Error).self) { _ = try AgentSupport.parseAction(["clipboard-set", "-"]) }
+        let input = Pipe()
+        input.fileHandleForWriting.write(Data("two\nlines é".utf8))
+        try input.fileHandleForWriting.close()
+        #expect(try AgentSupport.clipboardTextFromStdin(input.fileHandleForReading) == .writeClipboard(text: "two\nlines é"))
+        // Empty, over 1 MiB and invalid UTF-8 are refused.
+        let empty = Pipe()
+        try empty.fileHandleForWriting.close()
+        #expect(throws: (any Error).self) { _ = try AgentSupport.clipboardTextFromStdin(empty.fileHandleForReading) }
+        let big = Pipe()
+        let oversize = Data(repeating: 0x61, count: AgentProtocol.maxClipboardBytes + 1)
+        let writer = Thread {
+            big.fileHandleForWriting.write(oversize)
+            try? big.fileHandleForWriting.close()
+        }
+        writer.start()
+        #expect(throws: (any Error).self) { _ = try AgentSupport.clipboardTextFromStdin(big.fileHandleForReading) }
+        let bad = Pipe()
+        bad.fileHandleForWriting.write(Data([0xFF, 0xFE]))
+        try bad.fileHandleForWriting.close()
+        #expect(throws: (any Error).self) { _ = try AgentSupport.clipboardTextFromStdin(bad.fileHandleForReading) }
+    }
+
     @Test func invocationCarriesOutputAndWait() throws {
         #expect(try AgentSupport.parseInvocation(["screenshot", "--output", "/x/a.png"])
             == .send(.screenshot(maxLongEdge: 1280), output: "/x/a.png"))
@@ -103,8 +142,8 @@ import Testing
 
     /// The text for an unknown action names every action `nido act` takes, in every language.
     @Test func unknownActionListsEveryAction() throws {
-        let actions = ["status", "screenshot", "zoom", "ui-tree", "click", "drag", "scroll", "type", "key", "wait",
-                       "checkpoint", "rollback", "checkpoints", "put-file", "get-file", "files"]
+        let actions = ["status", "screenshot", "zoom", "ui-tree", "ocr", "click", "drag", "scroll", "type", "key", "wait",
+                       "checkpoint", "rollback", "checkpoints", "put-file", "get-file", "files", "clipboard", "clipboard-set"]
         for action in actions {
             do {
                 _ = try AgentSupport.parseInvocation([action])
@@ -117,14 +156,14 @@ import Testing
         #expect(text.contains("teleport"))
         for language in ["en", "it", "de", "es", "fr"] {
             let translated = L10n.string(
-                "unknown action “\("x")”: use status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file or files",
+                "unknown action “\("x")”: use status, screenshot, zoom, ui-tree, ocr, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file, files, clipboard or clipboard-set",
                 language: language)
             for action in actions {
                 #expect(translated.contains(" \(action)"), "\(language) \(action)")
             }
         }
         #expect(text == L10n.string(
-            "unknown action “\("teleport")”: use status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file or files"))
+            "unknown action “\("teleport")”: use status, screenshot, zoom, ui-tree, ocr, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file, files, clipboard or clipboard-set"))
     }
 
     // MARK: - Files
@@ -307,6 +346,20 @@ import Testing
         #expect(!line.contains("\n"))
         // A time a person can read: ISO 8601, UTC.
         #expect(line.contains(#""checkpoint":{"createdAt":"1970-01-01T00:00:00Z","name":"a1"}"#))
+    }
+
+    @Test func ocrParsesRegionAndMax() throws {
+        #expect(try AgentSupport.parseInvocation(["ocr"]) == .readText(region: nil, maxLines: 300))
+        #expect(try AgentSupport.parseInvocation(["ocr", "--max", "20"]) == .readText(region: nil, maxLines: 20))
+        #expect(try AgentSupport.parseInvocation(["ocr", "1", "2", "30", "40"])
+            == .readText(region: PixelRect(x: 1, y: 2, w: 30, h: 40), maxLines: 300))
+        #expect(try AgentSupport.parseInvocation(["ocr", "1", "2", "30", "40", "--max", "5"])
+            == .readText(region: PixelRect(x: 1, y: 2, w: 30, h: 40), maxLines: 5))
+        for bad in [["ocr", "1", "2", "3"], ["ocr", "1", "2", "3", "4", "5"], ["ocr", "-1", "2", "3", "4"],
+                    ["ocr", "1", "2", "0", "4"], ["ocr", "1.5", "2", "3", "4"], ["ocr", "--max", "0"],
+                    ["ocr", "--max", "1001"], ["ocr", "--output", "x"]] {
+            #expect(throws: (any Error).self) { _ = try AgentSupport.parseInvocation(bad) }
+        }
     }
 
     @Test func uiTreeParsing() throws {

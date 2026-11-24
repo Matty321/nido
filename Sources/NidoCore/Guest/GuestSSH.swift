@@ -556,6 +556,24 @@ public struct GuestSSH: Sendable {
         out = out.trimmingCharacters(in: .whitespaces)
         return out.count > limit ? String(out.suffix(limit)) : out
     }
+
+    /// `text` made safe like `sanitize`, but as a document: `\n` and `\t` stay, a `\r` is dropped
+    /// (a CRLF becomes `\n`), U+2028 and U+2029 become `\n`, every other control or format character is removed, and neither
+    /// spaces nor length are touched.
+    static func sanitizeMultiline(_ text: String) -> String {
+        var out = String.UnicodeScalarView()
+        for scalar in text.unicodeScalars {
+            let isControl = scalar.value < 0x20 || scalar.value == 0x7F
+                || (scalar.value >= 0x80 && scalar.value < 0xA0)
+                || scalar.properties.generalCategory == .format
+            if scalar == "\u{2028}" || scalar == "\u{2029}" {
+                out.append("\n")
+            } else if scalar == "\n" || scalar == "\t" || !isControl {
+                out.append(scalar)
+            }
+        }
+        return String(out)
+    }
 }
 
 extension GuestSSH {

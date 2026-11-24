@@ -2,6 +2,19 @@
 
 Le versioni di Nido, dalla più recente. L'app mostra la sezione della versione installata al primo avvio dopo un aggiornamento (menu Aiuto › Novità di Nido per rivederla).
 
+## [0.10.1] – 2026-11-24
+
+### Un Mac per gli agenti
+- **L’agente vede la barra dei menu e il Dock.** Dopo i controlli dell’app, `ui_tree` ora elenca i menu dell’app che possiede la barra dei menu, le icone di stato a destra e il Dock, ognuno sotto la sua intestazione. Serve Nido Agent 1.0.7.
+- **L’agente legge il testo che non ha controlli.** La nuova azione `read_text` (lo strumento MCP `read_text`, o `nido act <vm> ocr`) legge il testo sullo schermo della VM (immagini, canvas, alcune pagine web) con la posizione di ogni riga, così l’agente può cliccarla. Il testo viene riconosciuto sul tuo Mac da una cattura nitida dello schermo della VM: nella VM non si installa nulla e nulla esce dal tuo Mac.
+- **Appunti.** `set_clipboard` mette del testo negli appunti della VM (fino a 1 MiB), così l’agente incolla un testo lungo con ⌘V invece di digitarlo; `get_clipboard` legge quello che un’app nella VM ha copiato (`nido act <vm> clipboard-set` e `clipboard`). Un elemento segnato come nascosto, come la copia della password di Nido o quella di un gestore di password, non viene mai mostrato. Gli appunti del tuo Mac non vengono mai toccati e il registro delle attività tiene solo il numero di caratteri.
+
+### Correzioni
+- **Permettere un dominio su una base salta le copie nuove chiuse nel frattempo**; se l’elenco di una copia è danneggiato, Nido ti dice di eseguire `nido net reset`.
+
+### Nido Agent 1.0.8
+- Aggiunge barra dei menu e Dock a `ui_tree` (1.0.7) e gli appunti (1.0.8). Aggiornalo da **Impostazioni › Agent** della VM o con `nido agent setup <vm>`.
+
 ## [0.10.0] – 2026-11-22
 
 ### Mac Intel (sperimentale)

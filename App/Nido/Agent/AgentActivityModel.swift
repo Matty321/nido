@@ -213,9 +213,9 @@ final class AgentActivityModel {
         var failure: String?
         if !entry.ok {
             let code = entry.error ?? "error"
-            // The log keeps no message for `type` and `key` (it could echo the text); one in a
-            // line written by hand is not shown either.
-            let message = entry.op == "type" || entry.op == "key" ? nil : entry.message
+            // The log keeps no message for `type`, `key` and `writeClipboard` (it could echo the
+            // text); one in a line written by hand is not shown either.
+            let message = ["type", "key", "writeClipboard"].contains(entry.op) ? nil : entry.message
             failure = message.map { "\(code): \($0)" } ?? code
         }
         return Row(
@@ -264,6 +264,15 @@ final class AgentActivityModel {
                 return String(localized: "UI tree of \(app): \(count) elements", comment: "%@ is an app’s name.")
             }
             return String(localized: "UI tree: \(count) elements")
+        case "readText":
+            guard let count = detail["lines"].flatMap(Int.init) else { return String(localized: "Read text") }
+            return String(localized: "Read text: \(count) lines")
+        case "readClipboard":
+            guard let count = detail["chars"].flatMap(Int.init) else { return String(localized: "Clipboard read") }
+            return String(localized: "Clipboard read: \(count) characters")
+        case "writeClipboard":
+            guard let count = detail["chars"].flatMap(Int.init) else { return String(localized: "Clipboard set") }
+            return String(localized: "Clipboard set: \(count) characters")
         case "click":
             let (x, y) = (detail["x"] ?? "?", detail["y"] ?? "?")
             let count = detail["count"] ?? "1"
@@ -356,6 +365,8 @@ final class AgentActivityModel {
         case "screenshot": "camera.viewfinder"
         case "zoom": "plus.magnifyingglass"
         case "uiTree": "list.bullet.indent"
+        case "readText": "text.viewfinder"
+        case "readClipboard", "writeClipboard": "doc.on.clipboard"
         case "click": "cursorarrow.click"
         case "drag": "hand.draw"
         case "scroll": "arrow.up.and.down"

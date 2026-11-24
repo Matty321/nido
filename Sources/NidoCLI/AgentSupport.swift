@@ -67,6 +67,10 @@ public enum AgentSupport {
         case putFile(local: String, guestPath: String)
         /// `get-file GUEST-PATH LOCAL [--force]`.
         case getFile(guestPath: String, local: String, force: Bool)
+        /// `ocr [X Y W H] [--max N]`: the text on the screen, recognized on the Mac.
+        case readText(region: PixelRect?, maxLines: Int)
+        /// `clipboard-set -`: the text is all of the standard input (`clipboardTextFromStdin`).
+        case writeClipboardFromStdin
     }
 
     /// The longest a `wait` may take, in milliseconds (the same as the MCP tool's).
@@ -85,18 +89,42 @@ public enum AgentSupport {
         case .wait: throw CLIError.agentUsage("wait MS")
         case .putFile: throw CLIError.agentUsage(putFileUsage)
         case .getFile: throw CLIError.agentUsage(getFileUsage)
+        case .readText: throw CLIError.agentUsage(ocrUsage)
+        case .writeClipboardFromStdin: throw CLIError.agentUsage(clipboardSetUsage)
         }
     }
 
     private static let putFileUsage = "put-file LOCAL GUEST-PATH"
+    private static let ocrUsage = "ocr [X Y W H] [--max N]"
     private static let getFileUsage = "get-file GUEST-PATH LOCAL [--force]"
+    private static let clipboardSetUsage = "clipboard-set TEXT|-"
+
+    /// The clipboard write of `text`: 1 byte to `AgentProtocol.maxClipboardBytes` of UTF-8.
+    private static func clipboardWrite(_ text: String) throws -> AgentAction {
+        guard (1...AgentProtocol.maxClipboardBytes).contains(text.utf8.count) else {
+            throw CLIError.agentUsage(clipboardSetUsage)
+        }
+        return .writeClipboard(text: text)
+    }
+
+    /// `clipboard-set -`: all of `input` as UTF-8 text, 1 byte to `AgentProtocol.maxClipboardBytes`
+    /// (more, empty or not UTF-8 is a usage error, and nothing is sent).
+    public static func clipboardTextFromStdin(_ input: FileHandle = .standardInput) throws -> AgentAction {
+        var data = Data()
+        while let chunk = try input.read(upToCount: 1 << 16), !chunk.isEmpty {
+            data.append(chunk)
+            guard data.count <= AgentProtocol.maxClipboardBytes else { throw CLIError.agentUsage(clipboardSetUsage) }
+        }
+        guard let text = String(data: data, encoding: .utf8) else { throw CLIError.agentUsage(clipboardSetUsage) }
+        return try clipboardWrite(text)
+    }
 
     /// `args` as an `Invocation`: the action name, then its arguments; unknown options, missing or
     /// extra arguments and out-of-range values throw (`CLIError`, `KeyMapError` for a bad combo).
     public static func parseInvocation(_ args: [String]) throws -> Invocation {
         guard let name = args.first else {
             throw CLIError.agentUsage(
-                "status | screenshot | zoom | ui-tree | click | drag | scroll | type | key | wait | checkpoint | rollback | checkpoints | put-file | get-file | files")
+                "status | screenshot | zoom | ui-tree | ocr | clipboard | clipboard-set | click | drag | scroll | type | key | wait | checkpoint | rollback | checkpoints | put-file | get-file | files")
         }
         let rest = Array(args.dropFirst())
         switch name {
@@ -130,6 +158,23 @@ public enum AgentSupport {
                 maxElements = try integer(value, name: "--max", in: AgentProtocol.uiTreeElementsRange)
             }
             return .send(.uiTree(maxElements: maxElements), output: nil)
+        case "ocr":
+            let p = try Parsed(rest, usage: ocrUsage, flags: [], options: ["--max"], positionals: 4, orNone: true)
+            let maxLines = try p.options["--max"].map { try integer($0, name: "--max", in: 1...1000) } ?? 300
+            guard p.positionals.count == 4 else { return .readText(region: nil, maxLines: maxLines) }
+            let x = try integer(p.positionals[0], name: "X", in: 0...Int(Int32.max))
+            let y = try integer(p.positionals[1], name: "Y", in: 0...Int(Int32.max))
+            let w = try integer(p.positionals[2], name: "W", in: 1...Int(Int32.max))
+            let h = try integer(p.positionals[3], name: "H", in: 1...Int(Int32.max))
+            return .readText(region: PixelRect(x: x, y: y, w: w, h: h), maxLines: maxLines)
+        case "clipboard":
+            _ = try Parsed(rest, usage: "clipboard", flags: [], options: [], positionals: 0)
+            return .send(.readClipboard, output: nil)
+        case "clipboard-set":
+            // The text is taken as it is, even when it starts with "--"; "-" alone is the stdin.
+            guard rest.count == 1 else { throw CLIError.agentUsage(clipboardSetUsage) }
+            if rest[0] == "-" { return .writeClipboardFromStdin }
+            return .send(try clipboardWrite(rest[0]), output: nil)
         case "click":
             let usage = "click X Y [--right] [--count N]"
             let p = try Parsed(rest, usage: usage, flags: ["--right"], options: ["--count"], positionals: 2)
@@ -653,7 +698,7 @@ public enum AgentSupport {
         var positionals: [String] = []
 
         init(_ args: [String], usage: String, flags knownFlags: Set<String>, options knownOptions: Set<String>,
-             positionals count: Int) throws {
+             positionals count: Int, orNone: Bool = false) throws {
             var i = 0
             while i < args.count {
                 let arg = args[i]
@@ -671,7 +716,7 @@ public enum AgentSupport {
                     positionals.append(arg)
                 }
             }
-            guard positionals.count == count else { throw CLIError.agentUsage(usage) }
+            guard positionals.count == count || (orNone && positionals.isEmpty) else { throw CLIError.agentUsage(usage) }
         }
     }
 }

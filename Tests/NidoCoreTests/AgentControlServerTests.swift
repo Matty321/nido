@@ -35,6 +35,20 @@ private final class FakeHelper: Sendable {
     let statusReply: AgentReply?
     /// What `uiTree` answers.
     let tree: UITree
+    /// What the clipboard holds: lines, a tab, and escape sequences a terminal would run.
+    static let clipboardText = "line one\n\tindented\u{1B}[31m red\r\nline\u{9B}three\u{200B}"
+    private let clipboardOverride = Mutex<AgentReply?>(nil)
+    /// What `readClipboard` answers instead of the clipboard text.
+    var clipboardReply: AgentReply? {
+        get { clipboardOverride.withLock { $0 } }
+        set { clipboardOverride.withLock { $0 = newValue } }
+    }
+    private let zoomOverride = Mutex<AgentReply?>(nil)
+    /// What `zoom` answers instead of an image (a refusal such as `screenChanged`).
+    var zoomReply: AgentReply? {
+        get { zoomOverride.withLock { $0 } }
+        set { zoomOverride.withLock { $0 = newValue } }
+    }
 
     init(delay: Duration = .zero, helperVersion: String = "1.0.0", statusReply: AgentReply? = nil,
          tree: UITree = UITree(app: "Notes", elements: [], truncated: false)) {
@@ -82,6 +96,8 @@ private final class FakeHelper: Sendable {
                 return (statusReply ?? AgentReply(ok: true, status: status), nil)
             case .screenshot:
                 return (AgentReply(ok: true, image: Self.image, screen: Self.screen), Self.png)
+            case .zoom where zoomReply != nil:
+                return (zoomReply!, nil)
             case .zoom:
                 return (AgentReply(ok: true, image: Self.zoomImage, screen: Self.screen), Self.png)
             case .uiTree:
@@ -96,6 +112,10 @@ private final class FakeHelper: Sendable {
                 return (AgentReply(ok: true, bytes: Self.fileBytes.count), Self.fileBytes)
             case .listFiles:
                 return (AgentReply(ok: true, files: Self.entries, truncated: true), nil)
+            case .readClipboard:
+                return (clipboardReply ?? AgentReply(ok: true, clipboard: Self.clipboardText), nil)
+            case .writeClipboard:
+                return (AgentReply(ok: true), nil)
             case .key(let combo) where combo == "fail":
                 throw AgentFailure(code: .notReady, message: "not ready")
             case .key(let combo) where combo == "old":
@@ -106,6 +126,39 @@ private final class FakeHelper: Sendable {
                 return (AgentReply(ok: true), nil)
             }
         }
+    }
+}
+
+/// A stand-in for Vision: answers what it is given and keeps the PNGs it was asked to read.
+private final class FakeRecognizer: TextRecognizing, @unchecked Sendable {
+    private let state = Mutex<[Data]>([])
+    private let lock = Mutex<(found: [RecognizedText], failure: Bool)>(([], false))
+    var found: [RecognizedText] {
+        get { lock.withLock { $0.found } }
+        set { lock.withLock { $0.found = newValue } }
+    }
+    var pngs: [Data] { state.withLock { $0 } }
+
+    init(_ found: [RecognizedText] = [], failure: Bool = false) {
+        lock.withLock { $0 = (found, failure) }
+    }
+
+    /// When set, the first call waits for `release()`.
+    var warmUpHold: Bool {
+        get { hold.withLock { $0.on } }
+        set { hold.withLock { $0.on = newValue } }
+    }
+    private let hold = Mutex<(on: Bool, released: Bool)>((false, false))
+    func release() { hold.withLock { $0.released = true } }
+
+    func recognize(png: Data) async throws -> [RecognizedText] {
+        let first = state.withLock { pngs -> Bool in pngs.append(png); return pngs.count == 1 }
+        if first {
+            while hold.withLock({ $0.on && !$0.released }) { try? await Task.sleep(for: .milliseconds(10)) }
+        }
+        let (found, failure) = lock.withLock { $0 }
+        if failure { throw CocoaError(.fileReadUnknown) }
+        return found
     }
 }
 
@@ -159,7 +212,10 @@ private final class RawConnection: @unchecked Sendable {
         var command = AgentCommand(
             vmID: vmID, bundlePath: AgentCommand.bundlePath(bundle), action: action, client: client, session: session)
         command.staged = staged
-        var line = try JSONEncoder().encode(command)
+        // Sorted keys, like `AgentControlClient`: a long clipboard line must start with its `op`.
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        var line = try encoder.encode(command)
         line.append(0x0A)
         write(line)
     }
@@ -268,6 +324,20 @@ private struct Env {
             sendTimeoutSeconds: AgentControlServer.sendTimeoutSeconds, appendLog: appendLog)
     }
 
+    /// `start` with the recognizer read-text requests use.
+    func start(recognizer: any TextRecognizing) throws -> AgentControlServer {
+        try AgentControlServer.start(
+            bundle: bundle, vmID: config.id, perform: helper.perform, root: root,
+            sendTimeoutSeconds: AgentControlServer.sendTimeoutSeconds, recognizer: recognizer, warmUp: false)
+    }
+
+    /// `start` with the recognizer, left to warm up as in the app.
+    func startWarming(recognizer: any TextRecognizing) throws -> AgentControlServer {
+        try AgentControlServer.start(
+            bundle: bundle, vmID: config.id, perform: helper.perform, root: root,
+            sendTimeoutSeconds: AgentControlServer.sendTimeoutSeconds, recognizer: recognizer, warmUp: true)
+    }
+
     /// `start` with the owner's checkpoint handling.
     func start(checkpoints: any AgentCheckpointHandling) throws -> AgentControlServer {
         try AgentControlServer.start(bundle: bundle, vmID: config.id, perform: helper.perform, checkpoints: checkpoints,
@@ -303,6 +373,19 @@ private func blocking<T: Sendable>(_ body: @escaping @Sendable () throws -> T) a
 }
 
 @Suite struct AgentControlServerTests {
+    /// The owner reads a line over 64 KiB only when it starts with its long-line prefix: the
+    /// client's encoding of a `writeClipboard` command must (contract between the two).
+    @Test func clientEncodingOfWriteClipboardStartsWithTheLongLinePrefix() throws {
+        let command = AgentCommand(
+            vmID: UUID(), bundlePath: "/tmp/x.nidovm", action: .writeClipboard(text: "héllo\n\u{1}"),
+            client: "mcp", session: "s", staged: nil, readText: nil)
+        let line = try AgentControlClient.encode(command)
+        #expect(line.starts(with: AgentControlServer.longLinePrefix))
+        let other = try AgentControlClient.encode(AgentCommand(
+            vmID: UUID(), bundlePath: "/tmp/x.nidovm", action: .type(text: "x")))
+        #expect(!other.starts(with: AgentControlServer.longLinePrefix))
+    }
+
     /// The client waits longer than the owner's own limits towards the helper, so the owner's
     /// error arrives rather than a timeout: a zoom asks `status` first, then the image.
     @Test func clientTimeoutCoversTheOwnersLimits() {
@@ -588,6 +671,204 @@ private func blocking<T: Sendable>(_ body: @escaping @Sendable () throws -> T) a
         #expect(env.helper.requests.map(\.action) == [.status])
     }
 
+    // MARK: - Clipboard text
+
+    /// An agent never gets the owner's `setClipboard` (password copy, concealed, auto-clear),
+    /// even on a helper that has the plain clipboard ops.
+    @Test func ownerClipboardStillRefusedToAgents() async throws {
+        let env = try Env(helperVersion: "1.0.8")
+        defer { env.cleanup() }
+        let server = try env.start()
+        defer { server.stop() }
+
+        let raw = try RawConnection(env.socketURL, vmID: env.config.id, bundle: env.bundle.url)
+        let answer = try await blocking {
+            try raw.send(.setClipboard(text: "secret-value", clearAfter: 60))
+            return try raw.readAnswer()
+        }
+        #expect(answer?.ok == false)
+        #expect(answer?.error == .badRequest)
+        #expect(answer?.message == L10n.string("only Nido can use the VM’s clipboard"))
+        #expect(env.helper.requests.isEmpty)
+    }
+
+    @Test func readClipboardForwardsText() async throws {
+        let env = try Env(helperVersion: "1.0.8")
+        defer { env.cleanup() }
+        env.helper.clipboardReply = AgentReply(ok: true, truncated: true, clipboard: FakeHelper.clipboardText)
+        let server = try env.start()
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking { try client.send(.readClipboard) }
+        #expect(answer.ok)
+        // Newlines and tabs stay; every other control and format character is gone.
+        #expect(answer.clipboard == "line one\n\tindented[31m red\nlinethree")
+        #expect(answer.truncated == true)
+        #expect(env.helper.requests.map(\.action) == [.status, .readClipboard])
+    }
+
+    @Test func readClipboardRefusalIsForwarded() async throws {
+        let env = try Env(helperVersion: "1.0.8")
+        defer { env.cleanup() }
+        env.helper.clipboardReply = AgentReply(
+            ok: false, error: .badRequest, message: "the clipboard holds a concealed item: its text is not shown")
+        let server = try env.start()
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking { try client.send(.readClipboard) }
+        #expect(!answer.ok)
+        #expect(answer.error == .badRequest)
+        #expect(answer.clipboard == nil)
+        #expect(answer.message == "the clipboard holds a concealed item: its text is not shown")
+    }
+
+    @Test func writeClipboardForwards() async throws {
+        let env = try Env(helperVersion: "1.0.8")
+        defer { env.cleanup() }
+        let server = try env.start()
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking { try client.send(.writeClipboard(text: "hello\nworld")) }
+        #expect(answer.ok)
+        #expect(env.helper.requests.map(\.action) == [.status, .writeClipboard(text: "hello\nworld")])
+    }
+
+    @Test func clipboardOnOldHelper() async throws {
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let server = try env.start()
+        defer { server.stop() }
+
+        let client = env.client()
+        let (read, write) = try await blocking {
+            (try client.send(.readClipboard), try client.send(.writeClipboard(text: "x")))
+        }
+        let expected = L10n.string(
+            "Nido Agent is too old for the clipboard: run nido agent setup \(env.config.name.rawValue) to update it")
+        for answer in [read, write] {
+            #expect(!answer.ok)
+            #expect(answer.error == .versionMismatch)
+            #expect(answer.message == expected)
+        }
+        #expect(env.helper.requests.allSatisfy { $0.action == .status })
+    }
+
+    @Test func minimumHelperVersionForTheClipboard() {
+        #expect(AgentGate.minimumHelperVersion(for: .readClipboard) == "1.0.8")
+        #expect(AgentGate.minimumHelperVersion(for: .writeClipboard(text: "a")) == "1.0.8")
+        #expect(AgentGate.minimumHelperVersion(for: .setClipboard(text: "a", clearAfter: 1)) == nil)
+    }
+
+    @Test func readClipboardNeverLogsText() async throws {
+        let env = try Env(helperVersion: "1.0.8")
+        defer { env.cleanup() }
+        let secret = "hunter2-on-the-clipboard"
+        env.helper.clipboardReply = AgentReply(ok: true, clipboard: secret)
+        let server = try env.start()
+        defer { server.stop() }
+
+        let client = env.client("mcp")
+        let answer = try await blocking { try client.send(.readClipboard) }
+        #expect(answer.clipboard == secret)
+        let entry = try #require(env.log(server).last)
+        #expect(entry.op == "readClipboard")
+        #expect(entry.detail == ["chars": String(secret.count)])
+        #expect(Self.bundleBytes(env).range(of: Data(secret.utf8)) == nil)
+    }
+
+    @Test func writeClipboardNeverLogsText() async throws {
+        let env = try Env(helperVersion: "1.0.8")
+        defer { env.cleanup() }
+        let secret = "hunter2-to-the-clipboard"
+        let server = try env.start()
+        defer { server.stop() }
+
+        let client = env.client("mcp")
+        _ = try await blocking { try client.send(.writeClipboard(text: secret)) }
+        let entry = try #require(env.log(server).last)
+        #expect(entry.op == "writeClipboard")
+        #expect(entry.detail == ["chars": String(secret.count)])
+        #expect(Self.bundleBytes(env).range(of: Data(secret.utf8)) == nil)
+    }
+
+    /// Every byte of every file in the VM's bundle (the activity log among them).
+    private static func bundleBytes(_ env: Env) -> Data {
+        var all = Data()
+        let walker = FileManager.default.enumerator(at: env.bundle.url, includingPropertiesForKeys: [.isRegularFileKey])
+        while let url = walker?.nextObject() as? URL {
+            guard (try? url.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true else { continue }
+            all.append((try? Data(contentsOf: url)) ?? Data())
+        }
+        return all
+    }
+
+    /// A 1 MiB clipboard of a character JSON escapes (`/` becomes `\/`) crosses the socket in
+    /// both directions.
+    @Test func aMebibyteClipboardRoundTrips() async throws {
+        let env = try Env(helperVersion: "1.0.8")
+        defer { env.cleanup() }
+        let big = String(repeating: "/", count: AgentProtocol.maxClipboardBytes)
+        env.helper.clipboardReply = AgentReply(ok: true, clipboard: big)
+        let server = try env.start()
+        defer { server.stop() }
+
+        let client = env.client()
+        let (read, write) = try await blocking {
+            (try client.send(.readClipboard), try client.send(.writeClipboard(text: big)))
+        }
+        #expect(read.ok)
+        #expect(read.clipboard == big)
+        #expect(write.ok)
+        #expect(env.helper.requests.last?.action == .writeClipboard(text: big))
+    }
+
+    /// A line over 64 KiB that is not a clipboard write is refused as soon as its first 64 KiB
+    /// are in, never buffered up to the clipboard's limit nor decoded.
+    @Test func oversizeNonClipboardLinesAreRefusedEarly() async throws {
+        let env = try Env(helperVersion: "1.0.8")
+        defer { env.cleanup() }
+        let server = try env.start()
+        defer { server.stop() }
+
+        for size in [AgentControlServer.maxLineBytes + 1, 5 * 1024 * 1024] {
+            let raw = try RawConnection(env.socketURL, vmID: env.config.id, bundle: env.bundle.url)
+            let answer = try await blocking {
+                try raw.send(.type(text: String(repeating: "a", count: size)))
+                return try raw.readAnswer()
+            }
+            #expect(answer?.ok == false)
+            #expect(answer?.message == L10n.string("command longer than 64 KiB"))
+        }
+        #expect(env.helper.requests.isEmpty)
+    }
+
+    @Test func cleanedClipboardKeepsNewlines() {
+        let answer = AgentAnswer(ok: true, clipboard: "a\r\nb\tc\u{1B}d\u{9B}e\u{200B}f\n\ng ").cleaned
+        #expect(answer.clipboard == "a\nb\tcdef\n\ng ")
+        // Bidi overrides are format characters; Unicode line and paragraph separators become lines.
+        let unicode = AgentAnswer(ok: true, clipboard: "a\u{202E}b\u{2028}c\u{2029}d").cleaned
+        #expect(unicode.clipboard == "ab\nc\nd")
+        let long = String(repeating: "é\n", count: 5000)
+        #expect(AgentAnswer(ok: true, clipboard: long).cleaned.clipboard == long)
+    }
+
+    /// A compromised guest may send more than the limit: the Mac cuts it at a character boundary.
+    @Test func cleanedClipboardIsCutAtTheLimit() {
+        let limit = AgentProtocol.maxClipboardBytes
+        let over = AgentAnswer(ok: true, truncated: false,
+                               clipboard: String(repeating: "a", count: limit - 1) + "é" + "tail").cleaned
+        #expect(over.clipboard?.utf8.count == limit - 1)
+        #expect(over.truncated == true)
+        let exact = AgentAnswer(ok: true, truncated: false, clipboard: String(repeating: "a", count: limit)).cleaned
+        #expect(exact.clipboard?.utf8.count == limit)
+        #expect(exact.truncated == false)
+        // The guest's own cut is kept.
+        #expect(AgentAnswer(ok: true, truncated: true, clipboard: "abc").cleaned.truncated == true)
+    }
+
     /// The checkpoint ops are the owner's own: never forwarded to Nido Agent, refused when the
     /// owner hands the gate no checkpoint handling, and logged like any other command.
     @Test func checkpointOpsWithoutHandlingAreRefused() async throws {
@@ -811,6 +1092,356 @@ private func blocking<T: Sendable>(_ body: @escaping @Sendable () throws -> T) a
         #expect(answer.error == .versionMismatch)
         #expect(answer.message == L10n.string("Nido Agent is too old for ui_tree: run nido agent setup \(env.config.name.rawValue) to update it"))
         #expect(!env.helper.requests.contains { if case .uiTree = $0.action { true } else { false } })
+    }
+
+    // MARK: - read_text
+
+    private static func zooms(_ helper: FakeHelper) -> [AgentRequest] {
+        helper.requests.filter { if case .zoom = $0.action { true } else { false } }
+    }
+
+    private static let hello = RecognizedText(text: "Hello", box: CGRect(x: 0, y: 0.5, width: 0.5, height: 0.5))
+
+    @Test func readTextSendsAZoom() async throws {
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let server = try env.start(recognizer: FakeRecognizer([Self.hello]))
+        defer { server.stop() }
+
+        let client = env.client()
+        _ = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return try client.readText(region: nil, maxLines: 300)
+        }
+        let zoom = try #require(Self.zooms(env.helper).first)
+        #expect(zoom.action == .zoom(x: 0, y: 0, width: 1280, height: 800, maxLongEdge: 4096))
+        #expect(zoom.image == FakeHelper.image)
+        #expect(zoom.screen == FakeHelper.screen)
+        // The guest never learns of a new op.
+        #expect(env.helper.requests.allSatisfy {
+            switch $0.action {
+            case .status, .screenshot, .zoom: true
+            default: false
+            }
+        })
+    }
+
+    @Test func readTextAnswersMappedLines() async throws {
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let recognizer = FakeRecognizer([Self.hello])
+        let server = try env.start(recognizer: recognizer)
+        defer { server.stop() }
+
+        let client = env.client()
+        let answers = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            recognizer.found = [Self.hello, RecognizedText(text: "World", box: CGRect(x: 0, y: 0, width: 0.5, height: 0.5))]
+            return [
+                try client.readText(region: nil, maxLines: 300),
+                try client.readText(region: nil, maxLines: 1),
+                try client.readText(region: PixelRect(x: 1200, y: 700, w: 500, h: 500), maxLines: 300),
+            ]
+        }
+        #expect(answers[0].ok)
+        #expect(answers[0].lines == [
+            TextLine(text: "Hello", frame: PixelRect(x: 0, y: 0, w: 640, h: 400)),
+            TextLine(text: "World", frame: PixelRect(x: 0, y: 400, w: 640, h: 400)),
+        ])
+        #expect(answers[0].truncated == false)
+        // Text only: no capture is handed to the client.
+        #expect(answers[0].path == nil)
+        #expect(answers[1].lines?.count == 1)
+        #expect(answers[1].truncated == true)
+        // A partial region is clamped to the screenshot, like a zoom; frames are in screenshot pixels.
+        let zooms = Self.zooms(env.helper)
+        #expect(zooms[2].action == .zoom(x: 1200, y: 700, width: 80, height: 100, maxLongEdge: 4096))
+        #expect(answers[2].lines?.first == TextLine(text: "Hello", frame: PixelRect(x: 1200, y: 700, w: 40, h: 50)))
+        #expect(recognizer.pngs.allSatisfy { $0 == FakeHelper.png })
+    }
+
+    @Test func readTextOutsideTheScreenshotIsRefused() async throws {
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let server = try env.start(recognizer: FakeRecognizer([Self.hello]))
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return try client.readText(region: PixelRect(x: 5000, y: 5000, w: 10, h: 10), maxLines: 300)
+        }
+        #expect(answer.error == .badRequest)
+        #expect(Self.zooms(env.helper).isEmpty)
+    }
+
+    @Test func screenChangedIsReported() async throws {
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let recognizer = FakeRecognizer([Self.hello])
+        let server = try env.start(recognizer: recognizer)
+        defer { server.stop() }
+
+        let client = env.client()
+        let helper = env.helper
+        let answer = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            helper.zoomReply = AgentReply(ok: false, error: .screenChanged, message: "the screen changed")
+            return try client.readText(region: nil, maxLines: 300)
+        }
+        #expect(answer.error == .screenChanged)
+        #expect(answer.lines == nil)
+        #expect(recognizer.pngs.isEmpty)
+    }
+
+    /// "No text found" is a successful answer with no lines, never a version mismatch.
+    @Test func noTextIsAnEmptyOkAnswer() async throws {
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let server = try env.start(recognizer: FakeRecognizer([]))
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return try client.readText(region: nil, maxLines: 300)
+        }
+        #expect(answer.ok)
+        #expect(answer.error == nil)
+        #expect(answer.lines == [])
+    }
+
+    @Test func noScreenshotFirst() async throws {
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let server = try env.start(recognizer: FakeRecognizer([Self.hello]))
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking { try client.readText(region: nil, maxLines: 300) }
+        #expect(answer.error == .noScreenshot)
+        #expect(env.helper.requests.isEmpty)
+    }
+
+    @Test func recognizerFailureIsAnError() async throws {
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let server = try env.start(recognizer: FakeRecognizer(failure: true))
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return try client.readText(region: nil, maxLines: 300)
+        }
+        #expect(answer.ok == false)
+        #expect(answer.error == .internalError)
+    }
+
+    @Test func oldHelperNamesReadText() async throws {
+        let env = try Env(helperVersion: "1.0.3")
+        defer { env.cleanup() }
+        let recognizer = FakeRecognizer([Self.hello])
+        let server = try env.start(recognizer: recognizer)
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return try client.readText(region: nil, maxLines: 300)
+        }
+        #expect(answer.error == .versionMismatch)
+        #expect(answer.message == L10n.string("Nido Agent is too old for read_text: run nido agent setup \(env.config.name.rawValue) to update it"))
+        #expect(Self.zooms(env.helper).isEmpty)
+        #expect(recognizer.pngs.isEmpty)
+    }
+
+    @Test func readTextIsLoggedWithoutText() async throws {
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let secret = "hunter2-on-screen"
+        let server = try env.start(recognizer: FakeRecognizer([RecognizedText(text: secret, box: Self.hello.box)]))
+        defer { server.stop() }
+
+        let client = env.client("mcp")
+        let answer = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return try client.readText(region: PixelRect(x: 10, y: 20, w: 300, h: 200), maxLines: 300)
+        }
+        #expect(answer.lines?.first?.text == secret)
+        let log = env.log(server)
+        let entry = try #require(log.last)
+        #expect(entry.op == "readText")
+        #expect(entry.detail == ["region": "10,20,300,200", "lines": "1"])
+        #expect(entry.ok)
+        let thumb = try #require(entry.thumb)
+        #expect(FileManager.default.fileExists(atPath: AgentActivityLog.thumbnailURL(thumb, in: env.bundle).path))
+        let raw = try JSONEncoder().encode(log)
+        #expect(!String(decoding: raw, as: UTF8.self).contains(secret))
+    }
+
+    @Test func linesAreCleaned() async throws {
+        let dirty = "a\u{1B}[31mb\nc\u{9B}d" + String(repeating: "x", count: 400)
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let server = try env.start(recognizer: FakeRecognizer([RecognizedText(text: dirty, box: Self.hello.box)]))
+        defer { server.stop() }
+
+        let client = env.client()
+        let answer = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return try client.readText(region: nil, maxLines: 300)
+        }
+        let text = try #require(answer.lines?.first?.text)
+        #expect(!text.contains("\u{1B}") && !text.contains("\n") && !text.contains("\u{9B}"))
+        #expect(text.count <= 200)
+    }
+
+    /// An owner started before read text existed ignores the unknown key and answers a plain status.
+    @Test func readTextOnAnOwnerTooOld() async throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        try AgentControlServer.prepareDirectory(env.root)
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        try #require(fd >= 0)
+        defer { close(fd) }
+        var address = try AgentControlServer.socketAddress(env.socketURL)
+        let bound = withUnsafePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
+        }
+        try #require(bound == 0 && listen(fd, 1) == 0)
+        let status = FakeHelper().status
+        Thread {
+            let conn = accept(fd, nil, nil)
+            guard conn >= 0 else { return }
+            defer { close(conn) }
+            var byte: UInt8 = 0
+            while read(conn, &byte, 1) == 1, byte != 0x0A {}
+            var line = (try? JSONEncoder().encode(AgentAnswer(ok: true, status: status))) ?? Data()
+            line.append(0x0A)
+            _ = line.withUnsafeBytes { write(conn, $0.baseAddress, $0.count) }
+        }.start()
+
+        let client = env.client()
+        let answer = try await blocking { try client.readText(region: nil, maxLines: 300) }
+        #expect(answer.ok == false)
+        #expect(answer.error == .versionMismatch)
+        #expect(answer.message == L10n.string("The VM was started by an older Nido that can’t read text: restart \(env.config.name.rawValue) with this version"))
+    }
+
+    @Test func readTextRegionNearIntMaxIsRefusedNotACrash() async throws {
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let server = try env.start(recognizer: FakeRecognizer([Self.hello]))
+        defer { server.stop() }
+
+        let client = env.client()
+        let answers = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return [
+                try client.readText(region: PixelRect(x: Int.max, y: 0, w: 1, h: 1), maxLines: 300),
+                try client.readText(region: PixelRect(x: 0, y: Int.max, w: 1, h: 1), maxLines: 300),
+                try client.readText(region: PixelRect(x: 5, y: 5, w: Int.max, h: Int.max), maxLines: 300),
+            ]
+        }
+        #expect(answers[0].error == .badRequest)
+        #expect(answers[1].error == .badRequest)
+        // A huge size from a valid origin is cut to the screenshot, like a zoom.
+        #expect(answers[2].ok)
+        // The owner is alive.
+        let status = try await blocking { try client.send(.status) }
+        #expect(status.ok)
+    }
+
+    @Test func readTextOnAnotherActionIsRefused() throws {
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let server = try env.start(recognizer: FakeRecognizer([Self.hello]))
+        defer { server.stop() }
+
+        let conn = try RawConnection(env.socketURL, vmID: env.config.id, bundle: env.bundle.url)
+        let command = AgentCommand(
+            vmID: env.config.id, bundlePath: AgentCommand.bundlePath(env.bundle.url), action: .key(combo: "a"),
+            client: nil, session: nil, staged: nil, readText: ReadTextRequest(region: nil, maxLines: 5))
+        var line = try JSONEncoder().encode(command)
+        line.append(0x0A)
+        conn.write(line)
+        let answer = try #require(try conn.readAnswer())
+        #expect(answer.error == .badRequest)
+        #expect(env.helper.requests.isEmpty)
+    }
+
+    @Test func recognizerWarmsUpWhenTheServerStarts() async throws {
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let recognizer = FakeRecognizer([Self.hello])
+        let server = try env.startWarming(recognizer: recognizer)
+        defer { server.stop() }
+
+        for _ in 0..<200 where recognizer.pngs.isEmpty { try await Task.sleep(for: .milliseconds(25)) }
+        #expect(recognizer.pngs.count == 1)
+        #expect(recognizer.pngs.first?.starts(with: [0x89, 0x50, 0x4E, 0x47]) == true)
+
+        // A read does not warm up again.
+        let client = env.client()
+        _ = try await blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return try client.readText(region: nil, maxLines: 300)
+        }
+        #expect(recognizer.pngs.count == 2)
+    }
+
+    @Test func readTextAwaitsTheWarmUpInsteadOfLoadingTwice() async throws {
+        let env = try Env(helperVersion: "1.0.7")
+        defer { env.cleanup() }
+        let recognizer = FakeRecognizer([Self.hello])
+        recognizer.warmUpHold = true
+        let server = try env.startWarming(recognizer: recognizer)
+        defer { server.stop() }
+        for _ in 0..<200 where recognizer.pngs.isEmpty { try await Task.sleep(for: .milliseconds(25)) }
+        #expect(recognizer.pngs.count == 1)
+
+        let client = env.client()
+        async let answer = blocking {
+            _ = try client.send(.screenshot(maxLongEdge: 1280))
+            return try client.readText(region: nil, maxLines: 300)
+        }
+        // While the warm-up holds, the read has not reached the recognizer; other commands answer.
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(recognizer.pngs.count == 1)
+        recognizer.release()
+        let result = try await answer
+        #expect(result.ok)
+        #expect(recognizer.pngs.count == 2)
+    }
+
+    /// The first call after the owner starts can take longer than any plain timeout: a timeout on
+    /// read_text says so, with a way forward.
+    @Test func readTextTimeoutSaysRecognitionIsStarting() async throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        try AgentControlServer.prepareDirectory(env.root)
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        try #require(fd >= 0)
+        defer { close(fd) }
+        var address = try AgentControlServer.socketAddress(env.socketURL)
+        let bound = withUnsafePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
+        }
+        try #require(bound == 0 && listen(fd, 1) == 0)
+        Thread {
+            let conn = accept(fd, nil, nil)
+            guard conn >= 0 else { return }
+            Thread.sleep(forTimeInterval: 2)
+            close(conn)
+        }.start()
+
+        let client = env.client()
+        let answer = try await blocking { try client.readText(region: nil, maxLines: 300, timeout: .milliseconds(300)) }
+        #expect(answer.ok == false)
+        #expect(answer.error == .timeout)
+        #expect(answer.message == L10n.string("Text recognition is still starting on this Mac: try read_text again in a minute"))
+        #expect(AgentControlClient.readTextTimeout >= AgentControlClient.timeout(for: .zoom(x: 0, y: 0, width: 1, height: 1, maxLongEdge: 1)) + .seconds(150))
     }
 
     // MARK: - Files
@@ -1249,6 +1880,19 @@ private func blocking<T: Sendable>(_ body: @escaping @Sendable () throws -> T) a
         #expect(cleaned.tree?.elements[0].value == nil)
         #expect(cleaned.tree?.elements[0].name == "Password")
         #expect(!(String(decoding: (try? JSONEncoder().encode(cleaned)) ?? Data(), as: UTF8.self)).contains("hunter2"))
+    }
+
+    @Test func cleanedKeepsArea() {
+        let tree = UITree(app: "Safari", elements: [
+            UIElement(id: 0, role: "button", name: "Go", value: nil, enabled: true, focused: false,
+                      frame: PixelRect(x: 1, y: 2, w: 3, h: 4)),
+            UIElement(id: 1, role: "menuBarItem", name: "File", value: nil, enabled: true, focused: false,
+                      frame: PixelRect(x: 1, y: 2, w: 3, h: 4), area: .menuBar),
+            UIElement(id: 2, role: "dockItem", name: "Finder", value: "running", enabled: true, focused: false,
+                      frame: PixelRect(x: 1, y: 2, w: 3, h: 4), area: .dock),
+        ], truncated: false)
+        let cleaned = AgentAnswer(ok: true, tree: tree).cleaned
+        #expect(cleaned.tree?.elements.map(\.area) == [nil, .menuBar, .dock])
     }
 
     @Test func zoomOnOldHelper() async throws {

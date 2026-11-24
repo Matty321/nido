@@ -184,9 +184,14 @@ extension CLISupport {
             let names = outcome.applied.map(\.rawValue).joined(separator: ", ")
             lines.append(L10n.string("Also applied to the fresh Macs of \(name.rawValue): \(names)."))
         }
-        for (copy, reason) in outcome.failed {
+        for (copy, reason, damagedList) in outcome.failed {
             let shown = ConsoleSanitizer.echoable(reason)
-            lines.append(L10n.string("Couldn’t apply it to the fresh Mac \(copy.rawValue): \(shown)."))
+            if damagedList {
+                lines.append(L10n.string(
+                    "Couldn’t apply it to the fresh Mac \(copy.rawValue): \(shown). To repair its list: nido net reset \(copy.rawValue)"))
+            } else {
+                lines.append(L10n.string("Couldn’t apply it to the fresh Mac \(copy.rawValue): \(shown)."))
+            }
         }
         return lines
     }

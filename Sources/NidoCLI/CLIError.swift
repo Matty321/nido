@@ -180,7 +180,7 @@ extension CLIError: LocalizedError {
         case .agentNotServed(let message):
             message
         case .unknownAgentAction(let name):
-            L10n.string("unknown action “\(ConsoleSanitizer.echoable(name))”: use status, screenshot, zoom, ui-tree, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file or files")
+            L10n.string("unknown action “\(ConsoleSanitizer.echoable(name))”: use status, screenshot, zoom, ui-tree, ocr, click, drag, scroll, type, key, wait, checkpoint, rollback, checkpoints, put-file, get-file, files, clipboard or clipboard-set")
         case .agentUsage(let syntax):
             L10n.string("usage: nido act <vm> \(syntax)")
         case .agentLogClearNeedsConfirmation:

@@ -19,12 +19,15 @@ public enum FreshCopies {
     /// Runs `edit` on the list of every copy of `base` (`EgressPolicyStore.update`, under each
     /// copy's own lock), after the caller wrote the base. Best effort: a copy that fails (its
     /// list does not load, `edit` throws, the write fails) is left as it is and listed in
-    /// `failed` with the error's description; the others still get the change.
+    /// `failed` with the error's description, and `damagedList` when its `egress.json` is
+    /// unreadable or invalid (`nido net reset` repairs it); the others still get the change. A
+    /// copy deleted while the change ran (ENOENT, or its folder gone) is neither applied nor
+    /// failed: there is nothing left to repair.
     public static func propagate(
         from base: VMBundle, paths: NidoPaths, _ edit: (inout EgressPolicy) throws -> Void
-    ) -> (applied: [VMName], failed: [(VMName, String)]) {
+    ) -> (applied: [VMName], failed: [(name: VMName, reason: String, damagedList: Bool)]) {
         var applied: [VMName] = []
-        var failed: [(VMName, String)] = []
+        var failed: [(name: VMName, reason: String, damagedList: Bool)] = []
         for copy in of(base, paths: paths) {
             // `of` just read it; a copy deleted since then is skipped.
             guard let name = try? copy.readConfig().name else { continue }
@@ -32,9 +35,21 @@ public enum FreshCopies {
                 try EgressPolicyStore.update(bundle: copy, edit)
                 applied.append(name)
             } catch {
-                failed.append((name, error.localizedDescription))
+                if isGone(error, copy) { continue }
+                // `save` throws the same error for a list at its limit: damaged only when the
+                // file on disk does not load.
+                var damaged = false
+                if case NidoError.invalidEgressPolicy = error {
+                    damaged = EgressPolicyStore.load(bundle: copy) == nil
+                }
+                failed.append((name, error.localizedDescription, damaged))
             }
         }
         return (applied, failed)
+    }
+
+    private static func isGone(_ error: any Error, _ copy: VMBundle) -> Bool {
+        if let posix = error as? POSIXError, posix.code == .ENOENT { return true }
+        return !FileManager.default.fileExists(atPath: copy.url.path)
     }
 }

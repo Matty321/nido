@@ -75,6 +75,36 @@ public struct AgentControlClient: Sendable {
         }
     }
 
+    /// The text on the VM's screen (read text): the owner takes a capture at native density of
+    /// `region` (pixels of the latest screenshot, nil: all of it), recognizes the text on the Mac
+    /// and answers `lines` and `truncated` (at most `maxLines`), never the capture.
+    public func readText(region: PixelRect?, maxLines: Int) throws -> AgentAnswer {
+        try readText(region: region, maxLines: maxLines, timeout: Self.readTextTimeout)
+    }
+
+    func readText(region: PixelRect?, maxLines: Int, timeout: Duration) throws -> AgentAnswer {
+        let answer = try send(.status, staged: nil, readText: ReadTextRequest(region: region, maxLines: maxLines),
+                              timeout: timeout)
+        // The first recognition after the owner starts loads Vision's model: say so, not "no answer".
+        if answer.error == .timeout {
+            return .failure(.timeout, L10n.string(
+                "Text recognition is still starting on this Mac: try read_text again in a minute"))
+        }
+        // An owner started before read text existed ignores the unknown key and answers a plain
+        // status: an ok answer without lines.
+        if answer.ok, answer.lines == nil {
+            return .failure(.versionMismatch, L10n.string(
+                "The VM was started by an older Nido that can’t read text: restart \(vmName) with this version"))
+        }
+        return answer
+    }
+
+    /// How long the client waits for read text: a zoom's, plus the recognition on the Mac, which
+    /// on the first call of the owner's process includes loading Vision's text model (over a minute
+    /// seen); the owner warms it up at start, so this is only for a read that comes too early.
+    static let readTextTimeout: Duration = timeout(for: .zoom(x: 0, y: 0, width: 1, height: 1, maxLongEdge: 1))
+        + .seconds(150)
+
     /// Copies `data` to `path` in the guest's `~/NidoTransfer` (`putFile`): the bytes are staged
     /// in the bundle (`AgentFiles`) and only their name travels to the owner, which reads and
     /// deletes them; whatever the answer, nothing of this call stays staged. More than
@@ -134,8 +164,17 @@ public struct AgentControlClient: Sendable {
         try send(action, staged: nil, timeout: timeout)
     }
 
+    /// The command as it goes on the wire, without the line end. Sorted keys put `action` first,
+    /// and its `op` before its `text` (`AgentControlServer.longLinePrefix`).
+    static func encode(_ command: AgentCommand) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return try encoder.encode(command)
+    }
+
     /// `send(_:timeout:)` with the name of the staged file that holds a `putFile`'s bytes.
-    func send(_ action: AgentAction, staged: String?, timeout: Duration) throws -> AgentAnswer {
+    func send(_ action: AgentAction, staged: String?, readText: ReadTextRequest? = nil,
+              timeout: Duration) throws -> AgentAnswer {
         let deadline = ContinuousClock.now + timeout
         let url = AgentControlServer.socketURL(vmID: vmID, root: root)
         var address = try AgentControlServer.socketAddress(url)
@@ -172,9 +211,11 @@ public struct AgentControlClient: Sendable {
         let flags = fcntl(fd, F_GETFL)
         guard flags >= 0, fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 else { throw AgentControlServer.posixError() }
 
-        var line = try JSONEncoder().encode(AgentCommand(
+        // Sorted keys put `action` first, and its `op` before its `text`: the owner lets only a
+        // line that starts so with `writeClipboard` be longer than `maxLineBytes`.
+        var line = try Self.encode(AgentCommand(
             vmID: vmID, bundlePath: AgentCommand.bundlePath(bundle), action: action, client: client, session: session,
-            staged: staged))
+            staged: staged, readText: readText))
         line.append(0x0A)
         switch write(line, to: fd, before: deadline) {
         case .done, .closed: break  // closed: the owner refused the line; its answer may be waiting
@@ -243,7 +284,7 @@ public struct AgentControlClient: Sendable {
                 let start = buffer.count
                 buffer.append(contentsOf: chunk[..<n])
                 if let newline = buffer[start...].firstIndex(of: 0x0A) { return .line(Data(buffer[..<newline])) }
-                guard buffer.count <= AgentControlServer.maxAnswerBytes + 1 else { return .closed }
+                guard buffer.count <= AgentControlServer.maxClipboardAnswerBytes + 1 else { return .closed }
                 continue
             }
             if n < 0 && errno == EINTR { continue }

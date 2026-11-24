@@ -11,6 +11,22 @@ public protocol GuestPasteboard: AnyObject {
     /// it; returns the change count after the write.
     func writeConcealed(_ text: String) -> Int
     func clearContents()
+    /// The plain text on the pasteboard; `.concealed` when an item is marked concealed or
+    /// transient, whatever else it holds; `.none` when there is no text or it is empty.
+    func readPlain() -> PasteboardText
+    /// Replaces the contents with `text` as a plain string, not concealed; returns the change count,
+    /// or nil when the pasteboard refused the string.
+    func writePlain(_ text: String) -> Int?
+}
+
+/// What the pasteboard holds, as far as an agent may read it.
+public enum PasteboardText: Equatable, Sendable {
+    case text(String)
+    /// A concealed item (a password): its text is never given out.
+    case concealed
+    case none
+    /// The system's paste privacy forbids this app to read the pasteboard.
+    case denied
 }
 
 /// Puts text on the pasteboard and clears it after a delay, but only if nothing was copied since:
@@ -35,6 +51,10 @@ public final class ClipboardSetter: ClipboardSink {
             if pasteboard.changeCount == written { pasteboard.clearContents() }
         }
     }
+
+    public func readPlain() async -> PasteboardText { pasteboard.readPlain() }
+
+    public func writePlain(_ text: String) async -> Bool { pasteboard.writePlain(text) != nil }
 
     /// The real clock: a task that sleeps `seconds`, then runs `action`.
     public static func afterDelay(_ seconds: Int, _ action: @escaping @MainActor () -> Void) {

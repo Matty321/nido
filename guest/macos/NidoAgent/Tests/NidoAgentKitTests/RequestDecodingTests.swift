@@ -63,6 +63,13 @@ private func refusal(_ decoding: RequestDecoding) -> AgentReply? {
     #expect(AgentDispatcher.decodeRequest(data) == .request(request))
 }
 
+@Test func clipboardOpsDecodeFromJSON() {
+    #expect(decode(#"{"v":1,"action":{"op":"readClipboard"}}"#) == .request(AgentRequest(action: .readClipboard)))
+    #expect(decode(#"{"v":1,"action":{"op":"writeClipboard","text":"hi"}}"#)
+        == .request(AgentRequest(action: .writeClipboard(text: "hi"))))
+    #expect(refusal(decode(#"{"v":1,"action":{"op":"writeClipboard"}}"#))?.ok == false)
+}
+
 @Test func zoomRoundTrips() throws {
     let action = AgentAction.zoom(x: 10, y: 20, width: 300, height: 200, maxLongEdge: 1280)
     let data = try JSONEncoder().encode(action)

@@ -26,6 +26,19 @@ private final class FakePasteboard: GuestPasteboard {
         clears += 1
     }
 
+    var plainWrites: [String] = []
+    func readPlain() -> PasteboardText {
+        if concealed { return .concealed }
+        return text.map { .text($0) } ?? .none
+    }
+    func writePlain(_ text: String) -> Int? {
+        changeCount += 1
+        self.text = text
+        concealed = false
+        plainWrites.append(text)
+        return changeCount
+    }
+
     /// Another app copies something.
     func copyElsewhere(_ text: String) {
         changeCount += 1
@@ -68,6 +81,18 @@ private final class ManualClock {
         clock.fire()
         #expect(pasteboard.text == nil)
         #expect(pasteboard.clears == 1)
+    }
+
+    /// Reading and writing plain text pass through, and a plain write never conceals.
+    @Test func plainReadAndWritePassThrough() async {
+        let pasteboard = FakePasteboard()
+        let setter = ClipboardSetter(pasteboard: pasteboard)
+        await setter.writePlain("note")
+        #expect(pasteboard.plainWrites == ["note"])
+        #expect(pasteboard.concealed == false)
+        #expect(await setter.readPlain() == .text("note"))
+        await setter.set("pw", clearAfter: 60)
+        #expect(await setter.readPlain() == .concealed)
     }
 
     /// The user (or another app) copied something else meanwhile: that is not cleared.

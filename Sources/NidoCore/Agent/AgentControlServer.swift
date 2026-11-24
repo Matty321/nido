@@ -57,10 +57,19 @@ public final class AgentControlServer: Sendable {
     /// The longest command line accepted, without its `\n`. A `type` action of a long text fits;
     /// a client cannot make the owner buffer more than this.
     static let maxLineBytes = 64 * 1024
+    /// The longest line a `writeClipboard` command may be: 1 MiB of text JSON-escapes to at most
+    /// six times its size (a control character is `\u00XX`), plus the envelope. Any other
+    /// command over `maxLineBytes` is refused once its line is read.
+    static let maxClipboardLineBytes = 6 * AgentProtocol.maxClipboardBytes + maxLineBytes
+    /// How a line over `maxLineBytes` must start to be read at all: the client encodes with sorted
+    /// keys (`AgentControlClient.encode`), which puts `action` first and its `op` before `text`.
+    static let longLinePrefix = Data(#"{"action":{"op":"writeClipboard""#.utf8)
 
     /// The longest `AgentAnswer` line (a `uiTree` of 1000 elements with long names is far above
     /// `maxLineBytes`, which only bounds the commands the server reads).
     static let maxAnswerBytes = 2 * 1024 * 1024
+    /// The longest answer that carries clipboard text: 1 MiB escapes to six times that.
+    static let maxClipboardAnswerBytes = maxClipboardLineBytes
     /// Connections served at once. Each has a thread blocked in `read`; more are closed at once.
     static let maxConnections = 32
     /// How long writing an answer may block on a client that stopped reading.
@@ -92,10 +101,11 @@ public final class AgentControlServer: Sendable {
         bundle: VMBundle, vmID: UUID,
         perform: @escaping @Sendable (AgentRequest) async throws(AgentFailure) -> (AgentReply, Data?),
         checkpoints: (any AgentCheckpointHandling)? = nil,
+        recognizer: any TextRecognizing = VisionTextRecognizer(),
         root: URL = defaultRoot
     ) throws -> AgentControlServer {
         try start(bundle: bundle, vmID: vmID, perform: perform, checkpoints: checkpoints, root: root,
-                  sendTimeoutSeconds: sendTimeoutSeconds)
+                  sendTimeoutSeconds: sendTimeoutSeconds, recognizer: recognizer)
     }
 
     /// `start` with the send timeout, the activity log's clock and its writer injectable (tests).
@@ -104,11 +114,17 @@ public final class AgentControlServer: Sendable {
         perform: @escaping @Sendable (AgentRequest) async throws(AgentFailure) -> (AgentReply, Data?),
         checkpoints: (any AgentCheckpointHandling)? = nil,
         root: URL, sendTimeoutSeconds: Int, now: @escaping @Sendable () -> Date = { Date() },
-        appendLog: AgentActivityWriter.Append? = nil
+        appendLog: AgentActivityWriter.Append? = nil, recognizer: any TextRecognizing = VisionTextRecognizer(),
+        warmUp: Bool = true
     ) throws -> AgentControlServer {
         let url = socketURL(vmID: vmID, root: root)
         guard url.path.utf8.count <= maxSocketPathBytes else { throw NidoError.unsafePath(url.path) }
-        let vmName = try bundle.readConfig().name.rawValue
+        let config = try bundle.readConfig()
+        let vmName = config.name.rawValue
+        // Vision loads its text model on the first recognition of a process, which can take tens of
+        // seconds: with agent access on, do it now in the background, so the first read_text finds it
+        // loaded. Requests that come meanwhile await this same load.
+        let recognizer = (warmUp && config.agentAccess == true) ? WarmedTextRecognizer(recognizer) : recognizer
         // Files a previous owner staged and nobody read (it crashed, or its clients went away).
         AgentFiles.sweep(in: bundle, olderThan: AgentFiles.maxAge)
         let log = appendLog.map { AgentActivityWriter(vmName: vmName, append: $0) }
@@ -151,7 +167,7 @@ public final class AgentControlServer: Sendable {
                 bundle: bundle, bundlePath: AgentCommand.bundlePath(bundle.url), vmName: vmName,
                 sendTimeoutSeconds: sendTimeoutSeconds,
                 gate: AgentGate(bundle: bundle, vmName: vmName, perform: perform, checkpoints: checkpoints,
-                                now: now, log: log))
+                                recognizer: recognizer, now: now, log: log))
             Thread { core.acceptLoop() }.start()
             return AgentControlServer(core: core)
         } catch {
@@ -415,7 +431,9 @@ public final class AgentControlServer: Sendable {
                 state.withLock { _ = $0.connections.remove(fd) }
                 _ = Darwin.close(fd)
             }
-            var reader = LineReader(fd: fd, limit: AgentControlServer.maxLineBytes)
+            var reader = LineReader(
+                fd: fd, limit: AgentControlServer.maxClipboardLineBytes, softLimit: AgentControlServer.maxLineBytes,
+                longPrefix: AgentControlServer.longLinePrefix)
             // The activity log's session of this connection, set by its first command.
             var session: String?
             while true {
@@ -430,6 +448,13 @@ public final class AgentControlServer: Sendable {
                     guard let decoded = try? JSONDecoder().decode(AgentCommand.self, from: line) else {
                         _ = Self.write(.failure(.badRequest, L10n.string("invalid command")), to: fd)
                         return
+                    }
+                    // Only a clipboard write may be longer than `maxLineBytes`.
+                    if line.count > AgentControlServer.maxLineBytes {
+                        guard case .writeClipboard = decoded.action else {
+                            _ = Self.write(.failure(.badRequest, L10n.string("command longer than 64 KiB")), to: fd)
+                            return
+                        }
                     }
                     // Another VM whose socket name is the same, or a copy of this bundle (same
                     // id, another folder): as if the VM asked for were not running.
@@ -472,7 +497,9 @@ public final class AgentControlServer: Sendable {
         /// `sendTimeoutSeconds`.
         private static func write(_ answer: AgentAnswer, to fd: Int32) -> Bool {
             guard var line = try? JSONEncoder().encode(answer) else { return false }
-            if line.count > AgentControlServer.maxAnswerBytes {
+            let limit = answer.clipboard == nil
+                ? AgentControlServer.maxAnswerBytes : AgentControlServer.maxClipboardAnswerBytes
+            if line.count > limit {
                 // The client would give up on this line as a lost connection: say what is wrong.
                 let failure = AgentAnswer.failure(.internalError, L10n.string("the answer is too large: ask for fewer elements"))
                 guard let small = try? JSONEncoder().encode(failure) else { return false }
@@ -500,13 +527,27 @@ struct LineReader {
 
     let fd: Int32
     let limit: Int
+    /// A line longer than `softLimit` is cut off unless it starts with `longPrefix` (the start of
+    /// the one command allowed to be long, as `AgentControlClient` writes it with sorted keys), so
+    /// a client cannot make the reader buffer more than `softLimit` bytes of any other command,
+    /// nor have it decoded.
+    let softLimit: Int
+    let longPrefix: Data?
     private var buffer: [UInt8] = []
     /// How much of `buffer` is known to hold no `\n`.
     private var scanned = 0
 
-    init(fd: Int32, limit: Int) {
+    init(fd: Int32, limit: Int, softLimit: Int? = nil, longPrefix: Data? = nil) {
         self.fd = fd
         self.limit = limit
+        self.softLimit = softLimit ?? limit
+        self.longPrefix = longPrefix
+    }
+
+    /// Whether a line already past `softLimit` bytes may go on.
+    private func longMayContinue() -> Bool {
+        guard let longPrefix else { return false }
+        return buffer.starts(with: longPrefix)
     }
 
     mutating func next() -> Next {
@@ -514,6 +555,7 @@ struct LineReader {
         while true {
             if let newline = buffer[scanned...].firstIndex(of: 0x0A) {
                 guard newline <= limit else { return .tooLong }
+                guard newline <= softLimit || longMayContinue() else { return .tooLong }
                 let line = Data(buffer[..<newline])
                 buffer.removeSubrange(...newline)
                 scanned = 0
@@ -521,6 +563,7 @@ struct LineReader {
             }
             scanned = buffer.count
             guard buffer.count <= limit else { return .tooLong }
+            guard buffer.count <= softLimit || longMayContinue() else { return .tooLong }
             let n = chunk.withUnsafeMutableBytes { Darwin.read(fd, $0.baseAddress!, $0.count) }
             if n < 0 && errno == EINTR { continue }
             guard n > 0 else { return .end }
@@ -561,6 +604,10 @@ actor AgentGate {
     private let perform: @Sendable (AgentRequest) async throws(AgentFailure) -> (AgentReply, Data?)
     /// The owner's checkpoints; nil when the owner takes none.
     private let checkpoints: (any AgentCheckpointHandling)?
+    /// Reads the text of a capture (read text), on the Mac.
+    private let recognizer: any TextRecognizing
+    /// The region the read-text command being handled captures, once known (for the log).
+    private var readTextRegion: PixelRect?
     /// The sizes of the last screenshot the agent saw: the coordinates of the next click, drag or
     /// scroll refer to that image, and the helper maps them back to points with it.
     private var lastShot: (image: PixelSize, screen: ScreenSize)?
@@ -575,11 +622,13 @@ actor AgentGate {
     init(bundle: VMBundle, vmName: String,
          perform: @escaping @Sendable (AgentRequest) async throws(AgentFailure) -> (AgentReply, Data?),
          checkpoints: (any AgentCheckpointHandling)? = nil,
+         recognizer: any TextRecognizing = VisionTextRecognizer(),
          now: @escaping @Sendable () -> Date = { Date() }, log: AgentActivityWriter) {
         self.bundle = bundle
         self.vmName = vmName
         self.perform = perform
         self.checkpoints = checkpoints
+        self.recognizer = recognizer
         self.now = now
         self.log = log
     }
@@ -619,9 +668,16 @@ actor AgentGate {
         }
         if client == AgentCommand.Client.act { lastAct = (session, time) }
 
-        if client == AgentCommand.Client.nido, command.action == .status { return session }
-        guard let entry = AgentActivityEntry.make(
-            action: command.action, answer: outcome.answer, session: session, client: client, time: time, ms: ms)
+        // A read-text command carries `.status` as its action: only a plain status is filtered out
+        // here, so the `readText` check must stay with it.
+        if client == AgentCommand.Client.nido, command.action == .status, command.readText == nil {
+            return session
+        }
+        guard let entry = command.readText != nil
+            ? AgentActivityEntry.makeReadText(
+                region: readTextRegion, answer: outcome.answer, session: session, client: client, time: time, ms: ms)
+            : AgentActivityEntry.make(
+                action: command.action, answer: outcome.answer, session: session, client: client, time: time, ms: ms)
         else { return session }
         log.enqueue(entry, png: outcome.png)
         return session
@@ -662,7 +718,14 @@ actor AgentGate {
     }
 
     private func handle(_ command: AgentCommand) async -> Outcome {
-        let action = command.action
+        readTextRegion = nil
+        var action = command.action
+        let readText = command.readText
+        // A read-text command is a status carrying the request: on any other action it is malformed.
+        if readText != nil, action != .status {
+            return Outcome(answer: .failure(.badRequest, L10n.string("read_text does not go with another action")),
+                           close: false)
+        }
         // The guest's clipboard is the owner's alone (Settings › Agent, after Touch ID): an agent
         // or `nido act` never writes it. Answered without the text.
         if case .setClipboard = action {
@@ -678,6 +741,21 @@ actor AgentGate {
         }
         if let answer = await answerCheckpoint(action) {
             return Outcome(answer: answer, close: false)
+        }
+        if let readText {
+            // Host-only: the guest is asked for an ordinary zoom of the region, at native density.
+            guard let lastShot else {
+                return Outcome(answer: .failure(
+                    .noScreenshot, L10n.string("take a screenshot first: coordinates refer to the last screenshot")),
+                    close: false)
+            }
+            guard let region = Self.clamp(readText.region, to: lastShot.image) else {
+                return Outcome(answer: .failure(.badRequest, L10n.string("the region is outside the screenshot")),
+                               close: false)
+            }
+            readTextRegion = region
+            action = .zoom(x: Double(region.x), y: Double(region.y), width: Double(region.w),
+                           height: Double(region.h), maxLongEdge: Self.readTextLongEdge)
         }
         var request = AgentRequest(v: AgentProtocol.version, action: action)
         if case .putFile(_, let size) = action {
@@ -718,10 +796,14 @@ actor AgentGate {
                     let name = config.name.rawValue
                     let message: String
                     switch action {
+                    case .zoom where readText != nil:
+                        message = L10n.string("Nido Agent is too old for read_text: run nido agent setup \(name) to update it")
                     case .uiTree:
                         message = L10n.string("Nido Agent is too old for ui_tree: run nido agent setup \(name) to update it")
                     case .putFile, .getFile, .listFiles:
                         message = L10n.string("Nido Agent is too old for files: run nido agent setup \(name) to update it")
+                    case .readClipboard, .writeClipboard:
+                        message = L10n.string("Nido Agent is too old for the clipboard: run nido agent setup \(name) to update it")
                     default:
                         message = L10n.string("Nido Agent is too old to zoom: run nido agent setup \(name) to update it")
                     }
@@ -750,7 +832,7 @@ actor AgentGate {
         }
         var answer = AgentAnswer(ok: reply.ok, status: reply.status, image: reply.image, screen: reply.screen,
                                  error: reply.error, message: reply.message, tree: reply.tree, files: reply.files,
-                                 truncated: reply.truncated, bytes: reply.bytes)
+                                 truncated: reply.truncated, bytes: reply.bytes, clipboard: reply.clipboard)
         if case .getFile = action, reply.ok {
             // The bytes go to the client through the bundle, never in the answer's line.
             guard let data = frame else {
@@ -763,6 +845,26 @@ actor AgentGate {
             }
             answer.bytes = data.count
             return Outcome(answer: answer, close: false)
+        }
+        if let readText, reply.ok {
+            // Fail closed: a read-text command never falls through to the plain image branch,
+            // which would save the capture in agent-shots.
+            guard let region = readTextRegion, let shot = lastShot, let png = frame else {
+                return Outcome(answer: .failure(.internalError, L10n.string("could not talk to Nido Agent")), close: false)
+            }
+            let found: [RecognizedText]
+            do {
+                found = try await recognizer.recognize(png: png)
+            } catch {
+                return Outcome(answer: .failure(.internalError, L10n.string("could not read the text on the screen")),
+                               close: false)
+            }
+            let result = TextReading.lines(
+                found, region: region, screenshot: shot.image, maxLines: max(1, min(readText.maxLines, Self.maxReadTextLines)))
+            // Text only: the capture is for the log's thumbnail, never for the client.
+            return Outcome(answer: AgentAnswer(ok: true, image: shot.image, screen: shot.screen, lines: result.lines,
+                                               truncated: result.truncated),
+                           close: false, png: png)
         }
         if action.isImageAction, reply.ok {
             guard let png = frame, let image = reply.image, let screen = reply.screen else {
@@ -796,12 +898,31 @@ actor AgentGate {
         }
     }
 
+    /// The long edge of a read-text capture, the most a zoom takes: native density, for small text.
+    static let readTextLongEdge = 4096
+    /// The most lines a read-text answer holds.
+    static let maxReadTextLines = 1000
+
+    /// `region` (nil: all of `image`) cut to `image`'s bounds, like a zoom; nil if nothing is left.
+    static func clamp(_ region: PixelRect?, to image: PixelSize) -> PixelRect? {
+        guard let region else { return PixelRect(x: 0, y: 0, w: image.width, h: image.height) }
+        // Each component is bounded before any sum: the numbers come off the socket unchecked.
+        let limit = Int(Int32.max)
+        let rx = min(max(region.x, 0), limit), ry = min(max(region.y, 0), limit)
+        let rw = min(max(region.w, 0), limit), rh = min(max(region.h, 0), limit)
+        let x0 = min(rx, image.width), y0 = min(ry, image.height)
+        let x1 = min(max(rx + rw, x0), image.width), y1 = min(max(ry + rh, y0), image.height)
+        guard x1 > x0, y1 > y0 else { return nil }
+        return PixelRect(x: x0, y: y0, w: x1 - x0, h: y1 - y0)
+    }
+
     /// The first Nido Agent that understands `action`, or nil when every helper does.
     static func minimumHelperVersion(for action: AgentAction) -> String? {
         switch action {
         case .zoom: AgentProtocol.minimumZoomHelperVersion
         case .uiTree: AgentProtocol.minimumUITreeHelperVersion
         case .putFile, .getFile, .listFiles: AgentProtocol.minimumFilesHelperVersion
+        case .readClipboard, .writeClipboard: AgentProtocol.minimumClipboardHelperVersion
         default: nil
         }
     }
@@ -812,7 +933,7 @@ actor AgentGate {
         switch action {
         case .click, .drag, .zoom, .uiTree: true
         case .scroll(_, _, let x, let y): x != nil || y != nil
-        case .status, .screenshot, .type, .key, .setClipboard, .checkpoint, .rollback, .checkpoints,
+        case .status, .screenshot, .type, .key, .setClipboard, .readClipboard, .writeClipboard, .checkpoint, .rollback, .checkpoints,
              .putFile, .getFile, .listFiles: false
         }
     }

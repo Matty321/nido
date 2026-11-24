@@ -22,15 +22,20 @@ public struct AgentCommand: Codable, Equatable, Sendable {
     /// For `putFile`: the name of the staged file in `<bundle>/agent-files/` that holds the bytes
     /// (`AgentFiles`), which never travel in the line. Anything but a staged file's name is refused.
     public var staged: String?
+    /// Set for a read-text request: a host-only request the owner turns into an ordinary `zoom`
+    /// for the guest, which never learns of it. `action` is then only a carrier (`status`) that an
+    /// owner older than read_text would answer harmlessly.
+    public var readText: ReadTextRequest?
 
     public init(vmID: UUID, bundlePath: String, action: AgentAction, client: String? = nil, session: String? = nil,
-                staged: String? = nil) {
+                staged: String? = nil, readText: ReadTextRequest? = nil) {
         self.vmID = vmID
         self.bundlePath = bundlePath
         self.action = action
         self.client = client
         self.session = session
         self.staged = staged
+        self.readText = readText
     }
 
     /// The values of `client`.
@@ -52,6 +57,18 @@ public struct AgentCommand: Codable, Equatable, Sendable {
         guard let resolved = realpath(standardized, nil) else { return standardized }
         defer { free(resolved) }
         return String(cString: resolved)
+    }
+}
+
+/// A request to read the text on the guest's screen: `region` in pixels of the latest screenshot
+/// (nil: all of it), at most `maxLines` lines back.
+public struct ReadTextRequest: Codable, Equatable, Sendable {
+    public var region: PixelRect?
+    public var maxLines: Int
+
+    public init(region: PixelRect?, maxLines: Int) {
+        self.region = region
+        self.maxLines = maxLines
     }
 }
 
@@ -77,18 +94,24 @@ public struct AgentAnswer: Codable, Equatable, Sendable {
     public var checkpoint: AgentCheckpointInfo?
     /// One folder level of `~/NidoTransfer` (`listFiles`), newest first.
     public var files: [TransferEntry]?
-    /// More entries than `files` holds (`listFiles`).
+    /// The text found on the screen, top to bottom, frames in pixels of the latest screenshot
+    /// (a read-text request).
+    public var lines: [TextLine]?
+    /// More entries than `files` holds (`listFiles`), or more lines than asked for (read text).
     public var truncated: Bool?
     /// The size of the file written (`putFile`) or got (`getFile`), in bytes.
     public var bytes: Int?
     /// The staged file that holds what `getFile` got (`AgentFiles`).
     public var staged: String?
+    /// The text on the guest's clipboard (`readClipboard`); `truncated` says the guest cut it.
+    public var clipboard: String?
 
     public init(ok: Bool, status: AgentStatus? = nil, path: String? = nil, image: PixelSize? = nil,
                 screen: ScreenSize? = nil, error: AgentErrorCode? = nil, message: String? = nil,
                 tree: UITree? = nil, checkpoints: [AgentCheckpointInfo]? = nil,
-                checkpoint: AgentCheckpointInfo? = nil, files: [TransferEntry]? = nil, truncated: Bool? = nil,
-                bytes: Int? = nil, staged: String? = nil) {
+                checkpoint: AgentCheckpointInfo? = nil, files: [TransferEntry]? = nil, lines: [TextLine]? = nil,
+                truncated: Bool? = nil,
+                bytes: Int? = nil, staged: String? = nil, clipboard: String? = nil) {
         self.ok = ok
         self.status = status
         self.path = path
@@ -100,9 +123,11 @@ public struct AgentAnswer: Codable, Equatable, Sendable {
         self.checkpoints = checkpoints
         self.checkpoint = checkpoint
         self.files = files
+        self.lines = lines
         self.truncated = truncated
         self.bytes = bytes
         self.staged = staged
+        self.clipboard = clipboard
     }
 
     /// A refusal: `ok` false with a code and a localized message.
@@ -157,6 +182,30 @@ public struct AgentAnswer: Codable, Equatable, Sendable {
             e.name = GuestSSH.sanitize(entry.name, limit: Self.maxFileNameCharacters)
             e.kind = entry.kind == TransferEntry.folder ? TransferEntry.folder : TransferEntry.file
             return e
+        }
+        // The text on the screen is written by whatever the guest shows.
+        copy.lines = lines?.map {
+            TextLine(text: GuestSSH.sanitize($0.text, limit: Self.maxTreeTextCharacters), frame: $0.frame)
+        }
+        // The clipboard is guest text too, but a document: lines and tabs stay. The guest holds it
+        // to `AgentProtocol.maxClipboardBytes`; a guest that sends more is cut here, at a
+        // character boundary, and `truncated` says so.
+        if let clipboard {
+            let clean = GuestSSH.sanitizeMultiline(clipboard)
+            let limit = AgentProtocol.maxClipboardBytes
+            if clean.utf8.count > limit {
+                var kept = ""
+                var bytes = 0
+                for character in clean {
+                    bytes += character.utf8.count
+                    if bytes > limit { break }
+                    kept.append(character)
+                }
+                copy.clipboard = kept
+                copy.truncated = true
+            } else {
+                copy.clipboard = clean
+            }
         }
         return copy
     }

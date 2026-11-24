@@ -97,4 +97,60 @@ import Testing
         #expect(try Data(contentsOf: damaged.bundle.egressPolicyURL) == bad)
         #expect(env.allowList(sound.bundle) == ["example.com"])
     }
+
+    /// A copy deleted after `of` listed it (here: while its own edit runs) is skipped, not failed.
+    @Test func copyDeletedDuringPropagationIsSkipped() throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let a = try env.makeVM("base-a")
+        let gone = try env.makeVM("base-a-fresh-0001", disposable: true, base: a.id)
+        let pattern = try DomainPattern("example.com")
+        let url = gone.bundle.url
+
+        let outcome = FreshCopies.propagate(from: a.bundle, paths: env.paths) {
+            $0.allow.append(pattern)
+            try? FileManager.default.removeItem(at: url)
+        }
+
+        #expect(outcome.applied.isEmpty)
+        #expect(outcome.failed.isEmpty)
+    }
+
+    /// A save-time refusal (the copy's list is at its limit) is not a damaged list.
+    @Test func limitErrorIsNotADamagedList() throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let a = try env.makeVM("base-a")
+        let full = try env.makeVM("base-a-fresh-0001", disposable: true, base: a.id)
+        let damaged = try env.makeVM("base-a-fresh-0002", disposable: true, base: a.id)
+        let names = try (0..<EgressPolicy.maxPatterns).map { try DomainPattern("d\($0).example.com") }
+        try EgressPolicyStore.save(EgressPolicy(v: 1, allow: names), bundle: full.bundle)
+        try Data("{".utf8).write(to: damaged.bundle.egressPolicyURL)
+        let pattern = try DomainPattern("example.com")
+
+        let outcome = FreshCopies.propagate(from: a.bundle, paths: env.paths) { $0.allow.append(pattern) }
+
+        #expect(outcome.applied.isEmpty)
+        #expect(outcome.failed.count == 2)
+        #expect(outcome.failed.first { $0.name.rawValue == "base-a-fresh-0001" }?.damagedList == false)
+        #expect(outcome.failed.first { $0.name.rawValue == "base-a-fresh-0002" }?.damagedList == true)
+    }
+
+    /// The failure of a damaged list says so; any other failure does not.
+    @Test func failureSaysWhetherTheListIsDamaged() throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let a = try env.makeVM("base-a")
+        let damaged = try env.makeVM("base-a-fresh-0001", disposable: true, base: a.id)
+        try env.makeVM("base-a-fresh-0002", disposable: true, base: a.id)
+        try Data("{".utf8).write(to: damaged.bundle.egressPolicyURL)
+        struct Boom: Error {}
+
+        let broken = FreshCopies.propagate(from: a.bundle, paths: env.paths) { _ in }
+        #expect(broken.failed.map(\.name.rawValue) == ["base-a-fresh-0001"])
+        #expect(broken.failed.map(\.damagedList) == [true])
+        let other = FreshCopies.propagate(from: a.bundle, paths: env.paths) { _ in throw Boom() }
+        #expect(other.failed.count == 2)
+        #expect(other.failed.filter(\.damagedList).map(\.name.rawValue) == ["base-a-fresh-0001"])
+    }
 }

@@ -62,6 +62,11 @@ public final class FreshMacActions: AgentActions {
         return try inner.getFile(path, maxBytes: maxBytes)
     }
 
+    public func readText(region: PixelRect?, maxLines: Int) throws -> AgentAnswer {
+        try waitUntilReady()
+        return try inner.readText(region: region, maxLines: maxLines)
+    }
+
     /// Returns once Nido Agent answers `status`: probes every `poll` until `deadline`, then
     /// throws `notReady` after one more probe. Throws `notRunning` as soon as the child has ended.
     private func waitUntilReady() throws {

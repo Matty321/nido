@@ -204,6 +204,19 @@ private final class FakeAuthenticator: OwnerAuthenticator {
 
     // MARK: - Fresh copies
 
+    @Test func otherFailureLineUnchanged() async throws {
+        let env = try Env()
+        defer { env.cleanup() }
+        let full = try env.makeCopy("vm-fresh-0001")
+        let names = try (0..<EgressPolicy.maxPatterns).map { try DomainPattern("d\($0).example.com") }
+        try EgressPolicyStore.save(EgressPolicy(v: 1, allow: names), bundle: full)
+
+        let text = try await env.allow("example.com", FakeAuthenticator(result: true))
+
+        #expect(text.contains("Impossibile applicarlo al Mac nuovo vm-fresh-0001: "))
+        #expect(!text.contains("nido net reset"))
+    }
+
     @Test func allowNamesTheFreshCopies() async throws {
         let env = try Env()
         defer { env.cleanup() }
@@ -219,7 +232,7 @@ private final class FakeAuthenticator: OwnerAuthenticator {
         let (base, names, failed) = ("vm", "vm-fresh-0001, vm-fresh-0002", "vm-fresh-0003")
         #expect(text.contains(L10n.string("Also applied to the fresh Macs of \(base): \(names).")))
         let reason = NidoError.invalidEgressPolicy(L10n.string("egress.json is unreadable or invalid")).localizedDescription
-        #expect(text.contains(L10n.string("Couldn’t apply it to the fresh Mac \(failed): \(reason).")))
+        #expect(text.contains(L10n.string("Couldn’t apply it to the fresh Mac \(failed): \(reason). To repair its list: nido net reset \(failed)")))
         #expect(text.contains("Applicato anche ai Mac nuovi di vm: vm-fresh-0001, vm-fresh-0002."))
         #expect(text.contains("Impossibile applicarlo al Mac nuovo vm-fresh-0003: "))
         #expect(env.allowList() == ["example.com"])

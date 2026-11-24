@@ -3,13 +3,17 @@ import Foundation
 
 public enum AgentProtocol {
     public static let version = 1
-    public static let helperVersion = "1.0.6"
+    public static let helperVersion = "1.0.8"
     /// The first Nido Agent that understands `zoom`.
     public static let minimumZoomHelperVersion = "1.0.4"
     /// The first Nido Agent that understands `uiTree`.
     public static let minimumUITreeHelperVersion = "1.0.5"
     /// The first Nido Agent that understands `putFile`, `getFile` and `listFiles`.
     public static let minimumFilesHelperVersion = "1.0.6"
+    /// The first Nido Agent that understands `readClipboard` and `writeClipboard`.
+    public static let minimumClipboardHelperVersion = "1.0.8"
+    /// The most UTF-8 bytes of text `writeClipboard` takes and `readClipboard` returns.
+    public static let maxClipboardBytes = 1_048_576
     public static let port: UInt32 = 7710
     public static let maxFrameBytes = 32 << 20
     public static let defaultMaxLongEdge = 1280
@@ -51,6 +55,13 @@ public enum AgentAction: Codable, Equatable, Sendable {
     /// own vsock: the control socket of `nido act` and `nido mcp` refuses it. Nido Agent 1.0.2 and
     /// older answer `badRequest`.
     case setClipboard(text: String, clearAfter: Int)
+    /// The text on the guest's pasteboard, as `clipboard` of the reply (cut at `maxClipboardBytes`,
+    /// then `truncated`). A concealed item is refused, never shown. Nido Agent 1.0.7 and older
+    /// answer `badRequest`.
+    case readClipboard
+    /// Puts `text` (1 to `maxClipboardBytes` UTF-8 bytes) on the guest's pasteboard as plain text:
+    /// not concealed, never cleared. Nido Agent 1.0.7 and older answer `badRequest`.
+    case writeClipboard(text: String)
     /// A region of the latest screenshot (pixels of that screenshot), captured again at the
     /// display's full pixel density and scaled down to `maxLongEdge`. Never changes the
     /// coordinate space: clicks keep referring to the latest screenshot. Nido Agent 1.0.3 and
@@ -110,6 +121,10 @@ public enum AgentAction: Codable, Equatable, Sendable {
         case "setClipboard":
             self = .setClipboard(text: try c.decode(String.self, forKey: .text),
                                  clearAfter: try c.decode(Int.self, forKey: .clearAfter))
+        case "readClipboard":
+            self = .readClipboard
+        case "writeClipboard":
+            self = .writeClipboard(text: try c.decode(String.self, forKey: .text))
         case "zoom":
             self = .zoom(x: try c.decode(Double.self, forKey: .x), y: try c.decode(Double.self, forKey: .y),
                          width: try c.decode(Double.self, forKey: .width),
@@ -171,6 +186,11 @@ public enum AgentAction: Codable, Equatable, Sendable {
             try c.encode("setClipboard", forKey: .op)
             try c.encode(text, forKey: .text)
             try c.encode(clearAfter, forKey: .clearAfter)
+        case .readClipboard:
+            try c.encode("readClipboard", forKey: .op)
+        case .writeClipboard(let text):
+            try c.encode("writeClipboard", forKey: .op)
+            try c.encode(text, forKey: .text)
         case .zoom(let x, let y, let width, let height, let maxLongEdge):
             try c.encode("zoom", forKey: .op)
             try c.encode(x, forKey: .x)
@@ -259,6 +279,12 @@ public struct PixelRect: Codable, Equatable, Sendable {
     public init(x: Int, y: Int, w: Int, h: Int) { self.x = x; self.y = y; self.w = w; self.h = h }
 }
 
+/// Where a `uiTree` element lives when it is not in the app: the menu bar, or the Dock.
+public enum UIArea: String, Codable, Sendable {
+    case menuBar
+    case dock
+}
+
 /// One control of a `uiTree` answer. The text comes from the guest's apps: the host cleans it
 /// before it reaches a terminal or an agent.
 public struct UIElement: Codable, Equatable, Sendable {
@@ -273,8 +299,12 @@ public struct UIElement: Codable, Equatable, Sendable {
     public var enabled: Bool
     public var focused: Bool
     public var frame: PixelRect
+    /// `menuBar` or `dock`; nil (absent) for the app's own windows and menus.
+    public var area: UIArea?
 
-    public init(id: Int, role: String, name: String?, value: String?, enabled: Bool, focused: Bool, frame: PixelRect) {
+    public init(id: Int, role: String, name: String?, value: String?, enabled: Bool, focused: Bool, frame: PixelRect,
+                area: UIArea? = nil) {
+        self.area = area
         self.id = id
         self.role = role
         self.name = name
@@ -324,7 +354,7 @@ public struct TransferEntry: Codable, Equatable, Sendable {
 /// A screenshot reply has `ok`, `image` and `screen`; its PNG follows as a second binary frame.
 /// A `uiTree` reply has `ok` and `tree`, and no PNG. A `putFile` reply has `bytes` (written); a
 /// `getFile` reply has `bytes` and the file follows as a second binary frame; a `listFiles` reply
-/// has `files` and `truncated`.
+/// has `files` and `truncated`. A `readClipboard` reply has `clipboard` and `truncated`.
 public struct AgentReply: Codable, Equatable, Sendable {
     public var ok: Bool
     public var status: AgentStatus?
@@ -336,10 +366,12 @@ public struct AgentReply: Codable, Equatable, Sendable {
     public var files: [TransferEntry]?
     public var truncated: Bool?
     public var bytes: Int?
+    public var clipboard: String?
 
     public init(ok: Bool, status: AgentStatus? = nil, image: PixelSize? = nil, screen: ScreenSize? = nil,
                 error: AgentErrorCode? = nil, message: String? = nil, tree: UITree? = nil,
-                files: [TransferEntry]? = nil, truncated: Bool? = nil, bytes: Int? = nil) {
+                files: [TransferEntry]? = nil, truncated: Bool? = nil, bytes: Int? = nil,
+                clipboard: String? = nil) {
         self.ok = ok
         self.status = status
         self.image = image
@@ -350,5 +382,6 @@ public struct AgentReply: Codable, Equatable, Sendable {
         self.files = files
         self.truncated = truncated
         self.bytes = bytes
+        self.clipboard = clipboard
     }
 }

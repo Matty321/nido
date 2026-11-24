@@ -21,6 +21,7 @@ import Testing
         .scroll(dx: 1, dy: 2, x: 3, y: 4),
         .type(text: "hi"), .key(combo: "cmd+space"),
         .setClipboard(text: "abcde-fghjk", clearAfter: 60),
+        .readClipboard, .writeClipboard(text: "a\u{0}é\n"),
         .zoom(x: 1, y: 2, width: 3, height: 4, maxLongEdge: 800),
         .uiTree(maxElements: 300),
         .putFile(path: "a/b.txt", size: 3), .getFile(path: "a/b.txt", maxBytes: 1 << 20),
@@ -64,7 +65,6 @@ import Testing
     #expect(AgentProtocol.uiTreeElementsRange.contains(AgentProtocol.defaultUITreeElements))
     #expect(AgentProtocol.minimumUITreeHelperVersion == "1.0.5")
     #expect(AgentProtocol.minimumFilesHelperVersion == "1.0.6")
-    #expect(AgentProtocol.helperVersion == "1.0.6")
     #expect(AgentProtocol.maxTransferBytes == 16 << 20)
     #expect(AgentProtocol.maxTransferBytes < AgentProtocol.maxFrameBytes)
     #expect(AgentProtocol.maxListedFiles == 500)
@@ -83,4 +83,40 @@ import Testing
     if let build = info["CFBundleVersion"] as? String {
         #expect(!build.isEmpty && build.allSatisfy(\.isASCII) && build.allSatisfy(\.isNumber))
     }
+}
+
+@Test func helperVersionIs108() {
+    #expect(AgentProtocol.helperVersion == "1.0.8")
+    #expect(AgentProtocol.minimumClipboardHelperVersion == "1.0.8")
+    #expect(AgentProtocol.maxClipboardBytes == 1_048_576)
+}
+
+@Test func clipboardJSONIsStable() throws {
+    let read = try JSONSerialization.jsonObject(with: JSONEncoder().encode(AgentAction.readClipboard)) as? [String: Any]
+    #expect(read?["op"] as? String == "readClipboard")
+    let write = try JSONSerialization.jsonObject(with: JSONEncoder().encode(AgentAction.writeClipboard(text: "x"))) as? [String: Any]
+    #expect(write?["op"] as? String == "writeClipboard")
+    #expect(write?["text"] as? String == "x")
+    let reply = try JSONEncoder().encode(AgentReply(ok: true, truncated: true, clipboard: "t"))
+    let object = try JSONSerialization.jsonObject(with: reply) as? [String: Any]
+    #expect(object?["clipboard"] as? String == "t")
+    #expect(object?["truncated"] as? Bool == true)
+}
+
+@Test func areaRoundTrips() throws {
+    for area in [UIArea.menuBar, .dock] {
+        let element = UIElement(id: 3, role: "dockItem", name: "Finder", value: "running", enabled: true,
+                                focused: false, frame: PixelRect(x: 1, y: 2, w: 3, h: 4), area: area)
+        let data = try JSONEncoder().encode(element)
+        #expect(String(data: data, encoding: .utf8)?.contains("\"area\":\"\(area.rawValue)\"") == true)
+        #expect(try JSONDecoder().decode(UIElement.self, from: data) == element)
+    }
+}
+
+@Test func absentAreaDecodesNil() throws {
+    let json = #"{"id":0,"role":"button","enabled":true,"focused":false,"frame":{"x":1,"y":2,"w":3,"h":4}}"#
+    let element = try JSONDecoder().decode(UIElement.self, from: Data(json.utf8))
+    #expect(element.area == nil)
+    let data = try JSONEncoder().encode(element)
+    #expect(String(data: data, encoding: .utf8)?.contains("area") == false)
 }

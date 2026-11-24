@@ -89,11 +89,50 @@ func testPNG(width: Int, height: Int) -> Data {
         #expect(read[1].error == "notReady")
     }
 
+    @Test func readTextRecordsRegionAndCountOnly() throws {
+        let region = PixelRect(x: 1, y: 2, w: 30, h: 40)
+        let answer = AgentAnswer(ok: true, lines: [
+            TextLine(text: "secret one", frame: region), TextLine(text: "secret two", frame: region),
+        ], truncated: false)
+        let made = AgentActivityEntry.makeReadText(
+            region: region, answer: answer, session: "s", client: "mcp", time: Date(timeIntervalSince1970: 1_800_000_000),
+            ms: 3)
+        #expect(made.op == "readText")
+        #expect(made.detail == ["region": "1,2,30,40", "lines": "2"])
+        let failed = AgentActivityEntry.makeReadText(
+            region: nil, answer: .failure(.noScreenshot, "take a screenshot first"), session: "s", client: "mcp",
+            time: Date(timeIntervalSince1970: 1_800_000_000), ms: 3)
+        #expect(failed.op == "readText")
+        #expect(failed.detail == [:])
+        #expect(failed.error == "noScreenshot")
+    }
+
     @Test func clipboardNeverRecorded() {
         #expect(AgentActivityEntry.describe(.setClipboard(text: "secret", clearAfter: 60)) == nil)
         #expect(AgentActivityEntry.make(
             action: .setClipboard(text: "secret", clearAfter: 60), answer: AgentAnswer(ok: true), session: "s",
             client: "act", time: Date(), ms: 1) == nil)
+    }
+
+    @Test func clipboardOpsKeepOnlyTheCharacterCount() throws {
+        let text = "pässword\nwith secret"
+        let write = try #require(AgentActivityEntry.make(
+            action: .writeClipboard(text: text), answer: AgentAnswer(ok: true), session: "s", client: "mcp",
+            time: Date(), ms: 1))
+        #expect(write.op == "writeClipboard")
+        #expect(write.detail == ["chars": String(text.count)])
+        let read = try #require(AgentActivityEntry.make(
+            action: .readClipboard, answer: AgentAnswer(ok: true, clipboard: text), session: "s", client: "mcp",
+            time: Date(), ms: 1))
+        #expect(read.op == "readClipboard")
+        #expect(read.detail == ["chars": String(text.count)])
+        let failed = try #require(AgentActivityEntry.make(
+            action: .readClipboard, answer: .failure(.badRequest, "the clipboard has no text"), session: "s",
+            client: "mcp", time: Date(), ms: 1))
+        #expect(failed.detail == [:])
+        for entry in [write, read, failed] {
+            #expect(!String(decoding: try JSONEncoder().encode(entry), as: UTF8.self).contains("secret"))
+        }
     }
 
     @Test func everyActionIsDescribed() throws {
